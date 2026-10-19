@@ -836,7 +836,7 @@ body { margin: 0; }
 <script>
 /* accounts and storage on Supabase. The page code talks to it through the same small set of calls it used with the sheet. */
 const SUPA_URL = "https://kgggpqoaporqkxcdngqn.supabase.co", SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2dwcW9hcG9ycWt4Y2RuZ3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjY5MDIsImV4cCI6MjEwODAwMjkwMn0.5VIFb-E28SroABOSisX4CYR2COEO1Bcfj2K_yx-wzJQ";
-const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); // stays signed in on this device
 let USER_NAME = "", PROFILE = null, SHEET_MODE = false, TOUR_PENDING = false, USER_ID = "", JUST_SIGNED_UP = false;
 // any user name (Hebrew too) becomes a technical e-mail address the login system accepts
 const emailOf = u => "u" + Array.from(new TextEncoder().encode(u.trim().toLowerCase())).map(b => b.toString(16).padStart(2, "0")).join("") + "@users.ispend.app";
@@ -884,7 +884,13 @@ async function startApp() {
   let { data: { session } } = await sb.auth.getSession();
   if (!session) session = await showLogin();
   const uid = session.user.id;
-  const { data: prof } = await sb.from("profiles").select("*").eq("id", uid).single();
+  const pKey = "profile-" + uid;
+  let cachedProf = null; try { cachedProf = JSON.parse(localStorage.getItem(pKey) || "null"); } catch (e) {}
+  const freshProf = sb.from("profiles").select("*").eq("id", uid).single().then(({ data }) => {
+    if (data) { try { localStorage.setItem(pKey, JSON.stringify(data)); } catch (e) {} }
+    return data;
+  });
+  const prof = cachedProf || await freshProf;
   PROFILE = prof || { settings: [] };
   USER_NAME = (PROFILE.display_name || PROFILE.username || "").trim();
   const payUrl = SUPA_URL + "/rest/v1/rpc/add_pay?apikey=" + SUPA_KEY;
@@ -892,7 +898,10 @@ async function startApp() {
   document.getElementById("copyPayUrl").onclick = () => copy(payUrl, "הכתובת");
   document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
   document.getElementById("whoAmI").textContent = "מחובר בתור " + (PROFILE.username || "");
-  document.getElementById("logoutBtn").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  document.getElementById("logoutBtn").onclick = async () => {
+    try { Object.keys(localStorage).filter(k => k.startsWith("c1:") || k.startsWith("profile-") || k.startsWith("sheetcfg-")).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    await sb.auth.signOut(); location.reload();
+  };
   USER_ID = uid;
   // linked account: read and write the owner's own Google Sheets through his Apps Script
   const sh = PROFILE.sheet_api;
@@ -911,18 +920,43 @@ async function startApp() {
   document.getElementById("sheetOff").onclick = async () => { await sb.from("profiles").update({ sheet_api: null }).eq("id", uid); location.reload(); };
   if (sh && sh.url && sh.key) {
     try {
-      const cfg = await sheetCall(sh.url, sh.key, "config");
+      const cKey = "sheetcfg-" + uid;
+      let cfg = null; try { cfg = JSON.parse(localStorage.getItem(cKey) || "null"); } catch (e) {}
+      const freshCfg = sheetCall(sh.url, sh.key, "config").then(c => { try { localStorage.setItem(cKey, JSON.stringify(c)); } catch (e) {} return c; });
+      if (!cfg) cfg = await freshCfg; else freshCfg.catch(() => {});
       HISTORY = cfg.history || []; FIRST_MONTH = cfg.first || FIRST_MONTH; SHEET_MODE = true;
       document.getElementById("payBox").hidden = true;
       try { render(); } catch (e) {}
-      return makeSheetAdapter(sh.url, sh.key);
+      return withCache(makeSheetAdapter(sh.url, sh.key), uid);
     } catch (e) { document.getElementById("sheetState").textContent = "לא הצלחתי להתחבר לגיליונות: " + (e.message || ""); }
   }
   let tourDone = false; try { tourDone = localStorage.getItem("tourDone-" + uid) === "1"; } catch (e) {}
   TOUR_PENDING = !tourDone && JUST_SIGNED_UP;
   if (TOUR_PENDING) setTimeout(() => startTour(), 700);
   try { render(); } catch (e) {}
-  return makeSupaAdapter(uid);
+  return withCache(makeSupaAdapter(uid), uid);
+}
+
+/* show the last data saved on this device immediately, then replace it with fresh data as it arrives */
+function withCache(ad, ns) {
+  const key = input => "c1:" + ns + ":" + input.spreadsheetId + ":" + input.range;
+  return Object.assign({}, ad, {
+    watchTool(server, tool, input, handler, opts) {
+      if (tool === "get_values") {
+        try { const c = localStorage.getItem(key(input)); if (c) handler({ type: "data", result: { payload: JSON.parse(c), cached: true } }); } catch (e) {}
+      }
+      return ad.watchTool(server, tool, input, ev => {
+        if (ev.type === "data" && tool === "get_values") { try { localStorage.setItem(key(input), JSON.stringify(ev.result.payload)); } catch (e) {} }
+        handler(ev);
+      }, opts);
+    },
+    callTool(server, tool, input, o) {
+      return ad.callTool(server, tool, input, o).then(res => {
+        if (tool === "get_values" && input.range && !/!\w+\d+:\w+\d+$/.test(input.range)) { try { localStorage.setItem(key(input), JSON.stringify(res.payload)); } catch (e) {} }
+        return res;
+      });
+    }
+  });
 }
 
 async function sheetCall(url, key, fn, ...args) {
