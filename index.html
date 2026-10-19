@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="iSpend">
 <title>iSpend</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <style>
 /* Layout: a phone-first cash-flow app. One status card (what's left this month), then this week's budget, the month's weeks, fixed vs. variable categories, and the itemised list. */
 :root {
@@ -881,8 +881,15 @@ function showLogin() {
 }
 
 async function startApp() {
-  let { data: { session } } = await sb.auth.getSession();
-  if (!session) session = await showLogin();
+  // signed in before on this device: start right away from the stored session; the login library refreshes it in the background
+  let session = null;
+  try {
+    const ref = new URL(SUPA_URL).hostname.split(".")[0];
+    const stored = JSON.parse(localStorage.getItem("sb-" + ref + "-auth-token") || "null");
+    if (stored && stored.user && stored.user.id && stored.refresh_token) session = { user: stored.user };
+  } catch (e) {}
+  if (session) sb.auth.getSession().then(({ data }) => { if (!data.session) { location.reload(); } }).catch(() => {});
+  else { session = (await sb.auth.getSession()).data.session; if (!session) session = await showLogin(); }
   const uid = session.user.id;
   const pKey = "profile-" + uid;
   let cachedProf = null; try { cachedProf = JSON.parse(localStorage.getItem(pKey) || "null"); } catch (e) {}
@@ -966,8 +973,22 @@ async function sheetCall(url, key, fn, ...args) {
   return j.result;
 }
 function makeSheetAdapter(url, key) {
+  // reads that start together go to the server as one request
+  let queue = [], timer = null, noBatch = false;
+  const flush = async () => {
+    const q = queue; queue = []; timer = null;
+    if (noBatch || q.length === 1) { q.forEach(j => sheetCall(url, key, "getValues", j.id, j.range).then(j.ok, j.bad)); return; }
+    try {
+      const res = await sheetCall(url, key, "batchGet", q.map(j => [j.id, j.range]));
+      q.forEach((j, i) => res[i] && !res[i].error ? j.ok(res[i]) : j.bad({ code: "tool_error", message: res[i] && res[i].error }));
+    } catch (e) {
+      if (/לא מוכרת/.test(e.message || "")) { noBatch = true; q.forEach(j => sheetCall(url, key, "getValues", j.id, j.range).then(j.ok, j.bad)); }
+      else q.forEach(j => j.bad(e));
+    }
+  };
+  const getBatched = (id, range) => new Promise((ok, bad) => { queue.push({ id, range, ok, bad }); if (!timer) timer = setTimeout(flush, 40); });
   const run = (tool, input) => {
-    if (tool === "get_values") return sheetCall(url, key, "getValues", input.spreadsheetId, input.range).then(p => ({ payload: p }));
+    if (tool === "get_values") return getBatched(input.spreadsheetId, input.range).then(p => ({ payload: p }));
     if (tool === "update_values") return sheetCall(url, key, "updateValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
     if (tool === "append_values") return sheetCall(url, key, "appendValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
     if (tool === "update_spreadsheet") { const r = input.requests[0].deleteDimension.range; return sheetCall(url, key, "deleteRow", input.spreadsheetId, r.sheetId, r.startIndex).then(p => ({ payload: p })); }
