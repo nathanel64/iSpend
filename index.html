@@ -735,14 +735,17 @@ body { margin: 0; }
     <details id="payBox">
       <summary>חיבור Apple Pay (כל תשלום נכנס לבד)</summary>
       <div class="body">
-        <p class="note" style="margin:0">באייפון: <b>קיצורים ← אוטומציה ← + ← עסקה</b>, בוחרים את כל הכרטיסים ו<b>הפעל מיד</b>. מוסיפים פעולה <b>קבלת התוכן של כתובת אינטרנט</b>:</p>
+        <p class="note" style="margin:0">כל תשלום באייפון ב-Apple Pay ייכנס לכאן מיד. הגדרה חד-פעמית של כ-3 דקות:</p>
         <ol>
-          <li><b>כתובת:</b> מעתיקים את הכתובת האישית <button class="btn ghost" type="button" id="copyPayUrl" style="padding:3px 12px;font-size:.8rem">העתקה</button></li>
-          <li>לוחצים על החץ: שיטה <b>POST</b>, גוף הבקשה <b>JSON</b>.</li>
-          <li>שדות טקסט: <code>token</code> = המפתח האישי <button class="btn ghost" type="button" id="copyPayTok" style="padding:3px 12px;font-size:.8rem">העתקה</button>, <code>amount</code> = כמות, <code>merchant</code> = בית העסק, <code>card</code> = כרטיס.</li>
-          <li>אחריה פעולה <b>הצגת עדכון</b> עם "תוכן של כתובת אינטרנט", כדי לראות שזה נרשם.</li>
+          <li><b>מעתיקים את המפתח האישי</b> <button class="btn ghost" type="button" id="copyPayTok" style="padding:3px 12px;font-size:.8rem">העתקה</button>
+            <div class="field" style="margin-top:6px"><input id="payTokShow" readonly dir="ltr" aria-label="המפתח האישי שלך" style="font-family:ui-monospace,monospace;font-size:15px"></div></li>
+          <li><b>מתקינים את הקיצור</b> <a class="btn" id="installShortcut" href="https://www.icloud.com/shortcuts/b7bf468df8d64b0286d0c1a5897ddf9c" target="_blank" rel="noopener" style="padding:4px 14px;font-size:.85rem;text-decoration:none;display:inline-block">התקנת הקיצור iSpend</a><br>כשהוא שואל, מדביקים את המפתח.</li>
+          <li><b>יוצרים אוטומציה:</b> קיצורים ← <b>אוטומציה</b> ← <b>+</b> ← <b>עסקה</b> ← בוחרים את כל הכרטיסים ← <b>הפעל מיד</b> ← הבא ← <b>אוטומציה ריקה</b>.</li>
+          <li>מוסיפים פעולה <b>מילון</b> עם 3 פריטים:
+            <code>amount</code> (מספר) = כמות, <code>merchant</code> (טקסט) = בית העסק, <code>card</code> (טקסט) = כרטיס.</li>
+          <li>מוסיפים פעולה <b>הפעלת קיצור</b> ← בוחרים <b>iSpend</b> ← בחץ, הקלט: <b>מילון</b>. סיום.</li>
         </ol>
-        <div class="field"><label for="payTokShow">המפתח האישי שלך</label><input id="payTokShow" readonly dir="ltr" style="font-family:ui-monospace,monospace;font-size:15px"></div>
+        <p class="note" style="margin:0">בתשלום מעל ₪1,000 הקיצור ישאל כמה תשלומים.</p>
         <p class="note" style="margin:0" id="payCopied"></p>
       </div>
     </details>
@@ -915,7 +918,6 @@ async function startApp() {
   };
   document.getElementById("payTokShow").value = PROFILE.pay_token || "";
   freshProf.then(p => { if (p && p.pay_token) { PROFILE.pay_token = p.pay_token; document.getElementById("payTokShow").value = p.pay_token; } }).catch(() => {});
-  document.getElementById("copyPayUrl").onclick = () => copy(payUrl, "הכתובת");
   document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
   document.getElementById("whoAmI").textContent = "מחובר בתור " + (PROFILE.username || "");
   document.getElementById("logoutBtn").onclick = async () => {
