@@ -1,0 +1,2660 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="iSpend">
+<title>iSpend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a phone-first cash-flow app. One status card (what's left this month), then this week's budget, the month's weeks, fixed vs. variable categories, and the itemised list. */
+:root {
+  --bg: #f6f3ee;
+  --surface: #ffffff;
+  --ink: #1c1b22;
+  --muted: #7d7987;
+  --line: #ebe6de;
+  --brand: #4b3fd6;
+  --brand2: #8a4fd0;
+  --brand-ink: #ffffff;
+  --brand-soft: #ebe8fc;
+  --good: #16935f;
+  --good-soft: #dcf3e8;
+  --bad: #d9473f;
+  --bad-soft: #fbe4e1;
+  --ic-bg-l: 92%; --ic-fg-l: 36%; --ic-sat: 1; --slice-l: 52%;
+  --heat-0: #e6ebf2; --heat-1: #c7d6f7; --heat-2: #8fb0f0; --heat-3: #4f7fe0; --heat-4: #1f4fb8;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s-other: #9aa3ad;
+  --warn: #b5650f;
+  --warn-soft: #fbecd9;
+  --font-display: "IBM Plex Sans Hebrew", "Arial Hebrew", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Hebrew", "Arial Hebrew", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121117; --surface: #1d1c24; --ink: #f2f0f7; --muted: #9a96a6; --line: #2c2a35;
+    --brand: #7c70f0; --brand2: #a874e6; --brand-ink: #ffffff; --brand-soft: #2a2648;
+    --good: #43c995; --good-soft: #15342a; --bad: #f2857a; --bad-soft: #3b1e1c; --warn: #f0ac5e; --warn-soft: #3a2a17; --ic-bg-l: 22%; --ic-fg-l: 74%; --ic-sat: .75; --slice-l: 58%; --heat-0: #1c2536; --heat-1: #1f3566; --heat-2: #2b4f9c; --heat-3: #4b78d6; --heat-4: #8fb0ff; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s-other: #5f6b7a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121117; --surface: #1d1c24; --ink: #f2f0f7; --muted: #9a96a6; --line: #2c2a35;
+  --brand: #7c70f0; --brand2: #a874e6; --brand-ink: #ffffff; --brand-soft: #2a2648;
+  --good: #43c995; --good-soft: #15342a; --bad: #f2857a; --bad-soft: #3b1e1c; --warn: #f0ac5e; --warn-soft: #3a2a17; --ic-bg-l: 22%; --ic-fg-l: 74%; --ic-sat: .75; --slice-l: 58%; --heat-0: #1c2536; --heat-1: #1f3566; --heat-2: #2b4f9c; --heat-3: #4b78d6; --heat-4: #8fb0ff; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s-other: #5f6b7a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 600px; margin: 0 auto; padding-block: 4px 48px; display: flex; flex-direction: column; gap: 18px; }
+.num { font-variant-numeric: tabular-nums; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+header.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 10px;
+}
+.month { text-align: center; }
+.month h1 { font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; margin: 0; line-height: 1.2; }
+.month .range { font-size: .78rem; color: var(--muted); }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface); display: grid; place-items: center; font-size: 1.15rem; line-height: 1; }
+.icon-btn:disabled { opacity: .3; cursor: default; }
+
+.banner { border-radius: 16px; padding: 12px 14px; background: var(--warn-soft); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.banner strong { display: block; }
+.banner .act { margin-inline-start: auto; }
+
+/* status card */
+.status { border-radius: 24px; padding: 20px; background: var(--brand); color: var(--brand-ink); display: flex; flex-direction: column; gap: 14px; }
+.status.neg { background: var(--bad); }
+.status .lbl { font-size: .85rem; opacity: .85; }
+.status .big { font-family: var(--font-display); font-size: clamp(2.5rem, 12vw, 3.3rem); line-height: 1; }
+.status .sub { font-size: .9rem; opacity: .9; }
+.flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.flow > div { background: color-mix(in srgb, var(--brand-ink) 14%, transparent); border-radius: 14px; padding: 9px 10px; min-width: 0; }
+.flow .k { font-size: .74rem; opacity: .85; }
+.flow .v { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edit-income { background: none; border: 0; color: inherit; padding: 0; text-decoration: underline; text-underline-offset: 3px; opacity: .9; font-size: .82rem; }
+.income-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.income-form input { width: 9em; border-radius: 10px; border: 0; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+.income-form button { border: 0; border-radius: 10px; padding: 7px 14px; background: var(--surface); color: var(--ink); font-weight: 600; }
+
+.card { background: var(--surface); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { font-size: 1rem; font-weight: 700; margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card h2 .side { font-size: .8rem; font-weight: 500; color: var(--muted); }
+
+/* weekly */
+.week-now { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.week-now .left { font-family: var(--font-display); font-size: 2rem; line-height: 1; }
+.week-now .left.neg { color: var(--bad); }
+.week-now .note { margin: 0; }
+.meter { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 5px; background: var(--good); }
+.meter i.mid { background: var(--warn); }
+.meter i.over { background: var(--bad); }
+.weeks { display: flex; flex-direction: column; gap: 10px; }
+.wk { display: grid; grid-template-columns: 6.8em minmax(0, 1fr) auto; white-space: nowrap; gap: 10px; align-items: center; font-size: .85rem; }
+.wk .d { color: var(--muted); }
+.wk.cur .d { color: var(--ink); font-weight: 600; }
+.wk .meter { height: 8px; }
+.wk .s { font-weight: 600; min-width: 4.5em; text-align: end; }
+.wk.future { opacity: .45; }
+
+/* categories */
+.seg { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: none; border-radius: 8px; padding: 5px 12px; font-size: .82rem; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; }
+.cats { display: flex; flex-direction: column; }
+.cat { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 9px 4px; border: 0; border-top: 1px solid var(--line); background: none; text-align: start; width: 100%; }
+.cat:first-child { border-top: 0; }
+.cat[aria-pressed="true"] .name { color: var(--brand); font-weight: 600; }
+.cat .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat .amt { font-weight: 600; display: inline-flex; align-items: baseline; gap: 8px; }
+.cat .bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--bg); overflow: hidden; }
+.cat .bar i { display: block; height: 100%; background: var(--brand); border-radius: 3px; }
+.pay-io { grid-column: 1 / -1; display: flex; gap: 16px; font-size: .8rem; color: var(--muted); }
+.pay-io b { font-weight: 600; color: var(--ink); }
+.cat .pct { color: var(--muted); font-weight: 400; font-size: .78rem; min-width: 2.6em; text-align: end; }
+
+/* list */
+.days { display: flex; flex-direction: column; gap: 14px; }
+.day-head { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); padding-bottom: 4px; }
+.tx { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 0 10px; padding: 8px 0; align-items: center; }
+.ic { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: hsl(var(--h) calc(var(--s) * var(--ic-sat)) var(--ic-bg-l)); color: hsl(var(--h) calc(var(--s) * var(--ic-sat)) var(--ic-fg-l)); }
+.ic svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.ic.sm { width: 28px; height: 28px; } .ic.sm svg { width: 15px; height: 15px; }
+.tx .ic { grid-row: span 2; }
+.cat .name { display: flex; align-items: center; gap: 10px; }
+.edit-row.cat-edit { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+.ic-btn { border: 0; background: none; padding: 0; border-radius: 50%; }
+.picker { display: flex; flex-direction: column; gap: 10px; background: var(--bg); border-radius: 14px; padding: 10px; }
+.picker-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; }
+.pick-ic { border: 2px solid transparent; background: none; border-radius: 50%; padding: 1px; display: grid; place-items: center; }
+.pick-ic.on { border-color: var(--ink); }
+.picker-hues { display: flex; gap: 8px; flex-wrap: wrap; }
+.pick-hue { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; background: hsl(var(--h) 60% 55%); }
+.pick-hue.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
+.tx .m { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tx .a { font-weight: 600; text-align: end; grid-row: span 2; }
+.tx .a.in { color: var(--good); }
+.tx .meta { font-size: .76rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.uncat { color: var(--warn); }
+.tx.can-del { cursor: pointer; border-radius: 10px; }
+.tx.can-del:hover { background: var(--bg); }
+.tx[aria-expanded="true"] { background: var(--bg); padding-inline: 8px; }
+.tx-act { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 8px; font-size: .85rem; }
+.tx-act .btn { padding: 6px 14px; font-size: .85rem; }
+.btn.danger { background: var(--bad); color: var(--surface); }
+.tx-msg { color: var(--bad); }
+.inst { color: var(--muted); font-weight: 400; font-size: .85em; }
+.inst-row .a small { display: block; font-size: .72rem; font-weight: 400; color: var(--muted); }
+.inst-bar { grid-column: 2 / -1; height: 5px; border-radius: 3px; background: var(--bg); margin-top: 6px; overflow: hidden; }
+.inst-bar i { display: block; height: 100%; background: var(--brand); border-radius: 3px; }
+.more { border: 0; background: var(--bg); border-radius: 12px; padding: 9px; font-weight: 600; color: var(--brand); }
+
+.empty { text-align: center; color: var(--muted); padding: 8px 4px; }
+.empty strong { display: block; color: var(--ink); font-size: 1.05rem; margin-bottom: 4px; }
+
+details { background: var(--surface); border-radius: 20px; }
+details > summary { padding: 15px 16px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after { content: "+"; color: var(--muted); }
+details[open] > summary::after { content: "−"; }
+details .body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+details ol { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 8px; }
+.pill { font-size: .75rem; font-weight: 600; border-radius: 999px; padding: 2px 10px; background: var(--warn-soft); color: var(--warn); }
+.pill.ok { background: var(--good-soft); color: var(--good); }
+code { background: var(--bg); border-radius: 4px; padding: 1px 5px; font-size: .85em; direction: ltr; unicode-bidi: embed; }
+.note { font-size: .82rem; color: var(--muted); }
+.btn { border: 0; background: var(--brand); color: var(--brand-ink); border-radius: 12px; padding: 9px 16px; font-weight: 600; }
+.btn.ghost { background: var(--bg); color: var(--ink); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+input[type="number"] { border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 7px 10px; }
+.fab { position: fixed; z-index: 6; inset-inline-start: calc(max(16px, env(safe-area-inset-left, 0px)) + 4px); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  height: 56px; padding: 0 22px; border-radius: 28px; border: 0; background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 1rem;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--ink) 25%, transparent); display: flex; align-items: center; gap: 8px; }
+.fab span { font-size: 1.5rem; line-height: 1; }
+.sheet-bg { position: fixed; inset: 0; z-index: 20; background: color-mix(in srgb, var(--ink) 45%, transparent); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--surface); width: 100%; max-width: 600px; border-radius: 24px 24px 0 0; max-height: 92%; overflow-y: auto;
+  padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(16px, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; gap: 14px; }
+.sheet h3 { margin: 0; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; }
+.sheet .x { border: 0; background: var(--bg); width: 34px; height: 34px; border-radius: 50%; }
+.kind { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border-radius: 12px; padding: 4px; gap: 4px; }
+.kind button { border: 0; background: none; border-radius: 9px; padding: 9px; font-weight: 600; color: var(--muted); }
+.kind button[aria-pressed="true"] { background: var(--surface); color: var(--ink); }
+.amount-in { display: flex; align-items: baseline; gap: 6px; justify-content: center; border-bottom: 2px solid var(--line); padding-bottom: 4px; }
+.amount-in span { font-family: var(--font-display); font-size: 2rem; color: var(--muted); }
+.amount-in input { font-family: var(--font-display); font-size: 2.6rem; border: 0; background: none; width: 6em; text-align: center; outline: none; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: .8rem; color: var(--muted); }
+.field input, .field select { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 12px; width: 100%; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.two > .field { min-width: 0; }
+/* iPhone gives date fields a fixed width of their own; keep them inside their column */
+.field input[type=date] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; box-sizing: border-box; min-height: 42px; text-align: start; }
+.field input[type=date]::-webkit-date-and-time-value { text-align: start; }
+.form-msg { font-size: .85rem; color: var(--bad); min-height: 1.2em; margin: 0; }
+.topbar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.tabs { flex: 1; display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border-radius: 14px; padding: 4px; gap: 4px; }
+.gear { width: 46px; height: 46px; flex: none; border: 0; border-radius: 14px; background: var(--surface); color: var(--muted); display: grid; place-items: center; }
+.gear svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.gear[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
+.tabs button { border: 0; background: none; border-radius: 10px; padding: 8px; font-weight: 600; color: var(--muted); }
+.tabs button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
+.admin-title { font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; margin: 6px 0 0; }
+.edit-list { display: flex; flex-direction: column; gap: 8px; }
+.edit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+.edit-row.pay { grid-template-columns: minmax(0, 1fr) auto; }
+.edit-row input[type="text"] { border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 8px 10px; width: 100%; min-width: 0; }
+.edit-row label.fx { display: flex; align-items: center; gap: 4px; font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.del { border: 0; background: var(--bg); width: 34px; height: 34px; border-radius: 50%; color: var(--muted); }
+.del:hover { color: var(--bad); }
+.add-row { border: 1px dashed var(--line); background: none; border-radius: 10px; padding: 8px; color: var(--brand); font-weight: 600; }
+.sal-row { display: grid; grid-template-columns: minmax(0, 1fr) 9em; gap: 10px; align-items: center; }
+.sal-row.cur span { font-weight: 700; }
+.sal-row input { border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 8px 10px; width: 100%; text-align: start; }
+.money-in { position: relative; display: block; }
+.money-in > span { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.sal-row .money-in input { direction: ltr; text-align: left; padding-left: 26px; }
+.save-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.save-row .ok { color: var(--good); font-size: .85rem; }
+.save-row .err { color: var(--bad); font-size: .85rem; }
+.year-pick { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.year-pick button { border: 0; background: var(--surface); border-radius: 999px; padding: 6px 18px; font-weight: 600; color: var(--muted); }
+.year-pick button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.yhero { text-align: center; display: flex; flex-direction: column; gap: 4px; padding-block: 6px; }
+.yhero .lbl { color: var(--muted); font-size: .85rem; }
+.yhero .big { font-family: var(--font-display); font-size: clamp(2.6rem, 12vw, 3.4rem); line-height: 1.05; }
+.yhero .big.neg { color: var(--bad); }
+.ytiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ytile { background: var(--surface); border-radius: 16px; padding: 10px 12px; min-width: 0; }
+.ytile .k { font-size: .75rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.ytile .v { font-weight: 700; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.chart-box { position: relative; overflow-x: auto; }
+.chart-box svg { display: block; width: 100%; min-width: 340px; height: auto; }
+.legend { display: flex; gap: 14px; font-size: .8rem; color: var(--muted); flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 10px; padding: 7px 10px; font-size: .8rem; line-height: 1.4; white-space: nowrap; z-index: 3; transform: translate(-50%, -100%); }
+.donut-wrap { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 16px; align-items: center; }
+@media (max-width: 480px) { .donut-wrap { grid-template-columns: 1fr; justify-items: center; } .donut-wrap .cat-legend { width: 100%; } }
+.cat-legend { display: flex; flex-direction: column; gap: 7px; font-size: .88rem; }
+.cat-legend div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+.cat-legend .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-legend .p { color: var(--muted); font-size: .78rem; min-width: 2.6em; text-align: end; }
+.highlights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.hl { background: var(--bg); border-radius: 14px; padding: 10px 12px; min-width: 0; }
+.hl .k { font-size: .75rem; color: var(--muted); }
+.hl .v { font-weight: 700; }
+.hl .d { font-size: .8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-head { display: flex; align-items: center; gap: 10px; }
+.cs-sum { display: flex; gap: 8px; flex-wrap: wrap; }
+.cs-sum span { background: var(--bg); border-radius: 999px; padding: 4px 12px; font-size: .85rem; }
+.cs-sum b { font-variant-numeric: tabular-nums; }
+.cat-legend button { all: unset; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 10px; }
+.cat-legend button:hover, .cat-legend button:focus-visible { background: var(--bg); }
+.cat-legend .chev { color: var(--muted); font-size: .9rem; }
+.search { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 12px; padding: 0 12px; }
+.search svg { width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
+.search input { border: 0; background: none; padding: 10px 0; width: 100%; outline: none; }
+.delta { font-size: .72rem; font-weight: 600; border-radius: 999px; padding: 1px 8px; white-space: nowrap; flex: none; }
+.delta.up { color: var(--bad); background: var(--bad-soft); }
+.delta.down { color: var(--good); background: var(--good-soft); }
+.delta.new, .delta.same { color: var(--muted); background: var(--bg); }
+.insights { display: flex; flex-direction: column; gap: 8px; }
+.insight { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; background: var(--surface); border-radius: 16px; padding: 10px 12px; font-size: .88rem; }
+.insight b { font-weight: 700; }
+.insight .btn.add { padding: 6px 14px; font-size: .82rem; }
+.insight .acts { display: flex; gap: 2px; align-items: center; }
+.insight .x { border: 0; background: none; color: var(--muted); font-size: .9rem; padding: 4px; }
+.wrapped-pill { align-self: center; border: 0; border-radius: 999px; padding: 8px 16px; font-weight: 700; color: #fff; background: linear-gradient(120deg, #6d4bd8, #e0569a); box-shadow: 0 4px 14px rgba(109, 75, 216, .3); display: inline-flex; gap: 8px; align-items: center; }
+.wrapped-pill svg { width: 16px; height: 16px; fill: currentColor; }
+.streak { gap: 14px; }
+.streak-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.flame { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: hsl(24 95% var(--ic-bg-l)); color: hsl(20 90% 50%); }
+.flame svg { width: 26px; height: 26px; fill: currentColor; }
+.streak.zero .flame { background: var(--bg); color: var(--muted); }
+.streak-n { font-family: var(--font-display); font-size: 1.9rem; line-height: 1; }
+.streak-best { text-align: end; }
+.streak-days { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px; }
+.streak-days span { aspect-ratio: 1; border-radius: 6px; background: var(--bg); display: grid; place-items: center; font-size: .62rem; color: var(--muted); }
+.streak-days span.ok { background: hsl(150 55% var(--ic-bg-l)); color: hsl(150 60% var(--ic-fg-l)); }
+.streak-days span.bad { background: var(--bad-soft); color: var(--bad); }
+.streak-days span.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+.streak-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.streak-pick label { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border-radius: 999px; padding: 5px 10px 5px 12px; font-size: .85rem; cursor: pointer; }
+.heat-box { overflow: visible; }
+.heat-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px 12px; }
+.heat-m h4 { margin: 0 0 4px; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.heat-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.heat-grid i { aspect-ratio: 1; border-radius: 3px; background: var(--heat-0); }
+.heat-grid i.e { background: none; }
+.heat-grid i.f { opacity: .35; }
+.heat-grid .hl1, .heat-legend .hl1 { background: var(--heat-1); } .heat-grid .hl2, .heat-legend .hl2 { background: var(--heat-2); }
+.heat-grid .hl3, .heat-legend .hl3 { background: var(--heat-3); } .heat-grid .hl4, .heat-legend .hl4 { background: var(--heat-4); }
+.heat-legend { display: flex; align-items: center; gap: 4px; font-size: .75rem; color: var(--muted); }
+.heat-legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--heat-0); }
+.heat-legend span:first-child { margin-inline-end: 4px; } .heat-legend span:last-child { margin-inline-start: 4px; }
+.whatif-total { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.whatif-total > div { background: hsl(150 55% var(--ic-bg-l)); border-radius: 14px; padding: 10px 12px; }
+.whatif-total .big { font-family: var(--font-display); font-size: 1.6rem; color: hsl(150 60% var(--ic-fg-l)); }
+.whatif { display: flex; flex-direction: column; gap: 12px; }
+.wi-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.wi-row .nm { font-weight: 600; } .wi-row .nm small { font-weight: 400; color: var(--muted); }
+.wi-row .cut { font-weight: 700; min-width: 3.4em; text-align: end; font-variant-numeric: tabular-nums; }
+.wi-row input[type=range] { grid-column: 1 / -1; width: 100%; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px; background: var(--line); margin: 8px 0; }
+.wi-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: hsl(150 55% 40%); border: 3px solid var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.25); cursor: pointer; }
+.wi-row input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: hsl(150 55% 40%); border: 3px solid var(--surface); cursor: pointer; }
+.wrapped { position: fixed; inset: 0; z-index: 40; color: #fff; display: flex; flex-direction: column; overflow: hidden;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) max(18px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(18px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(160deg, hsl(var(--wh) 70% 46%), hsl(calc(var(--wh) + 40) 72% 26%)); transition: background .4s; }
+.w-bars { display: flex; gap: 4px; direction: rtl; }
+.w-bars i { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); }
+.w-bars i.on { background: #fff; }
+.w-close { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 26px); left: max(14px, env(safe-area-inset-left, 0px)); z-index: 2; border: 0; background: rgba(0,0,0,.18); color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 1rem; }
+.w-slide { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; max-width: 520px; margin: 0 auto; width: 100%; text-align: center; }
+.w-slide .w-k { font-size: 1rem; opacity: .85; font-weight: 600; letter-spacing: .02em; }
+.w-slide .w-big { font-family: var(--font-display); font-size: clamp(2.6rem, 13vw, 4.6rem); line-height: 1.05; }
+.w-slide .w-mid { font-family: var(--font-display); font-size: clamp(1.7rem, 8vw, 2.6rem); line-height: 1.15; }
+.w-slide .w-sub { font-size: 1.05rem; opacity: .9; }
+.w-slide .w-ic { align-self: center; width: 84px; height: 84px; border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; }
+.w-slide .w-ic svg { width: 44px; height: 44px; fill: none; stroke: #fff; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.w-slide .w-list { display: flex; flex-direction: column; gap: 8px; text-align: start; background: rgba(0,0,0,.14); border-radius: 16px; padding: 12px 14px; }
+.w-slide .w-list div { display: flex; justify-content: space-between; gap: 10px; }
+.w-nav { position: absolute; top: 70px; bottom: 0; width: 50%; border: 0; background: none; }
+.w-next { left: 0; } .w-prev { right: 0; }
+@media (prefers-reduced-motion: no-preference) { .w-slide > * { animation: wIn .45s ease both; } .w-slide > *:nth-child(2) { animation-delay: .08s; } .w-slide > *:nth-child(3) { animation-delay: .16s; } .w-slide > *:nth-child(4) { animation-delay: .24s; } }
+@keyframes wIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.cmp-pick { display: flex; align-items: center; gap: 8px; }
+.cmp-pick select { flex: 1; min-width: 0; border: 0; border-radius: 12px; padding: 9px 10px; font-weight: 700; color: #fff; }
+#cmpA { background: var(--s1); } #cmpB { background: var(--s7); }
+.cmp-pick .vs { color: var(--muted); font-size: .85rem; flex: none; }
+.cmp-sum { margin: 0; font-size: .95rem; line-height: 1.5; }
+.cmp { display: flex; flex-direction: column; }
+.cmp-row { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--line); }
+.cmp-row:first-child { border-top: 0; }
+.cmp-row:hover, .cmp-row:focus-visible { background: var(--bg); border-radius: 10px; }
+.cmp-row.total { font-weight: 700; border-bottom: 2px solid var(--line); cursor: default; }
+.cmp-row.total:hover { background: none; }
+.cmp-lbl { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; font-size: .78rem; min-width: 0; }
+.cmp-lbl span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-lbl .d { font-size: .7rem; font-weight: 600; }
+.cmp-lbl .d.up { color: var(--bad); } .cmp-lbl .d.down { color: var(--good); }
+.cmp-side { display: flex; flex-direction: column; gap: 4px; min-width: 0; width: 100%; }
+.cmp-side.a { align-items: flex-end; } /* RTL: month A grows to the right, away from the label */
+.cmp-side.b { align-items: flex-start; }
+.cmp-side .bar { height: 14px; border-radius: 4px; display: block; }
+.cmp-side.a .bar { background: var(--s1); } .cmp-side.b .bar { background: var(--s7); }
+.cmp-side .v { font-size: .78rem; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+.cmp-row.total .v { color: var(--ink); font-size: .85rem; }
+.card > h2.fold-h { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.fold-main { flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.fold-btn { flex: none; align-self: flex-start; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--bg); color: var(--muted); display: grid; place-items: center; padding: 0; }
+.fold-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
+.card.collapsed > :not(h2) { display: none !important; }
+.card.collapsed .fold-btn svg { transform: rotate(90deg); }
+.card.collapsed > h2 .seg, .card.collapsed > h2 #clearFilter { display: none; }
+.foot { font-size: .78rem; color: var(--muted); text-align: center; display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: no-preference) { .meter i, .cat .bar i { transition: width .4s ease; } }
+@media (max-width: 370px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* new-month salary window */
+.sal-bg { align-items: center; padding: 16px; }
+.sal-sheet { width: 100%; max-width: 380px; background: var(--surface); border-radius: 28px; overflow: hidden; box-shadow: 0 24px 60px rgba(13, 19, 32, .35); }
+@media (prefers-reduced-motion: no-preference) { .sal-bg:not([hidden]) .sal-sheet { animation: sal-in .35s cubic-bezier(.2, .9, .3, 1.2); } }
+@keyframes sal-in { from { transform: translateY(24px) scale(.96); opacity: 0; } }
+.sal-hero { position: relative; color: #fff; text-align: center; padding: 28px 20px 26px; background: radial-gradient(120% 90% at 85% 0%, #6d8bff 0%, transparent 60%), linear-gradient(150deg, #2b4fd8, #6d4bd8 70%, #a24fc2); }
+.sal-hero::after { content: ""; position: absolute; inset: auto -30px -60px auto; width: 160px; height: 160px; border-radius: 50%; background: rgba(255, 255, 255, .08); }
+.sal-x { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .18); color: #fff; font-size: .85rem; }
+.sal-ic { width: 54px; height: 54px; border-radius: 18px; margin: 0 auto 12px; display: grid; place-items: center; background: rgba(255, 255, 255, .18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25); }
+.sal-ic svg { width: 28px; height: 28px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sal-kicker { font-size: .78rem; font-weight: 600; letter-spacing: .02em; opacity: .85; }
+.sal-hero h3 { margin: 4px 0 6px; font-family: var(--font-display); font-size: 1.6rem; line-height: 1.2; }
+.sal-hero p { margin: 0; font-size: .92rem; opacity: .9; }
+.sal-body { padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 12px; }
+.sal-amount { display: flex; align-items: baseline; justify-content: center; gap: 8px; background: var(--bg); border-radius: 18px; padding: 14px 16px; border: 2px solid transparent; transition: border-color .2s; direction: ltr; }
+.sal-amount:focus-within { border-color: var(--brand); }
+.sal-amount span { font-family: var(--font-display); font-size: 1.6rem; color: var(--muted); }
+.sal-amount input { font-family: var(--font-display); font-size: 2.4rem; font-weight: 700; border: 0; background: none; width: 1.6ch; min-width: 1.6ch; max-width: 8em; text-align: center; outline: none; color: var(--ink); direction: ltr; padding: 0; }
+.sal-chip { align-self: center; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 14px; font-size: .82rem; }
+.sal-chip b { font-weight: 700; }
+.sal-save { padding: 14px; font-size: 1rem; border-radius: 14px; }
+.sal-later { border: 0; background: none; color: var(--muted); font-size: .85rem; padding: 4px; }
+
+/* ===== redesign: calm & clear ===== */
+[hidden] { display: none !important; }
+body { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); -webkit-tap-highlight-color: transparent; }
+.wrap { gap: 16px; padding-top: 6px; }
+.card { border-radius: 24px; padding: 18px; box-shadow: 0 1px 2px rgba(28, 27, 34, .04); }
+.card h2 { font-size: 1.05rem; }
+.month h1, .admin-title, .yhero .big, .status .big, .week-now .left, .w-slide .w-big, .w-slide .w-mid, .whatif-total .big, .streak-n, .amount-in input, .amount-in span, .sal-hero h3, .sal-amount input { font-weight: 700; letter-spacing: -.01em; }
+/* header: greeting + month, arrows on the sides */
+header.top { padding-block: 8px 2px; }
+.month { text-align: start; flex: 1; }
+.month .hello { font-size: .82rem; color: var(--muted); }
+.month h1 { font-size: 1.45rem; }
+.icon-btn { width: 38px; height: 38px; box-shadow: 0 1px 2px rgba(28, 27, 34, .06); }
+/* the ring */
+.status { background: none !important; color: var(--ink); padding: 0; gap: 14px; border-radius: 0; }
+.ring-wrap { position: relative; width: min(260px, 72vw); aspect-ratio: 1; margin: 6px auto 0; }
+.ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.ring-wrap circle { fill: none; stroke-width: 11; stroke-linecap: round; }
+.ring-bg { stroke: var(--line); }
+#ringFg { transition: stroke-dashoffset .9s cubic-bezier(.3, .8, .3, 1), stroke .4s; }
+.ring-c { position: absolute; inset: 12%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2px; }
+.status .lbl { font-size: .82rem; color: var(--muted); opacity: 1; }
+.status .big { font-size: clamp(2.2rem, 11vw, 2.8rem); line-height: 1.05; }
+.status .sub { font-size: .78rem; color: var(--muted); opacity: 1; max-width: 15em; }
+.ring-pill { margin-top: 6px; padding: 4px 11px; border-radius: 999px; font-size: .74rem; font-weight: 600; background: var(--good-soft); color: var(--good); }
+.status.mid .ring-pill { background: var(--warn-soft); color: var(--warn); }
+.status.neg .ring-pill { background: var(--bad-soft); color: var(--bad); }
+.status.neg .big { color: var(--ink); }
+.flow { gap: 10px; }
+.flow > div { background: var(--surface); border-radius: 18px; padding: 11px 10px; text-align: center; box-shadow: 0 1px 2px rgba(28, 27, 34, .04); }
+.flow .k { font-size: .74rem; color: var(--muted); opacity: 1; }
+.flow .v { font-size: 1rem; }
+#incomeArea { text-align: center; }
+.edit-income { color: var(--brand); text-decoration: none; font-weight: 600; opacity: 1; }
+.income-form { justify-content: center; }
+.income-form input { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.income-form button { background: var(--brand); color: var(--brand-ink); }
+/* insights as soft tips */
+.insight { border-radius: 20px; padding: 12px 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 8%, var(--surface)), var(--surface)); }
+.wrapped-pill { background: linear-gradient(120deg, var(--brand), var(--brand2)); box-shadow: 0 6px 18px color-mix(in srgb, var(--brand) 35%, transparent); }
+/* bubbles */
+.bubbles { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; padding: 4px 0; }
+.bub { border: 0; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1px; padding: 6px;
+  background: hsl(var(--h) calc(var(--s) * var(--ic-sat)) var(--ic-bg-l)); color: hsl(var(--h) calc(var(--s) * var(--ic-sat)) var(--ic-fg-l)); transition: transform .15s; }
+.bub:active { transform: scale(.95); }
+.bub svg { width: 22%; max-width: 30px; min-width: 16px; aspect-ratio: 1; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.bub .bn { font-size: .72rem; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bub .bv { font-weight: 700; font-size: .84rem; }
+.bub.lg .bn { font-size: .82rem; } .bub.lg .bv { font-size: 1.12rem; }
+.bub[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--brand); }
+.bub .delta { font-size: .62rem; padding: 0 6px; margin-top: 2px; }
+/* transactions */
+.tx-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.tx-chips button { flex: none; border: 0; border-radius: 999px; padding: 7px 14px; background: var(--bg); color: var(--muted); font-size: .82rem; }
+.tx-chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); font-weight: 600; }
+.search { background: var(--bg); border-radius: 16px; }
+.day-head { font-weight: 600; padding: 0 4px 6px; }
+.days > div > .tx-sw, .days > div > .tx { }
+.tx-sw { position: relative; overflow: hidden; border-radius: 16px; }
+.tx-sw + .tx-sw { margin-top: 2px; }
+.tx-sw .tx-acts { position: absolute; inset-block: 0; left: 0; display: flex; }
+.tx-sw .tx-acts button { width: 76px; border: 0; color: #fff; font-size: .74rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.tx-sw .tx-acts svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tx-sw .tx-acts .ed { background: var(--brand); }
+.tx-sw .tx-acts .rm { background: var(--bad); }
+.tx-sw .tx-acts .rm.sure { background: #a7261f; }
+.tx-sw > .tx { position: relative; background: var(--surface); transition: transform .25s cubic-bezier(.3, .8, .3, 1); touch-action: pan-y; padding: 10px 6px; }
+.tx-sw.open > .tx { transform: translateX(152px); }
+.tx-sw:not(.open):not(.moving) .tx-acts { visibility: hidden; }
+.tx-sw .tx-msg { display: block; font-size: .76rem; padding: 0 6px 6px; }
+.tx .ic { width: 42px; height: 42px; border-radius: 14px; }
+.tx .ic svg { width: 21px; height: 21px; }
+.tx { grid-template-columns: 42px minmax(0, 1fr) auto; gap: 0 12px; }
+.tx .m { font-weight: 600; }
+.tx .a { font-weight: 700; direction: ltr; }
+.tx.can-del:hover { background: var(--surface); }
+.list-total { font-size: .9rem; font-weight: 600; color: var(--muted); margin-inline-start: 6px; white-space: nowrap; }
+.swipe-hint { text-align: center; font-size: .74rem; color: var(--muted); margin: 0; }
+/* bottom navigation */
+.nav { position: fixed; z-index: 15; inset-inline: 0; bottom: 0; display: grid; grid-template-columns: 1fr 1fr 86px 1fr 1fr; align-items: start;
+  padding: 10px max(8px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 10px) max(8px, env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--surface) 86%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid var(--line); }
+.nav button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: .68rem; color: var(--muted); padding: 2px 0; }
+.nav button[aria-pressed="true"] { color: var(--brand); font-weight: 700; }
+.nav svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.nav .fab { position: static; width: 62px; height: 62px; padding: 0; margin: -30px auto 0; border-radius: 22px; justify-content: center;
+  background: linear-gradient(135deg, var(--brand), var(--brand2)); box-shadow: 0 10px 24px color-mix(in srgb, var(--brand) 40%, transparent); }
+.nav .fab svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 2.4; fill: none; stroke-linecap: round; }
+.btn { border-radius: 14px; }
+.sheet { border-radius: 28px 28px 0 0; }
+.seg { border-radius: 12px; }
+@media (prefers-reduced-motion: reduce) { #ringFg, .tx-sw > .tx { transition: none; } }
+</style>
+<style>
+html { color-scheme: light dark; }
+:root { padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+.auth-bg { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 18px; overflow-y: auto; }
+.auth { width: 100%; max-width: 380px; background: var(--surface); border-radius: 28px; overflow: hidden; box-shadow: 0 20px 50px rgba(28, 27, 34, .14); }
+.auth-hero { color: #fff; text-align: center; padding: 30px 20px 26px; background: radial-gradient(120% 90% at 85% 0%, #7c70f0 0%, transparent 60%), linear-gradient(150deg, #4b3fd6, #8a4fd0); }
+.auth-logo { width: 58px; height: 58px; border-radius: 18px; margin: 0 auto 10px; display: grid; place-items: center; background: rgba(255,255,255,.18); font-weight: 700; font-size: 1.6rem; }
+.auth-hero h1 { margin: 0; font-size: 1.7rem; }
+.auth-hero p { margin: 4px 0 0; opacity: .9; font-size: .92rem; }
+.auth-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border-radius: 14px; padding: 4px; gap: 4px; }
+.auth-tabs button { border: 0; background: none; border-radius: 10px; padding: 9px; font-weight: 600; color: var(--muted); }
+.auth-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.auth .field input { font-size: 16px; }
+.auth .btn { padding: 13px; font-size: 1rem; }
+.auth-msg { min-height: 1.2em; margin: 0; font-size: .85rem; color: var(--bad); }
+.auth-note { margin: 0; font-size: .78rem; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="auth-bg" id="authBg" dir="rtl" lang="he" hidden>
+  <form class="auth" id="authForm" novalidate>
+    <div class="auth-hero"><div class="auth-logo">i</div><h1>iSpend</h1><p>לראות לאן הולך הכסף, ולהתחיל לחסוך</p></div>
+    <div class="auth-body">
+      <div class="auth-tabs" role="group" aria-label="כניסה או הרשמה">
+        <button type="button" id="tabLogin" aria-pressed="true">כניסה</button>
+        <button type="button" id="tabSignup" aria-pressed="false">חשבון חדש</button>
+      </div>
+      <div class="field"><label for="authUser">שם משתמש</label><input id="authUser" autocomplete="username" maxlength="15" autocapitalize="off" spellcheck="false"></div>
+      <div class="field" id="nameField" hidden><label for="authName">איך לקרוא לך? (לברכה)</label><input id="authName" autocomplete="given-name" maxlength="20"></div>
+      <div class="field"><label for="authPass">סיסמה</label><input id="authPass" type="password" autocomplete="current-password"></div>
+      <p class="auth-msg" id="authMsg"></p>
+      <button class="btn" type="submit" id="authGo">כניסה</button>
+      <p class="auth-note" id="authNote">אין אפשרות לשחזר סיסמה, אז כדאי לשמור אותה.</p>
+    </div>
+  </form>
+</div>
+
+
+<div class="wrap" dir="rtl" lang="he">
+  <header class="top" id="monthBar">
+    <div class="month">
+      <div class="hello" id="hello"></div>
+      <h1 id="monthTitle">אוקטובר 2026</h1>
+      <div class="range num" id="rangeLabel"></div>
+    </div>
+    <button class="icon-btn" id="prev" aria-label="חודש קודם"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="icon-btn" id="next" aria-label="חודש הבא"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </header>
+
+  <div id="flowView" style="display:contents">
+  <div class="banner" id="banner" hidden></div>
+
+  <div class="banner" id="cardPrompt" hidden></div>
+
+  <section class="status" id="status" aria-label="מצב החודש">
+    <div class="ring-wrap">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="ring-bg" cx="60" cy="60" r="52"/>
+        <circle id="ringFg" cx="60" cy="60" r="52" stroke="var(--good)" stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+      </svg>
+      <div class="ring-c">
+        <div class="lbl" id="statusLabel">יתרה החודש</div>
+        <div class="big num" id="statusBig">—</div>
+        <div class="sub" id="statusSub">טוען…</div>
+        <div class="ring-pill" id="ringPill" hidden></div>
+      </div>
+    </div>
+    <div class="flow">
+      <div><div class="k">נכנס</div><div class="v num" id="fIncome">—</div></div>
+      <div><div class="k">קבועות</div><div class="v num" id="fFixed">—</div></div>
+      <div><div class="k">משתנות</div><div class="v num" id="fVar">—</div></div>
+    </div>
+    <div id="incomeArea"></div>
+  </section>
+
+  <button class="wrapped-pill" id="wrappedPill" hidden></button>
+
+  <div class="insights" id="instSuggest" aria-live="polite"></div>
+  <div class="insights" id="insights" aria-live="polite"></div>
+
+
+  <section class="card" id="weekCard">
+    <h2>תקציב שבועי להוצאות משתנות <span class="side num" id="weekBudget"></span></h2>
+    <div id="weekNow"></div>
+    <div class="weeks" id="weeks"></div>
+  </section>
+
+  <section class="card">
+    <h2>
+      <span>לאן הלך הכסף <span class="side" style="font-weight:400;font-size:.75rem;color:var(--muted)">מול החודש הקודם</span></span>
+      <span class="seg" role="group" aria-label="סוג הוצאה">
+        <button id="segVar" aria-pressed="true">משתנות</button>
+        <button id="segFixed" aria-pressed="false">קבועות</button>
+      </span>
+    </h2>
+    <div class="bubbles" id="cats"></div>
+  </section>
+
+  <section class="card" id="instCard" hidden>
+    <h2>תשלומים פתוחים <span class="side num" id="instLeft"></span></h2>
+    <div id="instList"></div>
+  </section>
+
+  <section class="card" id="payCard">
+    <h2>לפי אמצעי תשלום <span class="side num" id="payTotal"></span></h2>
+    <div class="cats" id="payMethods"></div>
+  </section>
+
+  </div>
+
+  <div id="txView" hidden style="display:contents">
+  <section class="card">
+    <h2><span><span id="listTitle">כל התנועות</span> <span class="list-total num" id="listTotal"></span></span> <button class="seg" id="clearFilter" hidden style="border:0;padding:4px 10px;font-size:.78rem">הצג הכול</button></h2>
+    <div class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 100-14 7 7 0 000 14z M21 21l-5-5"/></svg>
+      <input type="search" id="txSearch" placeholder="חיפוש לפי עסק, קטגוריה או כרטיס" aria-label="חיפוש תנועות" autocomplete="off"></div>
+    <div class="tx-chips" id="txChips" role="group" aria-label="סינון">
+      <button data-kind="all" aria-pressed="true">הכול</button><button data-kind="exp" aria-pressed="false">הוצאות</button><button data-kind="inc" aria-pressed="false">הכנסות</button><button data-kind="inst" aria-pressed="false">בתשלומים</button>
+    </div>
+    <div class="days" id="days"></div>
+    <p class="swipe-hint">מחליקים תנועה ימינה (או לוחצים עליה) לעריכה או מחיקה</p>
+  </section>
+  </div>
+
+  <div id="yearView" hidden style="display:contents">
+    <div class="year-pick" id="yearPick" role="group" aria-label="שנה"></div>
+    <section class="yhero">
+      <div class="big num" id="yBig">—</div>
+    </section>
+    <div class="ytiles">
+      <div class="ytile"><div class="k"><i class="dot" style="background:var(--s1)"></i>הכנסות</div><div class="v num" id="yInc">—</div></div>
+      <div class="ytile"><div class="k"><i class="dot" style="background:var(--s2)"></i>הוצאות</div><div class="v num" id="yExp">—</div></div>
+      <div class="ytile"><div class="k"><i class="dot" style="background:var(--s3)"></i>נשאר</div><div class="v num" id="yLeft">—</div></div>
+    </div>
+
+    <section class="card">
+      <h2>הכנסות מול הוצאות לפי חודש</h2>
+      <div class="legend"><span><i class="dot" style="background:var(--s1)"></i>הכנסות</span><span><i class="dot" style="background:var(--s2)"></i>הוצאות</span></div>
+      <div class="chart-box" id="monthsChart"></div>
+    </section>
+
+    <section class="card">
+      <h2>על מה הוצאתי השנה</h2>
+      <div class="donut-wrap">
+        <div class="chart-box" id="donut" style="overflow:visible"></div>
+        <div class="cat-legend" id="catLegend"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>השנה במספרים</h2>
+      <div class="highlights" id="highlights"></div>
+    </section>
+
+    <section class="card">
+      <h2>חודש מול חודש</h2>
+      <div class="cmp-pick">
+        <select id="cmpA" aria-label="חודש ראשון"></select>
+        <span class="vs">מול</span>
+        <select id="cmpB" aria-label="חודש שני"></select>
+      </div>
+      <p class="cmp-sum" id="cmpSum"></p>
+      <div class="cmp" id="cmpRows"></div>
+      <p class="note" style="margin:0">מסודר לפי גודל ההפרש. לחיצה על שורה מציגה את התנועות של שני החודשים.</p>
+    </section>
+
+    <section class="card">
+      <h2>לוח ההוצאות של השנה <span class="side">כל ריבוע הוא יום</span></h2>
+      <div class="chart-box heat-box" id="heatmap"></div>
+      <div class="heat-legend"><span>פחות</span><i class="hl0"></i><i class="hl1"></i><i class="hl2"></i><i class="hl3"></i><i class="hl4"></i><span>יותר</span></div>
+      <p class="note" id="heatNote" style="margin:0"></p>
+    </section>
+
+    <section class="card">
+      <h2>מה אם הייתי מוציא פחות?</h2>
+      <div class="whatif-total"><div><div class="note">חיסכון בחודש</div><div class="big num" id="wiMonth">₪0</div></div><div><div class="note">חיסכון בשנה</div><div class="big num" id="wiYear">₪0</div></div></div>
+      <div class="whatif" id="whatif"></div>
+      <p class="note" style="margin:0">לפי הממוצע החודשי של כל קטגוריה בשלושת החודשים המלאים האחרונים.</p>
+    </section>
+
+  </div>
+
+  <div id="adminView" hidden style="display:contents">
+    <h1 class="admin-title">הגדרות</h1>
+
+    <section class="card">
+      <h2>משכורת לפי חודש</h2>
+      <p class="note" style="margin:0">הזינו את המשכורת שנכנסה בכל חודש, מיולי 2025. בחודש שעוד לא הוזנה, האתר מעריך לפי החודש האחרון שהוזן.</p>
+      <div class="edit-list" id="salList"></div>
+      <div class="save-row"><button class="btn" id="saveSal">שמירת משכורות</button><span id="salMsg"></span></div>
+    </section>
+
+    <section class="card">
+      <h2>קטגוריות</h2>
+      <p class="note" style="margin:0">סמנו "קבועה" להוצאות שחוזרות כל חודש באותו סכום, כמו מנויים וביטוח. שינוי שם לא משנה תנועות שכבר נרשמו.</p>
+      <div class="edit-list" id="catList"></div>
+      <button class="add-row" id="addCatRow">+ קטגוריה חדשה</button>
+      <div class="save-row"><button class="btn" id="saveCats">שמירת קטגוריות</button><span id="catMsg"></span></div>
+    </section>
+
+    <section class="card">
+      <h2>אמצעי תשלום</h2>
+      <div class="edit-list" id="payList"></div>
+      <button class="add-row" id="addPayRow">+ אמצעי תשלום חדש</button>
+      <div class="save-row"><button class="btn" id="savePay">שמירת אמצעי תשלום</button><span id="payMsg"></span></div>
+    </section>
+
+    <section class="card">
+      <h2>כרטיסים מהארנק</h2>
+      <p class="note" style="margin:0">כל כרטיס שמשלמים בו ב-Apple Pay מופיע כאן עם השם שלו בארנק. בחרו לאיזה אמצעי תשלום הוא שייך. כרטיס חדש יופיע כאן לבד אחרי התשלום הראשון בו.</p>
+      <div class="edit-list" id="cardMapList"></div>
+    </section>
+
+    <section class="card">
+      <h2>מחזור החודש</h2>
+      <div class="row">
+        <label for="startDay">החודש מתחיל ביום</label>
+        <input type="number" id="startDay" min="1" max="28" value="1" style="width:5em">
+      </div>
+      <p class="note" style="margin:0">העברה שקיבלתם בחזרה על הוצאה משותפת מקזזת את ההוצאה באותה קטגוריה.</p>
+    </section>
+
+    <details id="bankBox" hidden>
+      <summary><span>חיבור הבנק וכרטיסי האשראי <span class="pill" id="bankPill">לא מחובר</span></span></summary>
+      <div class="body">
+        <p class="note" style="margin:0">משיכה אוטומטית פעמיים ביום מכל הכרטיסים והבנק לגיליון, דרך כלי קוד פתוח בשם moneyman שרץ בחשבון GitHub שלכם. הסיסמאות נשמרות רק אצלכם, כסוד מוצפן ב-GitHub. ההוראות המלאות נמצאות בשיחה עם Claude.</p>
+        <div class="note" id="bankStatus"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>חיבור Apple Pay (כל תשלום נכנס לבד)</summary>
+      <div class="body">
+        <p class="note" style="margin:0">באייפון: <b>קיצורים ← אוטומציה ← + ← עסקה</b>, בוחרים את כל הכרטיסים ו<b>הפעל מיד</b>. מוסיפים פעולה <b>קבלת התוכן של כתובת אינטרנט</b>:</p>
+        <ol>
+          <li><b>כתובת:</b> מעתיקים את הכתובת האישית <button class="btn ghost" type="button" id="copyPayUrl" style="padding:3px 12px;font-size:.8rem">העתקה</button></li>
+          <li>לוחצים על החץ: שיטה <b>POST</b>, גוף הבקשה <b>JSON</b>.</li>
+          <li>שדות טקסט: <code>token</code> = המפתח האישי <button class="btn ghost" type="button" id="copyPayTok" style="padding:3px 12px;font-size:.8rem">העתקה</button>, <code>amount</code> = כמות, <code>merchant</code> = בית העסק, <code>card</code> = כרטיס.</li>
+          <li>אחריה פעולה <b>הצגת עדכון</b> עם "תוכן של כתובת אינטרנט", כדי לראות שזה נרשם.</li>
+        </ol>
+        <p class="note" style="margin:0" id="payCopied"></p>
+      </div>
+    </details>
+
+    <section class="card">
+      <h2>החשבון שלי</h2>
+      <div class="row" style="justify-content:space-between"><span class="note" id="whoAmI"></span><button class="btn ghost" type="button" id="logoutBtn">התנתקות</button></div>
+    </section>
+
+  </div>
+
+  <div class="foot" id="foot">טוען נתונים…</div>
+</div>
+
+<nav class="nav" dir="rtl" lang="he" aria-label="ניווט">
+  <button id="navHome" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8 M5 10v11h14V10 M10 21v-6h4v6"/></svg>בית</button>
+  <button id="navTx" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16 M4 12h16 M4 18h10"/></svg>תנועות</button>
+  <div><button class="fab" id="fab" aria-label="הוספת תנועה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14 M5 12h14"/></svg></button></div>
+  <button id="tabYear" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10 M10 20V4 M16 20v-7 M22 20H2"/></svg>שנתי</button>
+  <button id="tabAdmin" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>הגדרות</button>
+</nav>
+
+<div class="wrapped" id="wrapped" hidden dir="rtl" lang="he" role="dialog" aria-modal="true" aria-label="סיכום החודש">
+  <div class="w-bars" id="wBars"></div>
+  <button class="w-close" id="wClose" aria-label="סגירה">✕</button>
+  <div class="w-slide" id="wSlide"></div>
+  <button class="w-nav w-next" id="wNext" aria-label="הבא"></button>
+  <button class="w-nav w-prev" id="wPrev" aria-label="הקודם"></button>
+</div>
+
+<div class="sheet-bg" id="catSheetBg" hidden dir="rtl" lang="he">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="catSheetTitle">
+    <h3><span class="cs-head" id="catSheetTitle"></span><button type="button" class="x" id="closeCatSheet" aria-label="סגירה">✕</button></h3>
+    <div class="cs-sum" id="catSheetSum"></div>
+    <div class="days" id="catSheetList"></div>
+  </div>
+</div>
+
+<div class="sheet-bg" id="sheetBg" hidden dir="rtl" lang="he" style="z-index:30">
+  <form class="sheet" id="addForm" role="dialog" aria-modal="true" aria-labelledby="addTitle" novalidate>
+    <h3><span id="addTitle">הוספת תנועה</span><button type="button" class="x" id="closeAdd" aria-label="סגירה">✕</button></h3>
+    <div class="kind" role="group" aria-label="סוג">
+      <button type="button" id="kExp" aria-pressed="true">הוצאה</button>
+      <button type="button" id="kInc" aria-pressed="false">קיבלתי כסף</button>
+    </div>
+    <div class="amount-in"><span>₪</span><input id="addAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" aria-label="סכום"></div>
+    <div class="field"><label for="addDesc">תיאור</label><input id="addDesc" type="text" placeholder="למשל: קניות בסופר" autocomplete="off"></div>
+    <div class="two">
+      <div class="field"><label for="addCat">קטגוריה</label><select id="addCat"></select></div>
+      <div class="field"><label for="addCard" id="addCardLbl">אמצעי תשלום</label><select id="addCard"></select></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="addDate">תאריך</label><input id="addDate" type="date"></div>
+      <div class="field" id="instField"><label for="addInst">תשלומים</label><select id="addInst"></select></div>
+    </div>
+    <p class="note" id="instHint" style="margin:0" hidden></p>
+    <p class="note" id="addHint" style="margin:0" hidden>העברה מחבר על הוצאה משותפת? בחרו את הקטגוריה של ההוצאה והיא תקוזז ממנה. משכורת או הכנסה אחרת: בחרו "הכנסה".</p>
+    <p class="form-msg" id="addMsg"></p>
+    <button type="submit" class="btn" id="addSave" style="padding:13px">שמירה</button>
+  </form>
+</div>
+
+<div class="sheet-bg sal-bg" id="salBg" hidden dir="rtl" lang="he" style="z-index:31">
+  <form class="sal-sheet" id="salForm" role="dialog" aria-modal="true" aria-labelledby="salTitle" novalidate>
+    <div class="sal-hero">
+      <button type="button" class="sal-x" id="salClose" aria-label="סגירה">✕</button>
+      <span class="sal-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3z M12 15a3 3 0 100-6 3 3 0 000 6z M6 10v.01 M18 14v.01"/></svg></span>
+      <div class="sal-kicker" id="salKicker">חודש חדש התחיל</div>
+      <h3 id="salTitle">המשכורת של נובמבר</h3>
+      <p id="salText">כמה נכנס לך החודש?</p>
+    </div>
+    <div class="sal-body">
+      <label class="sal-amount"><span>₪</span><input id="salAmount" type="text" inputmode="decimal" placeholder="0" aria-label="סכום המשכורת" autocomplete="off"></label>
+      <button type="button" class="sal-chip" id="salSame" hidden></button>
+      <p class="form-msg" id="salPopMsg"></p>
+      <button type="submit" class="btn sal-save" id="salPopSave">שמירה</button>
+      <button type="button" class="sal-later" id="salLater">אזכיר לך מחר</button>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* accounts and storage on Supabase. The page code talks to it through the same small set of calls it used with the sheet. */
+const SUPA_URL = "https://kgggpqoaporqkxcdngqn.supabase.co", SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2dwcW9hcG9ycWt4Y2RuZ3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjY5MDIsImV4cCI6MjEwODAwMjkwMn0.5VIFb-E28SroABOSisX4CYR2COEO1Bcfj2K_yx-wzJQ";
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+let USER_NAME = "", PROFILE = null;
+// any user name (Hebrew too) becomes a technical e-mail address the login system accepts
+const emailOf = u => "u" + Array.from(new TextEncoder().encode(u.trim().toLowerCase())).map(b => b.toString(16).padStart(2, "0")).join("") + "@users.ispend.app";
+
+function showLogin() {
+  return new Promise(resolve => {
+    const g = id => document.getElementById(id);
+    let mode = "login";
+    const setMode = m => {
+      mode = m;
+      g("tabLogin").setAttribute("aria-pressed", m === "login"); g("tabSignup").setAttribute("aria-pressed", m === "signup");
+      g("nameField").hidden = m !== "signup"; g("authGo").textContent = m === "login" ? "כניסה" : "יצירת חשבון";
+      g("authPass").autocomplete = m === "login" ? "current-password" : "new-password"; g("authMsg").textContent = "";
+    };
+    g("tabLogin").onclick = () => setMode("login"); g("tabSignup").onclick = () => setMode("signup");
+    g("authBg").hidden = false;
+    g("authForm").onsubmit = async e => {
+      e.preventDefault();
+      const user = g("authUser").value.trim(), pass = g("authPass").value, name = g("authName").value.trim();
+      const msg = t => { g("authMsg").textContent = t; };
+      if (user.length < 2) return msg("שם משתמש של 2 תווים לפחות.");
+      if (pass.length < 6) return msg("סיסמה של 6 תווים לפחות.");
+      g("authGo").disabled = true; msg("");
+      try {
+        let res;
+        if (mode === "signup") res = await sb.auth.signUp({ email: emailOf(user), password: pass, options: { data: { username: user, display_name: name || user } } });
+        else res = await sb.auth.signInWithPassword({ email: emailOf(user), password: pass });
+        if (res.error) {
+          const m = res.error.message || "";
+          msg(/already registered|already exists/i.test(m) ? "שם המשתמש הזה תפוס. נסו שם אחר."
+            : /invalid login|invalid credentials/i.test(m) ? "שם משתמש או סיסמה לא נכונים."
+            : /confirm/i.test(m) ? "צריך לכבות אימות מייל בהגדרות של Supabase."
+            : /database error/i.test(m) ? "שם המשתמש הזה תפוס. נסו שם אחר."
+            : "משהו השתבש: " + m);
+        } else if (!res.data.session) msg("החשבון נוצר, אבל צריך לכבות אימות מייל בהגדרות של Supabase.");
+        else { g("authBg").hidden = true; resolve(res.data.session); return; }
+      } catch (err) { msg("אין חיבור לאינטרנט. נסו שוב."); }
+      g("authGo").disabled = false;
+    };
+  });
+}
+
+async function startApp() {
+  let { data: { session } } = await sb.auth.getSession();
+  if (!session) session = await showLogin();
+  const uid = session.user.id;
+  const { data: prof } = await sb.from("profiles").select("*").eq("id", uid).single();
+  PROFILE = prof || { settings: [] };
+  USER_NAME = (PROFILE.display_name || PROFILE.username || "").trim();
+  const payUrl = SUPA_URL + "/rest/v1/rpc/add_pay?apikey=" + SUPA_KEY;
+  const copy = (txt, label) => { try { navigator.clipboard.writeText(txt); document.getElementById("payCopied").textContent = label + " הועתק."; } catch (e) { prompt("העתיקו:", txt); } };
+  document.getElementById("copyPayUrl").onclick = () => copy(payUrl, "הכתובת");
+  document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
+  document.getElementById("whoAmI").textContent = "מחובר בתור " + (PROFILE.username || "");
+  document.getElementById("logoutBtn").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  try { render(); } catch (e) {}
+  return makeSupaAdapter(uid);
+}
+
+function makeSupaAdapter(uid) {
+  const COL = s => s.split("").reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1;
+  const parse = a1 => {
+    const m = a1.match(/^'?(.*?)'?!([A-Z]+)(\d+)(?::([A-Z]+)(\d+)?)?$/);
+    return { tab: m[1], c0: COL(m[2]), r0: +m[3], c1: m[4] ? COL(m[4]) : COL(m[2]), r1: m[5] ? +m[5] : (m[4] ? Infinity : +m[3]) };
+  };
+  const trim = rows => {
+    const out = rows.map(r => { const a = (r || []).map(x => x == null ? "" : String(x)); let n = a.length; while (n && a[n - 1] === "") n--; return a.slice(0, n); });
+    let e = out.length; while (e && !out[e - 1].length) e--; return out.slice(0, e);
+  };
+  const fail = error => { throw { code: "tool_error", message: error && error.message }; };
+  let txRows = [];
+  const loadTx = async () => {
+    const { data, error } = await sb.from("tx").select("id,vals").order("id"); if (error) fail(error);
+    txRows = data || [];
+    // the year starts at the first transaction
+    txRows.forEach(r => { const d = String((r.vals || [])[0] || ""); const m = d.match(/^(\d{4})-(\d{2})/); if (m) FIRST_MONTH = Math.min(FIRST_MONTH, +m[1] * 12 + +m[2] - 1); });
+    return txRows;
+  };
+  const loadSettings = async () => {
+    const { data, error } = await sb.from("profiles").select("settings").eq("id", uid).single(); if (error) fail(error);
+    return Array.isArray(data.settings) ? data.settings : [];
+  };
+  const run = async (tool, input) => {
+    if (tool === "update_spreadsheet") {
+      const r = input.requests[0].deleteDimension.range;
+      const row = txRows[r.startIndex - 1]; if (!row) fail({ message: "row" });
+      const { error } = await sb.from("tx").delete().eq("id", row.id); if (error) fail(error);
+      txRows.splice(r.startIndex - 1, 1); return { payload: { ok: true } };
+    }
+    const p = parse(input.range);
+    if (tool === "get_values") {
+      if (p.tab === "עסקאות") { const rows = await loadTx(); return { payload: { values: trim(rows.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r.vals || []).slice(p.c0, p.c1 + 1))) } }; }
+      if (p.tab === "הגדרות") { const g = await loadSettings(); return { payload: { values: trim(g.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r || []).slice(p.c0, p.c1 + 1))) } }; }
+      return { payload: { values: [] } };
+    }
+    if (tool === "append_values") {
+      if (p.tab !== "עסקאות") fail({ message: "append" });
+      const { data, error } = await sb.from("tx").insert(input.values.map(v => ({ user_id: uid, vals: v.map(x => x == null ? "" : String(x)) }))).select("id,vals"); if (error) fail(error);
+      txRows.push(...(data || [])); return { payload: { ok: true } };
+    }
+    if (tool === "update_values") {
+      if (p.tab === "עסקאות") {
+        for (let i = 0; i < input.values.length; i++) {
+          const row = txRows[p.r0 - 2 + i]; if (!row) fail({ message: "row" });
+          const vals = (row.vals || []).slice(); input.values[i].forEach((v, j) => { while (vals.length <= p.c0 + j) vals.push(""); vals[p.c0 + j] = v == null ? "" : String(v); });
+          const { error } = await sb.from("tx").update({ vals }).eq("id", row.id); if (error) fail(error);
+          row.vals = vals;
+        }
+        return { payload: { ok: true } };
+      }
+      if (p.tab === "הגדרות") {
+        const g = await loadSettings();
+        input.values.forEach((rowVals, i) => {
+          const ri = p.r0 - 2 + i; while (g.length <= ri) g.push([]);
+          const r = (g[ri] || []).slice(); rowVals.forEach((v, j) => { while (r.length <= p.c0 + j) r.push(""); r[p.c0 + j] = v == null ? "" : String(v); }); g[ri] = r;
+        });
+        const { error } = await sb.from("profiles").update({ settings: trim(g) }).eq("id", uid); if (error) fail(error);
+        return { payload: { ok: true } };
+      }
+      return { payload: { ok: true } };
+    }
+    fail({ message: tool });
+  };
+  return {
+    callTool: (server, tool, input) => run(tool, input),
+    watchTool: (server, tool, input, handler, opts) => {
+      const go = () => run(tool, input).then(result => handler({ type: "data", result }), error => handler({ type: "error", error }));
+      go(); const t = setInterval(go, Math.min((opts && opts.refetchInterval) || 3600000, 600000)); return () => clearInterval(t);
+    },
+    invalidate: () => Promise.resolve()
+  };
+}
+</script>
+<script>
+const SHEET_ID = "1CwS8tTfMiKgwk-ke0ScWgYEYvABhqIQltITGK3d9Px8";
+const SERVER = "Google Sheets";
+const R_APPLE = "'עסקאות'!A2:I"; // I: number of payments (empty = one)
+const R_BANK = "'_moneyman'!A2:L";
+const R_SETTINGS = "'הגדרות'!A2:O300";
+const R_MANUAL = "'הוצאות יומיות'!D4:I";
+// Earlier monthly files (July 2025 – September 2026), read as they are. October 2026 onward lives in the main file.
+const HISTORY = [];
+let FIRST_MONTH = new Date().getFullYear() * 12 + new Date().getMonth(); // moved back to the first transaction once data loads
+const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+const WEEKDAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+let CATS = ["בילויים","קניות","שופינג","רכישות בדיגיטל","קניות לבית","סופר","אוכל ושתיה","טיפוח ופארם","אירועים","חופשות","מנוי חודשי","הוצאות שוטפות","מתנות","כושר","ביטוח","חתונה"];
+let PAY = ["כרטיס אשראי","חשבון בנק","מזומן"];
+let FIXED = new Set(["מנוי חודשי", "ביטוח"]);
+let salaries = {};
+let cardMap = {}; // card name as Apple Pay reports it → the viewer's payment method
+const COMPANY = {
+  isracard: "ישראכרט", amex: "אמריקן אקספרס", max: "מקס", visaCal: "כאל",
+  hapoalim: "בנק הפועלים", leumi: "בנק לאומי", discount: "דיסקונט", mercantile: "מרכנתיל", mizrahi: "מזרחי טפחות",
+  otsarHahayal: "אוצר החייל", beinleumi: "הבינלאומי", massad: "מסד", yahav: "יהב", union: "איגוד", oneZero: "וואן זירו"
+};
+const BANKS = new Set(["hapoalim","leumi","discount","mercantile","mizrahi","otsarHahayal","beinleumi","massad","yahav","union","oneZero","beyahadBishvilha"]);
+// Monthly credit-card bills as they appear in the bank account; skipped so card spending isn't counted twice.
+const CARD_BILL_WORDS = ["ישראכרט","מקס איט","max it","לאומי קארד","לאומי קרד","כאל","כרטיסי אשראי","כרטיסי א","אמריקן אקספרס","אמקס","ויזה","דיינרס","isracard","cal "];
+
+const CATEGORY_RULES = [
+  ["חופשות", ["מלון","hotel","booking","airbnb","אל על","el al","ישראייר","ארקיע","wizz","ryanair"]],
+  ["טיפוח ופארם", ["סופר-פארם","סופר פארם","super-pharm","superpharm","גוד פארם","ניו פארם"]],
+  ["סופר", ["שופרסל","רמי לוי","ויקטורי","יוחננוף","טיב טעם","אושר עד","חצי חינם","יינות ביתן","מגה בעיר","am:pm","ampm","קרפור","carrefour","מחסני השוק"]],
+  ["אוכל ושתיה", ["קפה","cafe","coffee","ארומה","מקדונלד","mcdonald","בורגר","burger","פיצה","pizza","וולט","wolt","תן ביס","10bis","סיבוס","cibus","סושי","מסעדה","דומינו"]],
+  ["מנוי חודשי", ["netflix","spotify","apple.com","icloud","disney","youtube","openai","chatgpt","anthropic","claude"]],
+  ["כושר", ["הולמס","holmes","גו אקטיב","go active","כושר","gym","fitness"]],
+  ["הוצאות שוטפות", ["פז ","דלק","סונול","דור אלון","yellow","חברת החשמל","חשמל","בזק","פרטנר","סלקום","רב קו","rav-kav","gett","פנגו","pango","סלופארק","cellopark","מוביט","moovit","סופרגז","אמישראגז","ארנונה","עירית","עיריית","תאגיד מים","ועד בית"]],
+  ["ביטוח", ["ביטוח","הראל","מגדל","הפניקס","מנורה","איילון","ליברה"]],
+  ["רכישות בדיגיטל", ["aliexpress","amazon","shein","temu","ebay","ksp","ivory","paypal"]],
+  ["שופינג", ["זארה","zara","h&m","קסטרו","castro","פוקס","fox","renuar","רנואר","terminal x","nike","adidas","אמריקן איגל"]],
+  ["קניות לבית", ["איקאה","ikea","הום סנטר","home center","אייס","ace ","מקס סטוק","max stock","ורדינון"]],
+  ["בילויים", ["סינמה","cinema","yes planet","רב חן","eventim","לאן","leaan"]],
+];
+const ISSUER_CATS = [
+  ["מסעדות","אוכל ושתיה"],["מזון","סופר"],["דלק","הוצאות שוטפות"],["תחבורה","הוצאות שוטפות"],["פנאי","בילויים"],
+  ["אופנה","שופינג"],["קוסמטיקה","טיפוח ופארם"],["טיפוח","טיפוח ופארם"],["ביטוח","ביטוח"],["עיצוב הבית","קניות לבית"],
+  ["ריהוט","קניות לבית"],["טיסות","חופשות"],["תיירות","חופשות"],["תקשורת","הוצאות שוטפות"],["מחשבים","רכישות בדיגיטל"],["ספורט","כושר"]
+];
+const SHEET_CATS = new Set(["בילויים","קניות","שופינג","רכישות בדיגיטל","קניות לבית","סופר","אוכל ושתיה","טיפוח ופארם","אירועים","חופשות","מנוי חודשי","הוצאות שוטפות","מתנות","כושר","ביטוח","חתונה"]);
+
+/* Israeli merchants as card terminals report them (often the English company name) → Hebrew name + category */
+const MERCHANTS = [
+  // supermarkets
+  ["yohananof", "יוחננוף", "סופר"], ["shufersal", "שופרסל", "סופר"], ["rami levy", "רמי לוי", "סופר"], ["victory", "ויקטורי", "סופר"],
+  ["osher ad", "אושר עד", "סופר"], ["tiv taam", "טיב טעם", "סופר"], ["hazi hinam", "חצי חינם", "סופר"], ["hatzi hinam", "חצי חינם", "סופר"],
+  ["yeinot bitan", "יינות ביתן", "סופר"], ["mega ba", "מגה בעיר", "סופר"], ["carrefour", "קרפור", "סופר"], ["am:pm", "AM:PM", "סופר"], ["ampm", "AM:PM", "סופר"],
+  ["super yuda", "סופר יודה", "סופר"], ["keshet teamim", "קשת טעמים", "סופר"], ["machsanei hashuk", "מחסני השוק", "סופר"], ["fresh market", "פרשמרקט", "סופר"],
+  ["freshmarket", "פרשמרקט", "סופר"], ["super dosh", "סופר דוש", "סופר"], ["zol vebegadol", "זול ובגדול", "סופר"], ["good market", "גוד מרקט", "סופר"],
+  ["cool market", "קול מרקט", "סופר"], ["yesh hesed", "יש חסד", "סופר"], ["mahsaney", "מחסני השוק", "סופר"],
+  // pharm
+  ["super-pharm", "סופר-פארם", "טיפוח ופארם"], ["super pharm", "סופר-פארם", "טיפוח ופארם"], ["superpharm", "סופר-פארם", "טיפוח ופארם"],
+  ["good pharm", "גוד פארם", "טיפוח ופארם"], ["new pharm", "ניו פארם", "טיפוח ופארם"], ["be pharm", "Be", "טיפוח ופארם"],
+  // food & coffee
+  ["aroma", "ארומה", "אוכל ושתיה"], ["cofix", "קופיקס", "אוכל ושתיה"], ["cafe greg", "קפה גרג", "אוכל ושתיה"], ["landwer", "לנדוור", "אוכל ושתיה"],
+  ["arcaffe", "ארקפה", "אוכל ושתיה"], ["cafe cafe", "קפה קפה", "אוכל ושתיה"], ["mcdonald", "מקדונלד'ס", "אוכל ושתיה"], ["burger king", "בורגר קינג", "אוכל ושתיה"],
+  ["burgeranch", "בורגראנץ'", "אוכל ושתיה"], ["domino", "דומינו'ס", "אוכל ושתיה"], ["pizza hut", "פיצה האט", "אוכל ושתיה"], ["kfc", "KFC", "אוכל ושתיה"],
+  ["japanika", "ג'פניקה", "אוכל ושתיה"], ["moses", "מוזס", "אוכל ושתיה"], ["wolt", "וולט", "אוכל ושתיה"], ["10bis", "תן ביס", "אוכל ושתיה"],
+  ["tenbis", "תן ביס", "אוכל ושתיה"], ["cibus", "סיבוס", "אוכל ושתיה"], ["starbucks", "סטארבקס", "אוכל ושתיה"], ["sabich", "סביח", "אוכל ושתיה"],
+  ["shawarma", "שווארמה", "אוכל ושתיה"], ["humus", "חומוס", "אוכל ושתיה"], ["hummus", "חומוס", "אוכל ושתיה"], ["bbb", "BBB", "אוכל ושתיה"],
+  ["golda", "גולדה", "אוכל ושתיה"], ["anita", "אניטה", "אוכל ושתיה"], ["roladin", "רולדין", "אוכל ושתיה"], ["lehamim", "לחמים", "אוכל ושתיה"],
+  // fuel & transport
+  ["sonol", "סונול", "הוצאות שוטפות"], ["dor alon", "דור אלון", "הוצאות שוטפות"], ["delek", "דלק", "הוצאות שוטפות"], ["paz ", "פז", "הוצאות שוטפות"],
+  ["yellow", "Yellow", "הוצאות שוטפות"], ["ten petrol", "TEN", "הוצאות שוטפות"], ["gett", "Gett", "הוצאות שוטפות"], ["yango", "יאנגו", "הוצאות שוטפות"],
+  ["rav kav", "רב-קו", "הוצאות שוטפות"], ["ravkav", "רב-קו", "הוצאות שוטפות"], ["moovit", "מוביט", "הוצאות שוטפות"], ["pango", "פנגו", "הוצאות שוטפות"],
+  ["cellopark", "סלופארק", "הוצאות שוטפות"], ["israel railways", "רכבת ישראל", "הוצאות שוטפות"], ["rakevet", "רכבת ישראל", "הוצאות שוטפות"],
+  ["partner", "פרטנר", "הוצאות שוטפות"], ["cellcom", "סלקום", "הוצאות שוטפות"], ["pelephone", "פלאפון", "הוצאות שוטפות"], ["bezeq", "בזק", "הוצאות שוטפות"],
+  ["hot mobile", "הוט מובייל", "הוצאות שוטפות"], ["golan telecom", "גולן טלקום", "הוצאות שוטפות"], ["israel electric", "חברת החשמל", "הוצאות שוטפות"],
+  // shopping
+  ["zara", "זארה", "שופינג"], ["h&m", "H&M", "שופינג"], ["castro", "קסטרו", "שופינג"], ["renuar", "רנואר", "שופינג"], ["terminal x", "טרמינל X", "שופינג"],
+  ["pull&bear", "Pull&Bear", "שופינג"], ["pull and bear", "Pull&Bear", "שופינג"], ["bershka", "ברשקה", "שופינג"], ["mango", "מנגו", "שופינג"],
+  ["nike", "נייקי", "שופינג"], ["adidas", "אדידס", "שופינג"], ["american eagle", "אמריקן איגל", "שופינג"], ["golf &", "גולף", "שופינג"],
+  ["hoodies", "הודיס", "שופינג"], ["fox", "פוקס", "שופינג"], ["shein", "שיין", "שופינג"], ["factory 54", "פקטורי 54", "שופינג"],
+  // home
+  ["ikea", "איקאה", "קניות לבית"], ["home center", "הום סנטר", "קניות לבית"], ["ace ", "אייס", "קניות לבית"], ["max stock", "מקס סטוק", "קניות לבית"],
+  ["hamashbir", "המשביר", "קניות לבית"],
+  // digital & subscriptions
+  ["apple.com", "Apple", "מנוי חודשי"], ["itunes", "Apple", "מנוי חודשי"], ["netflix", "נטפליקס", "מנוי חודשי"], ["spotify", "ספוטיפיי", "מנוי חודשי"],
+  ["youtube", "יוטיוב", "מנוי חודשי"], ["openai", "ChatGPT", "מנוי חודשי"], ["chatgpt", "ChatGPT", "מנוי חודשי"], ["anthropic", "Claude", "מנוי חודשי"],
+  ["claude.ai", "Claude", "מנוי חודשי"], ["disney", "דיסני+", "מנוי חודשי"], ["supercell", "קלאש אוף קלאנס", "רכישות בדיגיטל"],
+  ["playstation", "פלייסטיישן", "רכישות בדיגיטל"], ["steam", "Steam", "רכישות בדיגיטל"], ["aliexpress", "עלי אקספרס", "רכישות בדיגיטל"],
+  ["amazon", "אמזון", "רכישות בדיגיטל"], ["temu", "טמו", "רכישות בדיגיטל"], ["ksp", "KSP", "רכישות בדיגיטל"], ["ivory", "איבורי", "רכישות בדיגיטל"],
+  ["bug ", "באג", "רכישות בדיגיטל"], ["google", "Google", "רכישות בדיגיטל"],
+  // leisure & fitness
+  ["cinema city", "סינמה סיטי", "בילויים"], ["yes planet", "יס פלאנט", "בילויים"], ["rav hen", "רב חן", "בילויים"], ["lev cinema", "קולנוע לב", "בילויים"],
+  ["eventim", "איוונטים", "בילויים"], ["leaan", "לאן", "בילויים"], ["holmes", "הולמס פלייס", "כושר"], ["go active", "גו אקטיב", "כושר"],
+  // travel
+  ["booking", "Booking", "חופשות"], ["airbnb", "Airbnb", "חופשות"], ["el al", "אל על", "חופשות"], ["israir", "ישראייר", "חופשות"], ["arkia", "ארקיע", "חופשות"],
+  ["wizz", "וויז אייר", "חופשות"], ["ryanair", "ריינאייר", "חופשות"], ["fattal", "פתאל", "חופשות"], ["isrotel", "ישרוטל", "חופשות"]
+];
+let merchantRules = {}; // learned from the viewer's edits: raw name → {name, cat}
+const normMerchant = raw => " " + String(raw || "").toLowerCase().replace(/[׳'`"]/g, "").replace(/\s+/g, " ").trim() + " ";
+function recognizeMerchant(raw) {
+  const key = String(raw || "").trim();
+  if (!key) return null;
+  if (merchantRules[key]) return merchantRules[key];
+  const n = normMerchant(key);
+  // long names match anywhere; short ones only at the start of a word ("fox" must not match "firefox")
+  for (const [word, name, cat] of MERCHANTS) if (word.trim().length >= 5 ? n.includes(word) : n.includes(" " + word)) return { name, cat };
+  return null;
+}
+// "M YOHANANOF SONS LTD" → "M Yohananof Sons" when nothing else is known
+function tidyMerchant(raw) {
+  let s = String(raw || "").replace(/\b(ltd|ltd\.|limited|inc|inc\.|co\.|llc|bm)\b/gi, "").replace(/בע"?מ/g, "").replace(/\s{2,}/g, " ").trim();
+  if (/^[A-Z0-9 &.\-']+$/.test(s)) s = s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
+  return s || String(raw || "");
+}
+
+function guessCategory(text, issuerCat) {
+  if (issuerCat && (SHEET_CATS.has(issuerCat.trim()) || CATS.includes(issuerCat.trim()))) return issuerCat.trim();
+  const low = (text || "").toLowerCase() + " ";
+  for (const [cat, words] of CATEGORY_RULES) if (words.some(w => low.includes(w))) return cat;
+  if (issuerCat) for (const [k, cat] of ISSUER_CATS) if (issuerCat.includes(k)) return cat;
+  return "לא מסווג";
+}
+
+/* ---------- category icons: a tinted circle with a darker glyph of the same hue ---------- */
+const ICONS = {
+  glass: "M8 21h8M12 14v7M5 3h14l-7 11z",
+  bag: "M6 8h12l-1 13H7z M9 8a3 3 0 016 0",
+  shirt: "M9 3L4 6l2 4 2-1v12h8V9l2 1 2-4-5-3a3 3 0 01-6 0z",
+  phone: "M7 3h10a1 1 0 011 1v16a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z M11 18h2",
+  home: "M3 11l9-8 9 8 M5 10v11h14V10 M10 21v-6h4v6",
+  cart: "M3 4h2l2.4 11h11l2-8H6.3 M9 20h.01 M18 20h.01",
+  food: "M5 3v6a2 2 0 004 0V3 M7 11v10 M7 3v6 M17 21V3c-2.5 1.5-3.5 4.5-3.5 8H17",
+  coffee: "M4 9h12v5a5 5 0 01-5 5H9a5 5 0 01-5-5z M16 10h2a2 2 0 010 4h-2 M8 3v3 M12 3v3",
+  drop: "M12 3s6 6.8 6 11a6 6 0 01-12 0c0-4.2 6-11 6-11z M9.5 14.5a2.5 2.5 0 002.5 2.5",
+  cake: "M4 21h16 M5 21v-8h14v8 M5 16c2.3 1.5 4.7 1.5 7 0s4.7-1.5 7 0 M12 13V9 M12 6v.01",
+  plane: "M10.5 13.5L3 11l18-7-7 18-2.5-7.5z",
+  repeat: "M4 12a8 8 0 0114-5.3L20 9 M20 4v5h-5 M20 12a8 8 0 01-14 5.3L4 15 M4 20v-5h5",
+  bolt: "M13 2L4 14h7l-1 8 9-12h-7z",
+  gift: "M3 8h18v4H3z M5 12v9h14v-9 M12 8v13 M12 8C10 4 6 4 6 6.5S9 8 12 8s6-.5 6-1.5S14 4 12 8z",
+  dumbbell: "M6 7v10 M3 9.5v5 M18 7v10 M21 9.5v5 M6 12h12",
+  shield: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z M9 12l2 2 4-4",
+  heart: "M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z",
+  income: "M12 3v12 M7 10l5 5 5-5 M4 21h16",
+  question: "M9.2 9a3 3 0 015.6 1.5c0 2-2.8 2.4-2.8 4 M12 18v.01",
+  car: "M5 16V11l2-5h10l2 5v5 M3 16h18v3H3z M7 19v2 M17 19v2 M7 13h.01 M17 13h.01",
+  fuel: "M4 21V5a2 2 0 012-2h6a2 2 0 012 2v16 M3 21h12 M7 7h4 M14 10h2a2 2 0 012 2v5a1.5 1.5 0 003 0V9l-3-3",
+  health: "M12 4v16 M4 12h16 M7 4h10v16H7z",
+  pill: "M4.5 13.5l6-6a4.2 4.2 0 016 6l-6 6a4.2 4.2 0 01-6-6z M8 10l6 6",
+  book: "M4 4h6a2 2 0 012 2v14a2 2 0 00-2-2H4z M20 4h-6a2 2 0 00-2 2v14a2 2 0 012-2h6z",
+  kid: "M12 7a3 3 0 100-6 3 3 0 000 6z M8 21v-6l-3-3 3-3h8l3 3-3 3v6 M10 21v-4h4v4",
+  paw: "M7 10a2 2 0 100-4 2 2 0 000 4z M17 10a2 2 0 100-4 2 2 0 000 4z M10 6a2 2 0 100-4 2 2 0 000 4z M14 6a2 2 0 100-4 2 2 0 000 4z M12 12c-3 0-5 3-5 5.5S9 21 12 21s5-1 5-3.5S15 12 12 12z",
+  bus: "M5 4h14v13H5z M5 11h14 M8 20v-3 M16 20v-3 M8 14h.01 M16 14h.01",
+  game: "M6 9h12a4 4 0 014 4v1a3 3 0 01-5.2 2L15 14H9l-1.8 2A3 3 0 012 14v-1a4 4 0 014-4z M8 11v3 M6.5 12.5h3 M15 12h.01 M17 13.5h.01",
+  music: "M9 18V5l11-2v13 M9 18a3 3 0 11-6 0 3 3 0 016 0z M20 16a3 3 0 11-6 0 3 3 0 016 0z",
+  film: "M3 5h18v14H3z M7 5v14 M17 5v14 M3 9h4 M3 15h4 M17 9h4 M17 15h4",
+  tool: "M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z",
+  scissors: "M6 9a3 3 0 100-6 3 3 0 000 6z M6 21a3 3 0 100-6 3 3 0 000 6z M8.1 7.9L20 20 M8.1 16.1L20 4",
+  money: "M3 7h18v10H3z M12 15a3 3 0 100-6 3 3 0 000 6z M6 10v.01 M18 14v.01",
+  wifi: "M2 9a15 15 0 0120 0 M5.5 12.5a10 10 0 0113 0 M9 16a5 5 0 016 0 M12 19.5v.01",
+  tag: "M3 12V3h9l9 9-9 9z M8 8v.01",
+  card: "M3 6h18v12H3z M3 10h18 M7 15h4",
+  bank: "M3 10l9-6 9 6 M5 10v8 M9.5 10v8 M14.5 10v8 M19 10v8 M3 20h18"
+};
+const HUES = [12, 24, 44, 90, 140, 165, 192, 210, 240, 285, 322, 350];
+// built-in categories
+const CAT_ICONS = {
+  "בילויים": ["glass", 285, 55], "קניות": ["bag", 24, 70], "שופינג": ["shirt", 330, 55], "רכישות בדיגיטל": ["phone", 210, 65],
+  "קניות לבית": ["home", 32, 55], "סופר": ["cart", 135, 45], "אוכל ושתיה": ["food", 12, 70], "טיפוח ופארם": ["drop", 300, 45],
+  "אירועים": ["cake", 345, 60], "חופשות": ["plane", 192, 65], "מנוי חודשי": ["repeat", 240, 50], "הוצאות שוטפות": ["bolt", 44, 80],
+  "מתנות": ["gift", 355, 60], "כושר": ["dumbbell", 165, 50], "ביטוח": ["shield", 218, 35], "חתונה": ["heart", 322, 55],
+  "הכנסה": ["income", 148, 55], "לא מסווג": ["question", 220, 10]
+};
+// new categories: picked by words in the name
+const ICON_WORDS = [
+  ["car", 215, ["רכב", "אוטו", "מכונית", "טסט", "מוסך", "חניה", "חנייה"]], ["fuel", 30, ["דלק", "תדלוק"]],
+  ["health", 0, ["בריאות", "רופא", "רפואה", "קופת חולים", "שיניים", "טיפול"]], ["pill", 330, ["תרופות", "פארם", "מרקחת"]],
+  ["book", 255, ["לימוד", "לימודים", "אוניברסיטה", "קורס", "ספרים", "שכר לימוד"]], ["kid", 45, ["ילד", "ילדים", "תינוק", "גן", "בייביסיטר"]],
+  ["paw", 28, ["חיות", "כלב", "חתול", "וטרינר"]], ["bus", 200, ["תחבורה", "אוטובוס", "רכבת", "מונית", "נסיעות"]],
+  ["coffee", 25, ["קפה", "בית קפה"]], ["game", 275, ["משחק", "משחקים", "גיימינג"]], ["music", 300, ["מוזיקה", "הופעה", "הופעות"]],
+  ["film", 230, ["סרט", "סרטים", "קולנוע", "נטפליקס"]], ["tool", 35, ["תיקון", "תיקונים", "שיפוץ", "אחזקה", "כלי עבודה"]],
+  ["scissors", 315, ["תספורת", "מספרה"]], ["money", 140, ["חיסכון", "השקעה", "השקעות", "הלוואה", "עמלות", "בנק"]],
+  ["wifi", 205, ["אינטרנט", "סלולר", "טלפון", "תקשורת"]], ["home", 32, ["שכירות", "שכר דירה", "משכנתא", "דירה", "ארנונה", "ועד בית"]],
+  ["food", 12, ["אוכל", "מסעדה", "מסעדות"]], ["cart", 135, ["סופר", "מכולת"]], ["plane", 192, ["טיסה", "טיסות", "חופשה", "נופש"]],
+  ["gift", 355, ["מתנה"]], ["dumbbell", 165, ["ספורט", "חדר כושר", "אימון"]], ["shirt", 330, ["בגדים", "ביגוד", "נעליים"]]
+];
+let catStyle = {}; // manual choices from the admin page: name → {icon, hue}
+function iconFor(cat) {
+  if (catStyle[cat] && ICONS[catStyle[cat].icon]) return [catStyle[cat].icon, catStyle[cat].hue, 55];
+  return autoIcon(cat);
+}
+function autoIcon(cat) {
+  if (CAT_ICONS[cat]) return CAT_ICONS[cat];
+  const n = (cat || "").toLowerCase();
+  for (const [icon, hue, words] of ICON_WORDS) if (words.some(w => n.includes(w))) return [icon, hue, 55];
+  let h = 0; for (const ch of cat || "") h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return ["tag", h, 50];
+}
+function glyph(icon, hue, sat, small) {
+  return `<span class="ic${small ? " sm" : ""}" style="--h:${hue};--s:${sat}%" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${ICONS[icon] || ICONS.tag}"/></svg></span>`;
+}
+function catIcon(cat, small) { const [icon, hue, sat] = iconFor(cat); return glyph(icon, hue, sat, small); }
+
+/* ---------- state ---------- */
+const data = { manual: null, apple: null, bank: null, settings: null, hist: {} };
+let tx = [];
+let filterCat = null, catMode = "var", showAll = false, editingIncome = false;
+let startDay = 1;
+const now = new Date();
+const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+let view = { y: now.getFullYear(), m: now.getMonth() };
+try { const s = parseInt(localStorage.getItem("startDay"), 10); if (s >= 1 && s <= 28) startDay = s; } catch (e) {}
+document.getElementById("startDay").value = startDay;
+if (now.getDate() < startDay) shift(-1);
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+/* a sign always sits on the left of the amount, also inside right-to-left text */
+const ltr = s => "\u2066" + s + "\u2069";
+const fmt = n => n < 0 ? ltr("−₪" + Math.abs(Math.round(n)).toLocaleString("he-IL")) : "₪" + Math.round(n).toLocaleString("he-IL");
+// exact amount with agorot, signed: used inside lists and drill-downs
+const fmtX = n => { const v = "₪" + Math.abs(n).toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return n < -0.004 ? ltr("−" + v) : v; };
+const fmt2 = n => "₪" + Math.abs(n).toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const dd = d => d.getDate() + "." + (d.getMonth() + 1);
+const DAY = 864e5;
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const daysBetween = (a, b) => Math.round((b - a) / DAY);
+
+function parseDate(v) {
+  const s = String(v || "").trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
+  if (m) { let y = +m[3]; if (y < 100) y += 2000; return new Date(y, +m[2] - 1, +m[1]); }
+  return null;
+}
+function parseAmount(v) {
+  const n = parseFloat(String(v || "").replace(/[^\d.,\-−]/g, "").replace("−", "-").replace(/,/g, ""));
+  return isNaN(n) ? null : n;
+}
+/* installments: "(9/10)" typed in a description, "תשלום 3 מתוך 12" from the card company, or a number of payments chosen when adding */
+function parseInst(text) {
+  const s = String(text || "");
+  const m = s.match(/\(\s*(\d{1,2})\s*\/\s*(\d{1,2})\s*\)/) || s.match(/תשלום\s*(\d{1,2})\s*(?:מתוך|\/)\s*(\d{1,2})/);
+  if (!m) return null;
+  const k = +m[1], n = +m[2];
+  if (!(n >= 2 && k >= 1 && k <= n)) return null;
+  return { k, n, base: s.replace(m[0], " ").replace(/\s{2,}/g, " ").trim() };
+}
+const addMonths = (d, n) => { const last = new Date(d.getFullYear(), d.getMonth() + n + 1, 0).getDate(); return new Date(d.getFullYear(), d.getMonth() + n, Math.min(d.getDate(), last)); };
+const CHARGE_DAY = 2; // card charges go out on the 2nd of the month
+let instPlans = [];
+const txKey = t => t.del ? t.del.key + ":" + t.del.index + (t.gen > 1 ? ":" + t.gen : "") : "";
+function shift(n) { view.m += n; while (view.m < 0) { view.m += 12; view.y--; } while (view.m > 11) { view.m -= 12; view.y++; } }
+function period(y, m) { return { start: new Date(y, m, startDay), end: new Date(y, m + 1, startDay - 1) }; }
+
+/* ---------- merge sources ---------- */
+function build() {
+  const out = [];
+  const bankRows = (data.bank || []);
+  bankRows.forEach((v, i) => {
+    const date = parseDate(v[0]); const amt = parseAmount(v[1]);
+    if (!date || amt === null || amt === 0) return;
+    if ((v[7] || "").trim() === "מחוק") return; // hidden by the viewer; the row stays so the next scrape won't re-add it
+    const company = (v[9] || "").trim();
+    const isBank = BANKS.has(company);
+    const desc = (v[2] || "").trim(), memo = (v[3] || "").trim();
+    if (isBank && amt < 0 && CARD_BILL_WORDS.some(w => (desc + " " + memo).toLowerCase().includes(w))) return;
+    const acct = String(v[5] || "").replace(/\D/g, "").slice(-4);
+    const pi = parseInst(desc) || parseInst(memo);
+    out.push({
+      date, amount: Math.abs(amt), income: amt > 0 && isBank, refund: amt > 0 && !isBank, inst: pi && { k: pi.k, n: pi.n },
+      merchant: (recognizeMerchant(desc) || {}).name || (pi && parseInst(desc) ? pi.base : "") || desc || memo || "ללא תיאור", rawMerchant: desc,
+      category: amt > 0 && isBank ? "הכנסה" : ((recognizeMerchant(desc) || {}).cat || guessCategory(desc + " " + memo, v[4] || "")),
+      account: (COMPANY[company] || company || "") + (acct ? " · " + acct : ""),
+      source: isBank ? "bank" : "card", order: i,
+      del: { key: "bank", index: i, file: SHEET_ID, mode: "mark", range: "'_moneyman'!A" + (i + 2) + ":L" + (i + 2), mark: "'_moneyman'!H" + (i + 2), raw: v }
+    });
+  });
+  const scraped = out.slice();
+  const cardRows = out.filter(t => t.source === "card");
+  const seen = (amt, date) => scraped.some(c => Math.abs(c.amount - amt) < 0.01 && Math.abs(daysBetween(c.date, date)) <= 3);
+  // rows typed by hand in "הוצאות יומיות": D date, E type, F category, G description, H payment method, I amount
+  const daily = (rows, base, file, key) => (rows || []).forEach((v, i) => {
+    const type = (v[1] || "").trim(); if (!type) return; // day header rows
+    const date = parseDate(v[0]); const amt = parseAmount(v[5]);
+    if (!date || amt === null || amt === 0) return;
+    if (seen(Math.abs(amt), date)) return;
+    const cat = (v[2] || "").trim();
+    const isSalary = type === "הכנסה" && (!cat || cat === "הכנסה" || cat === "משכורת");
+    const pi = parseInst(v[3]);
+    out.push({
+      date, amount: Math.abs(amt), income: isSalary, inst: pi && { k: pi.k, n: pi.n },
+      refund: (type === "הכנסה" && !isSalary) || (type === "הוצאה" && amt < 0), // a negative expense is a credit
+      merchant: (pi && pi.base) || (v[3] || "").trim() || "ללא תיאור", category: isSalary ? "הכנסה" : (cat || "לא מסווג"),
+      account: (v[4] || "").trim(), source: "manual", order: base + i,
+      del: { key, index: i, file, sheetId: 1161900963, row: i + 4, range: "'הוצאות יומיות'!D" + (i + 4) + ":I" + (i + 4), raw: v }
+    });
+  });
+  HISTORY.forEach((id, k) => daily(data.hist[id], 10000 + k * 2000, id, "hist-" + id));
+  daily(data.manual, 50000, SHEET_ID, "manual");
+  (data.apple || []).forEach((v, i) => {
+    const date = parseDate(v[0]); const amt = parseAmount(v[1]);
+    if (!date || amt === null || amt === 0) return;
+    const payments = Math.min(MAX_INST, Math.max(1, parseInt(v[8], 10) || 1));
+    // shown once: hide an Apple Pay entry when the card company already reported the same charge
+    if (payments === 1 && seen(Math.abs(amt), date)) return;
+    const type = (v[5] || "").trim(); let cat = (v[4] || "").trim();
+    const isSalary = type === "הכנסה" && (!cat || cat === "הכנסה" || cat === "משכורת");
+    const fromPay = (v[6] || "") === "Apple Pay";
+    let name = v[2] || "ללא תיאור";
+    if (fromPay) {
+      const hit = recognizeMerchant(v[2]);
+      if (hit) { name = hit.name || name; if (hit.cat && (merchantRules[(v[2] || "").trim()] || cat === "לא מסווג" || !cat)) cat = hit.cat; }
+      else name = tidyMerchant(name);
+    }
+    const pi = parseInst(name);
+    const base = {
+      date, amount: Math.abs(amt), income: isSalary, refund: type === "החזר" || (type === "הכנסה" && !isSalary), inst: pi && { k: pi.k, n: pi.n },
+      merchant: (pi && pi.base) || name, rawMerchant: (v[2] || "").trim(), category: isSalary ? "הכנסה" : (cat || "לא מסווג"),
+      account: (v[6] || "") === "Apple Pay" ? (cardMap[(v[3] || "").trim()] || v[3] || "Apple Pay") : (v[3] || ""), rawCard: (v[3] || "").trim(), source: (v[6] || "") === "Apple Pay" ? "applepay" : "manual", order: 100000 + i,
+      del: { key: "apple", index: i, file: SHEET_ID, sheetId: 777001, row: i + 2, range: "'עסקאות'!A" + (i + 2) + ":I" + (i + 2), raw: v }
+    };
+    if (payments === 1) { out.push(base); return; }
+    // a purchase in payments: one row per month, each a share of the full price
+    const total = Math.abs(amt), per = Math.round(total / payments * 100) / 100;
+    for (let k = 1; k <= payments; k++) {
+      const a = k < payments ? per : Math.round((total - per * (payments - 1)) * 100) / 100;
+      const d = k === 1 ? date : new Date(date.getFullYear(), date.getMonth() + k - 1, CHARGE_DAY);
+      if (seen(a, d)) continue;
+      out.push({ ...base, date: d, amount: a, total, inst: { k, n: payments }, gen: k, plan: "a:" + i, order: base.order + k / 100 });
+    }
+  });
+  // payments typed month by month ("טלויזיה (9/10)"): the next one is suggested on the charge day, and added with one tap
+  const plans = new Map();
+  out.forEach(t => {
+    if (!t.inst || t.gen || t.income) return;
+    t.plan = t.merchant.toLowerCase() + "|" + t.inst.n + "|" + Math.round(t.amount);
+    const p = plans.get(t.plan); if (!p || t.inst.k > p.inst.k) plans.set(t.plan, t);
+  });
+  instPlans = [];
+  plans.forEach(last => {
+    if (last.inst.k >= last.inst.n || daysBetween(last.date, today) > 62) return;
+    const next = new Date(last.date.getFullYear(), last.date.getMonth() + 1, CHARGE_DAY);
+    instPlans.push({ last, next, due: today >= next && !seen(last.amount, next) });
+  });
+  tx = out;
+}
+
+/* ---------- render ---------- */
+function monthFigures(y, m) {
+  const { start, end } = period(y, m);
+  const inP = tx.filter(t => t.date >= start && t.date <= end);
+  const spend = inP.filter(t => !t.income);
+  const sum = arr => arr.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+  const fixed = sum(spend.filter(t => FIXED.has(t.category)));
+  const variable = sum(spend.filter(t => !FIXED.has(t.category)));
+  const income = inP.filter(t => t.income).reduce((s, t) => s + t.amount, 0);
+  return { start, end, inP, spend, fixed, variable, income };
+}
+
+function render() {
+  const f = monthFigures(view.y, view.m);
+  const { start, end } = f;
+  $("monthTitle").textContent = MONTHS[view.m] + " " + view.y;
+  const hr = new Date().getHours();
+  $("hello").textContent = (hr < 5 ? "לילה טוב" : hr < 12 ? "בוקר טוב" : hr < 17 ? "צהריים טובים" : hr < 21 ? "ערב טוב" : "לילה טוב") + (USER_NAME ? ", " + USER_NAME : "");
+  $("rangeLabel").textContent = startDay === 1 ? "" : dd(start) + " – " + dd(end);
+  $("next").disabled = today <= end;
+  $("prev").disabled = view.y * 12 + view.m <= FIRST_MONTH;
+
+  const loaded = data.manual !== null || data.apple !== null || data.bank !== null;
+  if (!loaded) return;
+
+  const isCurrent = today >= start && today <= end;
+  const isFuture = today < start;
+  const days = daysBetween(start, end) + 1;
+  const elapsed = isCurrent ? daysBetween(start, today) + 1 : days;
+  const sal = salaryFor(view.y, view.m, isCurrent || isFuture);
+  const prev = monthFigures(...prevYM(view.y, view.m));
+
+  const incomeExpected = sal.amount + f.income;
+  const fixedExpected = isCurrent ? Math.max(f.fixed, prev.fixed) : f.fixed;
+  const varProjected = isCurrent ? f.variable / Math.max(elapsed, 1) * days : f.variable;
+  const balance = incomeExpected - f.fixed - f.variable;
+
+  const st = $("status");
+  $("fIncome").textContent = fmt(incomeExpected);
+  $("fFixed").textContent = fmt(f.fixed);
+  $("fVar").textContent = fmt(f.variable);
+  const spent = f.fixed + f.variable;
+  const ratio = incomeExpected ? spent / incomeExpected : 0;
+  const daysLeft = isCurrent ? daysBetween(today, end) : 0;
+  const pill = $("ringPill");
+  st.classList.toggle("neg", !!incomeExpected && ratio >= 1);
+  st.classList.toggle("mid", !!incomeExpected && ratio >= .8 && ratio < 1);
+  if (!incomeExpected) {
+    $("statusLabel").textContent = isCurrent ? "הוצאת עד היום" : "סך ההוצאות בחודש";
+    $("statusBig").textContent = fmt(spent);
+    $("statusSub").textContent = "הזינו את המשכורת של החודש כדי לראות כמה נשאר.";
+    pill.hidden = true;
+  } else {
+    $("statusLabel").textContent = "יתרה החודש";
+    $("statusBig").textContent = balance > 0 ? ltr("+" + fmt(balance)) : fmt(balance);
+    $("statusSub").textContent = "הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected);
+    pill.hidden = false;
+    pill.textContent = isCurrent
+      ? (daysLeft === 0 ? "היום האחרון בחודש" : daysLeft === 1 ? "עוד יום אחד לסוף החודש" : "עוד " + daysLeft + " ימים לסוף החודש")
+      : (balance >= 0 ? "סיימת את החודש בפלוס" : "סיימת את החודש במינוס");
+  }
+  // the ring fills with what was spent out of what came in: green, then orange near the edge, red past it
+  const C = 326.73, fill = incomeExpected ? Math.min(ratio, 1) : (spent > 0 ? 1 : 0);
+  const ring = $("ringFg");
+  ring.style.strokeDashoffset = String(C * (1 - fill));
+  ring.setAttribute("stroke", !incomeExpected ? "var(--brand)" : ratio >= 1 ? "var(--bad)" : ratio >= .8 ? "var(--warn)" : "var(--good)");
+  renderIncome(sal);
+  renderWeeks(f, incomeExpected, fixedExpected, isCurrent, isFuture);
+  renderCats(f);
+  try { renderInsights(f, isCurrent); } catch (e) { console.error(e); }
+  try { renderWrappedPill(isCurrent); } catch (e) { console.error(e); }
+  try { renderPayMethods(f); } catch (e) { console.error(e); }
+  try { renderInstallments(); } catch (e) { console.error(e); }
+  renderList(f.inP);
+}
+
+/* a new month without a salary: ask for it once when the site opens ("אחר כך" waits until tomorrow) */
+let salAsked = false, salKey = null;
+function askSalary() {
+  if (salAsked) return; salAsked = true;
+  let y = now.getFullYear(), m = now.getMonth();
+  if (now.getDate() < startDay) { m--; if (m < 0) { m = 11; y--; } }
+  salKey = mkey(y, m);
+  if (salaries[salKey] != null) return;
+  try { if (localStorage.getItem("salLater") === iso(today) + "|" + salKey) return; } catch (e) {}
+  const [py, pm] = prevYM(y, m), last = salaries[mkey(py, pm)];
+  $("salKicker").textContent = MONTHS[m] + " " + y + " התחיל";
+  $("salTitle").textContent = "המשכורת של " + MONTHS[m];
+  $("salText").textContent = "כמה נכנס לך החודש? אחרי השמירה היתרה תתעדכן.";
+  $("salSame").hidden = last == null;
+  if (last != null) { $("salSame").innerHTML = `כמו ב${MONTHS[pm]} · <b>${fmt(last)}</b>`; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); $("salAmount").focus(); }; }
+  $("salAmount").value = ""; fitSal(); $("salPopMsg").textContent = "";
+  $("salPopSave").disabled = false; $("salPopSave").textContent = "שמירה";
+  $("salBg").hidden = false;
+  setTimeout(() => $("salAmount").focus(), 50);
+}
+const closeSal = () => { $("salBg").hidden = true; };
+function salLater() { try { localStorage.setItem("salLater", iso(today) + "|" + salKey); } catch (e) {} closeSal(); }
+$("salLater").onclick = salLater;
+$("salClose").onclick = salLater;
+$("salBg").addEventListener("click", e => { if (e.target.id === "salBg") salLater(); });
+const fitSal = () => { const el = $("salAmount"); el.style.width = Math.max(1, (el.value || el.placeholder).length) * 0.62 + 0.4 + "em"; };
+$("salAmount").addEventListener("input", e => { const el = e.target; const fromEnd = el.value.length - (el.selectionEnd ?? el.value.length); el.value = withCommas(el.value); const p = Math.max(0, el.value.length - fromEnd); try { el.setSelectionRange(p, p); } catch (err) {} fitSal(); });
+$("salForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = Math.round(parseFloat($("salAmount").value.replace(/,/g, "")) * 100) / 100;
+  if (!(v > 0)) { $("salPopMsg").textContent = "הזינו סכום גדול מאפס."; $("salAmount").focus(); return; }
+  const btn = $("salPopSave"); btn.disabled = true; btn.textContent = "שומר…";
+  try { await writeSalaries({ ...salaries, [salKey]: v }); closeSal(); try { renderSal(); } catch (err) {} }
+  catch (err) { $("salPopMsg").textContent = writeError(err); btn.disabled = false; btn.textContent = "שמירה"; }
+});
+
+/* the next payment of a purchase typed month by month: suggested from the charge day, added with one tap */
+function renderInstSuggest() {
+  const due = instPlans.filter(p => p.due);
+  $("instSuggest").innerHTML = due.map((p, i) => `<div class="insight">${catIcon(p.last.category, true)}
+    <span>${daysBetween(p.next, today) === 0 ? "יורד היום" : "ירד ב-" + dd(p.next)} תשלום <b><bdi>${esc(p.last.merchant)}</bdi> <bdi dir="ltr">(${p.last.inst.k + 1}/${p.last.inst.n})</bdi></b> של ${fmt2(p.last.amount)}. להוסיף אותו?</span>
+    <span class="acts"><button class="btn add" data-inst-add="${i}">הוספה</button></span></div>`).join("");
+  $("instSuggest").onclick = async e => {
+    const b = e.target.closest("[data-inst-add]"); if (!b || !mcp) return;
+    const p = due[+b.dataset.instAdd], l = p.last;
+    b.disabled = true; b.textContent = "מוסיף…";
+    const row = [iso(p.next), l.amount, l.merchant + " (" + (l.inst.k + 1) + "/" + l.inst.n + ")", l.account, l.category, "הוצאה", "ידני", "m-" + Date.now()];
+    try {
+      await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: [row] });
+      data.apple = [...(data.apple || []), row]; afterData();
+      try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
+    } catch (err) { b.disabled = false; b.textContent = "הוספה"; }
+  };
+}
+
+/* how much went through each card this month; the bank account also shows what came in */
+const isBankAcc = t => t.account === "חשבון בנק" || t.source === "bank";
+function renderPayMethods(f) {
+  const by = new Map();
+  f.inP.forEach(t => {
+    const name = isBankAcc(t) ? "חשבון בנק" : (t.account || "לא צוין");
+    if (!by.has(name)) by.set(name, { out: 0, in: 0 });
+    const r = by.get(name);
+    if (t.income || t.refund) r.in += t.amount; else r.out += t.amount;
+  });
+  const rows = [...by.entries()].map(([name, r]) => ({ name, bank: name === "חשבון בנק", out: r.out, in: r.in, spent: name === "חשבון בנק" ? r.out : r.out - r.in }))
+    .filter(r => r.out || r.in).sort((a, b) => (a.bank - b.bank) || b.spent - a.spent);
+  $("payCard").hidden = !rows.length;
+  const max = Math.max(1, ...rows.map(r => Math.max(r.out, r.in)));
+  $("payTotal").textContent = "";
+  $("payMethods").innerHTML = rows.map(r => {
+    let h = 0; for (const ch of r.name) h = (h * 31 + ch.charCodeAt(0)) % 360;
+    const ic = r.bank ? glyph("bank", 148, 45, true) : glyph("card", h, 55, true);
+    if (r.bank) return `<button class="cat" data-acc="חשבון בנק" aria-label="התנועות בחשבון הבנק"><span class="name">${ic}<span>חשבון בנק</span></span>
+      <span class="amt num"><span>${fmt(r.in - r.out)}</span></span>
+      <span class="pay-io"><span>נכנס <b class="num" style="color:var(--good)">${fmt(r.in)}</b></span><span>יצא <b class="num">${fmt(r.out)}</b></span></span></button>`;
+    return `<button class="cat" data-acc="${esc(r.name)}" aria-label="החיובים ב${esc(r.name)}"><span class="name">${ic}<span style="overflow:hidden;text-overflow:ellipsis"><bdi>${esc(r.name)}</bdi></span></span>
+      <span class="amt num"><span>${fmt(r.spent)}</span><span class="pct" aria-hidden="true">›</span></span>
+      <span class="bar"><i style="width:${(Math.max(0, r.spent) / max * 100).toFixed(1)}%"></i></span></button>`;
+  }).join("");
+}
+const accOf = t => isBankAcc(t) ? "חשבון בנק" : (t.account || "לא צוין");
+let filterAcc = null;
+$("payMethods").addEventListener("click", e => {
+  const b = e.target.closest("[data-acc]"); if (!b) return;
+  filterAcc = b.dataset.acc; filterCat = null; txKind = "all"; showAll = false; openTx = null; render(); showView("tx");
+});
+
+/* purchases still being paid off */
+function renderInstallments() {
+  const groups = new Map();
+  tx.forEach(t => { if (t.inst && t.plan) { if (!groups.has(t.plan)) groups.set(t.plan, []); groups.get(t.plan).push(t); } });
+  const rows = [];
+  groups.forEach(g => {
+    g.sort((a, b) => a.date - b.date);
+    const future = g.filter(t => t.date > today);
+    if (!future.length) return;
+    const paid = g.filter(t => t.date <= today), last = g[g.length - 1];
+    rows.push({ t: last, cur: paid.length ? paid[paid.length - 1].inst.k : 0, n: last.inst.n, per: future[0].amount, left: future.reduce((s, t) => s + t.amount, 0), end: last.date });
+  });
+  instPlans.forEach(({ last }) => {
+    const left = last.inst.n - last.inst.k;
+    rows.push({ t: last, cur: last.inst.k, n: last.inst.n, per: last.amount, left: left * last.amount, end: new Date(last.date.getFullYear(), last.date.getMonth() + left, CHARGE_DAY) });
+  });
+  rows.sort((a, b) => a.end - b.end);
+  renderInstSuggest();
+  $("instCard").hidden = !rows.length;
+  if (!rows.length) return;
+  $("instLeft").textContent = "נשאר " + fmt(rows.reduce((s, r) => s + r.left, 0));
+  $("instList").innerHTML = rows.map(r => `<div class="tx inst-row">${catIcon(r.t.category)}
+    <div class="m"><bdi>${esc(r.t.merchant)}</bdi> <bdi dir="ltr" class="inst">(${r.cur}/${r.n})</bdi></div>
+    <div class="a num">${fmt(r.per)}<small>נשארו ${fmt(r.left)}</small></div>
+    <div class="meta">${r.n - r.cur === 1 ? "תשלום אחרון ב" : "עוד " + (r.n - r.cur) + " תשלומים, אחרון ב"}${MONTHS[r.end.getMonth()]} ${r.end.getFullYear()}</div>
+    <div class="inst-bar"><i style="width:${(r.cur / r.n * 100).toFixed(1)}%"></i></div></div>`).join("");
+}
+
+function prevYM(y, m) { return m === 0 ? [y - 1, 11] : [y, m - 1]; }
+
+const mkey = (y, m) => y + "-" + String(m + 1).padStart(2, "0");
+function salaryFor(y, m, allowEstimate) {
+  const k = mkey(y, m);
+  if (salaries[k] != null) return { amount: salaries[k], est: false };
+  if (allowEstimate) {
+    const prevK = Object.keys(salaries).filter(x => x < k).sort().pop();
+    if (prevK) return { amount: salaries[prevK], est: true };
+  }
+  return { amount: 0, est: false, missing: true };
+}
+
+function renderIncome(sal) {
+  const a = $("incomeArea");
+  const name = MONTHS[view.m];
+  if (editingIncome) {
+    a.innerHTML = `<form class="income-form" id="incomeForm"><label for="incomeInput">משכורת ${name}</label><input id="incomeInput" type="number" inputmode="decimal" min="0" step="0.01" value="${sal.est || sal.missing ? "" : sal.amount}" placeholder="${sal.est ? sal.amount : ""}"><button type="submit">שמירה</button><span id="incomeMsg"></span></form>`;
+    $("incomeForm").onsubmit = saveIncome;
+    $("incomeInput").focus();
+  } else {
+    const label = sal.missing ? `הזינו את המשכורת של ${name}`
+      : sal.est ? `משכורת ${name}: הערכה ${fmt(sal.amount)} · הזינו את מה שקיבלתם`
+      : `משכורת ${name}: ${fmt(sal.amount)} · עריכה`;
+    a.innerHTML = `<button class="edit-income" id="editIncome">${label}</button>`;
+    $("editIncome").onclick = () => { editingIncome = true; renderIncome(sal); };
+  }
+}
+
+function renderWeeks(f, income, fixed, isCurrent, isFuture) {
+  // Sunday–Saturday weeks clipped to the month
+  const weeks = [];
+  let s = f.start;
+  while (s <= f.end) {
+    const e = new Date(Math.min(addDays(s, 6 - s.getDay()), f.end));
+    weeks.push({ s, e }); s = addDays(e, 1);
+  }
+  const days = daysBetween(f.start, f.end) + 1;
+  const pool = Math.max(0, income - fixed);
+  const varTx = f.spend.filter(t => !FIXED.has(t.category));
+  weeks.forEach(w => {
+    w.days = daysBetween(w.s, w.e) + 1;
+    w.budget = pool * w.days / days;
+    w.spent = varTx.filter(t => t.date >= w.s && t.date <= w.e).reduce((a, t) => a + (t.refund ? -t.amount : t.amount), 0);
+    w.cur = today >= w.s && today <= w.e;
+    w.future = today < w.s;
+  });
+  const full = pool * 7 / days;
+  $("weekBudget").textContent = income ? fmt(full) + " לשבוע" : "";
+  const cur = weeks.find(w => w.cur);
+  if (!income) {
+    $("weekNow").innerHTML = `<p class="note" style="margin:0">כשתזינו הכנסה חודשית, נחלק את מה שנשאר אחרי ההוצאות הקבועות לתקציב שבועי.</p>`;
+  } else if (cur) {
+    const left = cur.budget - cur.spent;
+    const daysLeft = daysBetween(today, cur.e) + 1;
+    $("weekNow").innerHTML = `<div class="week-now"><div><div class="note">${left >= 0 ? "נשאר להוציא השבוע" : "חרגתם השבוע ב-"}</div><div class="left num ${left < 0 ? "neg" : ""}">${fmt(Math.abs(left))}</div></div>
+      <p class="note num">הוצאתם ${fmt(cur.spent)} מתוך ${fmt(cur.budget)} · עוד ${daysLeft} ${daysLeft === 1 ? "יום" : "ימים"}</p></div>
+      ${meter(cur.spent, cur.budget)}`;
+  } else {
+    $("weekNow").innerHTML = "";
+  }
+  $("weeks").innerHTML = weeks.map(w => `<div class="wk ${w.cur ? "cur" : ""} ${w.future ? "future" : ""}">
+      <span class="d num"><bdi dir="ltr">${dd(w.s)}–${dd(w.e)}</bdi></span>
+      ${income ? meter(w.spent, w.budget) : meter(w.spent, Math.max(...weeks.map(x => x.spent), 1), true)}
+      <span class="s num">${w.future ? "" : fmt(w.spent)}</span></div>`).join("");
+}
+function meter(v, max, neutral) {
+  const p = max > 0 ? Math.min(100, v / max * 100) : (v > 0 ? 100 : 0);
+  const cls = neutral ? "" : (v > max ? "over" : p > 80 ? "mid" : "");
+  return `<div class="meter"><i class="${cls}" style="width:${p.toFixed(1)}%"></i></div>`;
+}
+
+function readDismissed() { try { return JSON.parse(localStorage.getItem("insightsOff") || "{}"); } catch (e) { return {}; } }
+function renderInsights(f, isCurrent) {
+  const box = $("insights");
+  if (!isCurrent) { box.innerHTML = ""; return; }
+  const val = t => t.refund ? -t.amount : t.amount;
+  const spendIn = (a, b) => tx.filter(t => !t.income && t.date >= a && t.date <= b);
+  const byCat = arr => { const m = new Map(); arr.forEach(t => m.set(t.category, (m.get(t.category) || 0) + val(t))); return m; };
+  const out = [];
+  // 1. this month vs the average of the previous three months
+  const prev = []; let y = view.y, m = view.m;
+  for (let i = 0; i < 3; i++) { [y, m] = prevYM(y, m); if (y * 12 + m >= FIRST_MONTH) prev.push(byCat(monthFigures(y, m).spend)); }
+  if (prev.length) {
+    byCat(f.spend).forEach((v, c) => {
+      if (FIXED.has(c) || c === "לא מסווג") return;
+      const avg = prev.reduce((s, mm) => s + (mm.get(c) || 0), 0) / prev.length;
+      if (avg > 0 && v > avg * 1.25 && v - avg > 150)
+        out.push({ k: "m:" + c, w: v - avg, c, t: `<b>${esc(c)}:</b> כבר ${fmt(v)} החודש, ${fmt(v - avg)} מעל הממוצע החודשי שלך (${fmt(avg)})` });
+    });
+  }
+  // 2. the last 7 days vs a normal week (the 8 weeks before)
+  const d0 = addDays(today, -6), b0 = addDays(today, -62), b1 = addDays(today, -7);
+  if (tx.some(t => t.date <= b0)) {
+    const wk = byCat(spendIn(d0, today)), base = byCat(spendIn(b0, b1));
+    wk.forEach((v, c) => {
+      if (FIXED.has(c) || c === "לא מסווג") return;
+      const norm = (base.get(c) || 0) / 8;
+      if (norm > 0 && v >= norm * 2 && v > 150)
+        out.push({ k: "w:" + c + ":" + iso(d0), w: v - norm, c, t: `<b>השבוע</b> הוצאת על ${esc(c)} פי ${(v / norm).toFixed(1).replace(/\.0$/, "")} מהרגיל: ${fmt(v)} מול ${fmt(norm)} בשבוע רגיל` });
+    });
+  }
+  // 3. small purchases that keep coming back
+  const per = new Map();
+  netPurchases(f.spend).forEach(t => { const k = t.merchant.trim(); const e = per.get(k) || { n: 0, v: 0, c: t.category }; e.n++; e.v += t.net; per.set(k, e); });
+  per.forEach((e, k) => { if (e.n >= 3 && e.v >= 100) out.push({ k: "r:" + k, w: e.v * .8, c: e.c, t: `<b><bdi>${esc(k)}</bdi>:</b> ${e.n} רכישות החודש, ${fmt(e.v)} בסך הכול` }); });
+  const off = readDismissed(), mk = view.y + "-" + view.m;
+  const shown = out.filter(x => !off[mk + "|" + x.k]).sort((a, b) => b.w - a.w).slice(0, 3);
+  box.innerHTML = shown.map(x => `<div class="insight">${catIcon(x.c, true)}<span>${x.t}</span><button class="x" data-off="${esc(mk + "|" + x.k)}" aria-label="הסתרה">✕</button></div>`).join("");
+}
+
+/* ---------- refunds from friends, matched to the purchase they paid back ---------- */
+const STOP = new Set(["העברה", "החזר", "העברות", "על", "של", "עבור", "בביט", "ביט", "מ", "את", "עם", "קניות"]);
+const toks = s => String(s || "").replace(/[()+.,\-]/g, " ").split(/\s+/)
+  .map(w => w.length > 3 && "והלבמשכ".includes(w[0]) ? w.slice(1) : w).filter(w => w.length >= 2 && !STOP.has(w));
+// returns the purchases in `spend` with a `net` amount: the price minus any refund that names it
+function netPurchases(spend) {
+  const buys = spend.filter(t => !t.refund).map(t => ({ t, net: t.amount, tk: new Set(toks(t.merchant)) }));
+  spend.filter(t => t.refund).forEach(r => {
+    const rt = toks(r.merchant);
+    const cands = buys.map(b => {
+      if (b.t.category !== r.category) return null;
+      const gap = daysBetween(b.t.date, r.date); if (gap < -2 || gap > 21) return null;
+      const score = rt.filter(w => b.tk.has(w)).length * 10 - Math.abs(gap) * .1;
+      return score >= 9 ? { b, score } : null;
+    }).filter(Boolean).sort((x, y) => y.score - x.score);
+    // several friends paying back one shared purchase can cover more than one receipt: spill over
+    let left = r.amount;
+    for (const { b } of cands) { if (left <= 0) break; const take = Math.min(b.net, left); b.net -= take; left -= take; }
+  });
+  return buys.map(b => ({ ...b.t, gross: b.t.amount, net: b.net }));
+}
+
+/* ---------- monthly "Wrapped" ---------- */
+let wSlides = [], wIdx = 0;
+function wrappedFor(y, m) {
+  const f = monthFigures(y, m);
+  const val = t => t.refund ? -t.amount : t.amount;
+  const spend = f.spend, buys = netPurchases(spend).filter(t => t.net > 0);
+  if (buys.length < 3) return null;
+  const total = f.fixed + f.variable;
+  const isCur = today >= f.start && today <= f.end;
+  const income = salaryFor(y, m, isCur).amount + f.income;
+  const name = MONTHS[m];
+  const slides = [];
+  slides.push({ h: 262, html: `<div class="w-k">${isCur ? "הסיכום של " + name + " עד עכשיו" : "הסיכום של " + name + " " + y}</div><div class="w-big num">${fmt(total)}</div><div class="w-sub">זה מה שיצא החודש, ב-${buys.length} רכישות</div>` });
+  if (income > 0) {
+    const left = income - total;
+    slides.push({ h: left >= 0 ? 150 : 355, html: `<div class="w-k">${left >= 0 ? "נשאר לך" : "חסר לך"}</div><div class="w-big num">${fmt(Math.abs(left))}</div><div class="w-sub">${left >= 0 ? "חסכת " + Math.round(left / income * 100) + "% מההכנסות" : "הוצאת יותר מההכנסות של החודש (" + fmt(income) + ")"}</div>` });
+  }
+  const byCat = new Map(); spend.forEach(t => byCat.set(t.category, (byCat.get(t.category) || 0) + val(t)));
+  const cats = [...byCat.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]);
+  if (cats.length) {
+    const [c, v] = cats[0], [ic, hue] = iconFor(c);
+    slides.push({ h: hue, html: `<div class="w-ic"><svg viewBox="0 0 24 24"><path d="${ICONS[ic] || ICONS.tag}"/></svg></div><div class="w-k">הכי הרבה כסף הלך על</div><div class="w-mid">${esc(c)}</div><div class="w-sub num">${fmt(v)} · ${Math.round(v / total * 100)}% מההוצאות</div>` });
+  }
+  if (cats.length > 1) slides.push({ h: 200, html: `<div class="w-k">הטופ 5 של ${name}</div><div class="w-list">${cats.slice(0, 5).map(([c, v], i) => `<div><span>${i + 1}. ${esc(c)}</span><b class="num">${fmt(v)}</b></div>`).join("")}</div>` });
+  const per = new Map(); buys.forEach(t => { const k = t.merchant.trim(); const e = per.get(k) || { n: 0, v: 0 }; e.n++; e.v += t.net; per.set(k, e); });
+  const fav = [...per.entries()].sort((a, b) => b[1].n - a[1].n || b[1].v - a[1].v)[0];
+  if (fav && fav[1].n >= 2) slides.push({ h: 28, html: `<div class="w-k">המקום שחזרת אליו הכי הרבה</div><div class="w-mid"><bdi>${esc(fav[0])}</bdi></div><div class="w-sub num">${fav[1].n} פעמים · ${fmt(fav[1].v)}</div>` });
+  const big = buys.slice().sort((a, b) => b.net - a.net)[0];
+  slides.push({ h: 318, html: `<div class="w-k">ההוצאה הגדולה של החודש</div><div class="w-big num">${fmt(big.net)}</div><div class="w-sub"><bdi>${esc(big.merchant)}</bdi> · ${big.date.getDate()} ב${name}</div>${big.net < big.gross ? `<div class="w-sub" style="font-size:.9rem">${fmt(big.gross)} פחות ${fmt(big.gross - big.net)} שהחזירו לך</div>` : ""}` });
+  const byDay = new Map(); buys.forEach(t => byDay.set(iso(t.date), (byDay.get(iso(t.date)) || 0) + t.net));
+  const topDay = [...byDay.entries()].sort((a, b) => b[1] - a[1])[0];
+  const wd = new Array(7).fill(0), wn = new Array(7).fill(0);
+  for (let d = f.start; d <= (isCur ? today : f.end); d = addDays(d, 1)) { wd[d.getDay()] += byDay.get(iso(d)) || 0; wn[d.getDay()]++; }
+  const avgWd = wd.map((v, i) => wn[i] ? v / wn[i] : 0), dear = avgWd.indexOf(Math.max(...avgWd)), cheap = avgWd.indexOf(Math.min(...avgWd));
+  if (topDay) { const td = parseDate(topDay[0]); slides.push({ h: 230, html: `<div class="w-k">היום הכי יקר</div><div class="w-mid">יום ${WEEKDAYS[td.getDay()]}, ${td.getDate()} ב${name}</div><div class="w-sub num">${fmt(topDay[1])} ביום אחד</div><div class="w-sub">בממוצע, ימי ${WEEKDAYS[dear]} הכי יקרים וימי ${WEEKDAYS[cheap]} הכי זולים</div>` }); }
+  const [py, pm] = prevYM(y, m);
+  if (py * 12 + pm >= FIRST_MONTH) {
+    const pf = monthFigures(py, pm), pt = pf.fixed + pf.variable;
+    if (pt > 0) { const ch = Math.round((total - pt) / pt * 100); slides.push({ h: ch > 0 ? 8 : 160, html: `<div class="w-k">לעומת ${MONTHS[pm]}</div><div class="w-big num">${ch > 0 ? "▲" : "▼"} ${Math.abs(ch)}%</div><div class="w-sub">${ch > 0 ? "הוצאת יותר" : "הוצאת פחות"}: ${fmt(total)} מול ${fmt(pt)}</div>` }); }
+  }
+  slides.push({ h: 262, html: `<div class="w-k">זהו, זה היה ${name}</div><div class="w-mid">${isCur ? "נתראה בסוף החודש" : "נתראה ב" + MONTHS[(m + 1) % 12]}</div><div class="w-sub">לחצו על ✕ כדי לחזור לתזרים</div>` });
+  return slides;
+}
+function openWrapped(y, m) {
+  const sl = wrappedFor(y, m); if (!sl) return;
+  wSlides = sl; wIdx = 0; $("wrapped").hidden = false; drawWrapped();
+}
+function drawWrapped() {
+  const sld = wSlides[wIdx];
+  $("wrapped").style.setProperty("--wh", sld.h);
+  $("wBars").innerHTML = wSlides.map((_, i) => `<i class="${i <= wIdx ? "on" : ""}"></i>`).join("");
+  $("wSlide").innerHTML = sld.html;
+}
+function wStep(d) { const n = wIdx + d; if (n < 0) return; if (n >= wSlides.length) { $("wrapped").hidden = true; return; } wIdx = n; drawWrapped(); }
+$("wNext").onclick = () => wStep(1); $("wPrev").onclick = () => wStep(-1);
+$("wClose").onclick = () => { $("wrapped").hidden = true; };
+document.addEventListener("keydown", e => {
+  if ($("wrapped").hidden) return;
+  if (e.key === "Escape") $("wrapped").hidden = true;
+  if (e.key === "ArrowLeft") wStep(1);
+  if (e.key === "ArrowRight") wStep(-1);
+});
+function renderWrappedPill(isCurrent) {
+  const pill = $("wrappedPill");
+  // in the first week of a month, offer last month's summary; otherwise the month on screen
+  let y = view.y, m = view.m, label;
+  if (isCurrent && today.getDate() <= 7) { [y, m] = prevYM(view.y, view.m); label = "חדש: הסיכום של " + MONTHS[m]; }
+  else label = isCurrent ? "הסיכום של " + MONTHS[m] + " עד עכשיו" : "הסיכום של " + MONTHS[m];
+  if (y * 12 + m < FIRST_MONTH || !wrappedFor(y, m)) { pill.hidden = true; return; }
+  pill.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.2 6.8H21l-5.5 4 2.1 6.7L12 15.4l-5.6 4.1 2.1-6.7L3 8.8h6.8z"/></svg>${label}`;
+  pill.onclick = () => openWrapped(y, m);
+  pill.hidden = false;
+}
+
+function renderCats(f) {
+  const list = f.spend.filter(t => catMode === "fixed" ? FIXED.has(t.category) : !FIXED.has(t.category));
+  const m = new Map();
+  list.forEach(t => m.set(t.category, (m.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
+  const rows = [...m.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]);
+  const total = rows.reduce((s, r) => s + r[1], 0);
+  const max = rows.length ? rows[0][1] : 1;
+  const pv = monthFigures(...prevYM(view.y, view.m)), prevBy = new Map();
+  pv.spend.forEach(t => prevBy.set(t.category, (prevBy.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
+  const hasPrev = pv.spend.length > 0;
+  const delta = (c, v) => {
+    if (!hasPrev) return "";
+    const p = prevBy.get(c) || 0;
+    const pm = MONTHS[(view.m + 11) % 12];
+    // next to nothing last month: a percentage would be meaningless (₪1 → ₪8,500 is "+850,000%")
+    if (p < 50) return `<span class="delta new" title="ב${pm}: ${fmt(Math.max(p, 0))}">חדש</span>`;
+    const ch = Math.round((v - p) / p * 100);
+    const tip = `title="ב${pm}: ${fmt(p)}"`;
+    if (Math.abs(ch) < 5) return `<span class="delta same" ${tip}>כמו ב${pm}</span>`;
+    if (ch >= 200) return `<span class="delta up" ${tip}>▲ פי ${(v / p).toFixed(1).replace(/\.0$/, "")}</span>`;
+    return `<span class="delta ${ch > 0 ? "up" : "down"}" ${tip}><bdi>${ch > 0 ? "▲" : "▼"} ${Math.abs(ch)}%</bdi></span>`;
+  };
+  // one bubble per category, its size by how much went there
+  $("cats").innerHTML = rows.length ? rows.map(([c, v], i) => {
+    const size = Math.round(66 + Math.sqrt(v / max) * 84);
+    const [icon, hue, sat] = iconFor(c);
+    return `<button class="bub ${size > 120 ? "lg" : ""}" data-cat="${esc(c)}" aria-pressed="${filterCat === c}" style="--h:${hue};--s:${sat}%;width:${size}px;height:${size}px" title="${esc(c)} · ${Math.round(v / total * 100)}%">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[icon] || ICONS.tag}"/></svg>
+      ${size >= 80 ? `<span class="bn">${esc(c)}</span>` : ""}<span class="bv num">${fmt(v)}</span>${size >= 96 ? delta(c, v) : ""}</button>`;
+  }).join("") : `<div class="empty">אין הוצאות ${catMode === "fixed" ? "קבועות" : "משתנות"} בחודש הזה.</div>`;
+}
+
+function txRowHtml(t, withDate) {
+  const pos = t.income || t.refund;
+  const k = txKey(t);
+  const open = k && openTx === k;
+  const row = `<div class="tx ${t.del ? "can-del" : ""}" ${k ? `role="button" tabindex="0" aria-expanded="${open}"` : ""}>
+    ${catIcon(t.category)}
+    <div class="m"><bdi>${esc(t.merchant)}</bdi>${t.inst ? ` <bdi dir="ltr" class="inst">(${t.inst.k}/${t.inst.n})</bdi>` : ""}</div>
+    <div class="a num ${pos ? "in" : ""}">${pos ? ltr("+" + fmt2(t.amount)) : fmt2(t.amount)}</div>
+    <div class="meta"><span class="${t.category === "לא מסווג" ? "uncat" : ""}">${esc(t.category)}</span>${withDate === true ? " · " + dd(t.date) : ""} · ${esc(t.account)}${t.gen ? " · מתוך " + fmt(t.total) : ""}</div>
+  </div>`;
+  if (!k) return row;
+  const sure = confirmTx === k;
+  // actions sit behind the row; swiping it (or tapping it) slides the row aside to show them
+  return `<div class="tx-sw ${open ? "open" : ""}" data-k="${k}">
+    <div class="tx-acts" aria-hidden="${!open}">
+      <button class="ed" data-edit="${k}" tabindex="${open ? 0 : -1}"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>עריכה</button>
+      <button class="rm ${sure ? "sure" : ""}" ${sure ? `data-del="${k}"` : `data-ask="${k}"`} tabindex="${open ? 0 : -1}"><svg viewBox="0 0 24 24"><path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13"/></svg>${sure ? (t.gen ? "למחוק הכול?" : "בטוח?") : "מחיקה"}</button>
+    </div>
+    ${row}
+    ${open && txMsgText ? `<span class="tx-msg">${txMsgText}</span>` : ""}
+  </div>`;
+}
+let txMsgText = "";
+let txKind = "all";
+$("txChips").addEventListener("click", e => { const b = e.target.closest("[data-kind]"); if (!b) return; txKind = b.dataset.kind; showAll = false; openTx = null; render(); });
+let searchQ = "";
+function renderList(inP) {
+  const all = tx.length === 0;
+  const q = searchQ.trim().toLowerCase();
+  // a search looks through every month, not just the one on screen
+  const pool = q ? tx.filter(t => [t.merchant, t.rawMerchant, t.category, t.account, String(t.amount)].some(x => String(x || "").toLowerCase().includes(q))) : inP;
+  const kindOk = t => txKind === "all" ? true : txKind === "exp" ? !t.income && !t.refund : txKind === "inc" ? (t.income || t.refund) : !!t.inst;
+  const list = (filterCat ? pool.filter(t => t.category === filterCat) : pool).filter(t => !filterAcc || accOf(t) === filterAcc).filter(kindOk).slice().sort((a, b) => b.date - a.date || b.order - a.order);
+  document.querySelectorAll("#txChips button").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === txKind));
+  $("listTitle").textContent = q ? `תוצאות חיפוש (${list.length})` : filterAcc ? (filterAcc === "חשבון בנק" ? "חשבון בנק" : "החיובים ב" + filterAcc) + (filterCat ? " · " + filterCat : "") : (filterCat || "כל התנועות");
+  $("clearFilter").hidden = !filterCat && !filterAcc;
+  // the exact total of what the list shows: money in for "הכנסות", otherwise spending minus refunds
+  const lt = txKind === "inc" ? list.reduce((s, t) => s + t.amount, 0) : list.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+  $("listTotal").innerHTML = list.length ? (txKind === "inc" ? ltr("+" + fmtX(lt)) : fmtX(lt)) : "";
+  if (all) {
+    $("days").innerHTML = `<div class="empty"><strong>עוד אין תנועות</strong>אחרי שתחברו את הבנק והאשראי (או את Apple Pay), התנועות יופיעו כאן.</div>`;
+    return;
+  }
+  if (!list.length) { $("days").innerHTML = `<div class="empty">${q ? "לא נמצאו תנועות שמתאימות לחיפוש." : "אין תנועות להצגה."}</div>`; return; }
+  const shown = showAll || filterCat || filterAcc ? list : list.slice(0, 40);
+  const groups = new Map();
+  shown.forEach(t => { const k = iso(t.date); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); });
+  $("days").innerHTML = [...groups.values()].map(g => {
+    const d = g[0].date, sum = g.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+    return `<div><div class="day-head"><span>יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}${q ? " " + d.getFullYear() : ""}</span><span class="num">${fmtX(sum)}</span></div>` +
+      g.map(t => txRowHtml(t, false)).join("") + `</div>`;
+  }).join("") + (shown.length < list.length ? `<button class="more" id="showMore">הצג את כל ${list.length} התנועות</button>` : "");
+  const more = $("showMore"); if (more) more.onclick = () => { showAll = true; render(); };
+}
+
+function walletCards() {
+  // every card name Apple Pay has reported, plus any already mapped
+  const names = new Set(Object.keys(cardMap));
+  (data.apple || []).forEach(v => { if ((v[6] || "") === "Apple Pay" && (v[3] || "").trim()) names.add(v[3].trim()); });
+  return [...names].filter(n => cardMap[n] || !PAY.includes(n)).sort();
+}
+function renderCardMap() {
+  const cards = walletCards();
+  const opts = sel => `<option value="">בחרו…</option>` + PAY.map(p => `<option${p === sel ? " selected" : ""}>${esc(p)}</option>`).join("");
+  $("cardMapList").innerHTML = cards.length ? cards.map((n, i) => `<div class="sal-row"><span>${esc(n)}</span>
+    <select id="cm-${i}" data-raw="${esc(n)}" aria-label="אמצעי תשלום עבור ${esc(n)}">${opts(cardMap[n] || "")}</select></div>`).join("")
+    : `<div class="note">עוד לא שולם אף תשלום ב-Apple Pay.</div>`;
+  const unknown = cards.filter(n => !cardMap[n]);
+  const b = $("cardPrompt");
+  if (!unknown.length) { b.hidden = true; return; }
+  const n = unknown[0];
+  b.innerHTML = `<div style="flex:1;min-width:0"><strong>כרטיס חדש מהארנק: ${esc(n)}</strong>לאיזה אמצעי תשלום הוא שייך?</div>
+    <select id="cardPromptSel" data-raw="${esc(n)}" aria-label="אמצעי תשלום עבור ${esc(n)}">${opts("")}</select>`;
+  b.hidden = false;
+}
+async function saveCardMap(raw, to, msgEl) {
+  const next = { ...cardMap }; if (to) next[raw] = to; else delete next[raw];
+  const rows = Object.entries(next).map(([k, v]) => [k, v]);
+  try {
+    await writeRange("'הגדרות'!I2:J61", pad(rows, 60, 2));
+    cardMap = next; build(); render(); renderCardMap();
+  } catch (err) { if (msgEl) msgEl.textContent = writeError(err); }
+}
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "cardPromptSel" || (t.id || "").startsWith("cm-")) saveCardMap(t.dataset.raw, t.value, t.id === "cardPromptSel" ? null : null);
+});
+
+function renderBankStatus() {
+  const rows = data.bank || [];
+  const pill = $("bankPill");
+  if (!rows.length) {
+    pill.textContent = "לא מחובר"; pill.className = "pill";
+    $("bankStatus").textContent = "הלשונית _moneyman בגיליון עדיין ריקה. אחרי ההרצה הראשונה התנועות יופיעו כאן לבד.";
+    return;
+  }
+  const companies = [...new Set(rows.map(r => COMPANY[(r[9] || "").trim()] || r[9]).filter(Boolean))];
+  const last = rows.map(r => Date.parse(r[8])).filter(n => !isNaN(n)).sort((a, b) => b - a)[0];
+  pill.textContent = "מחובר"; pill.className = "pill ok";
+  $("bankStatus").textContent = "מקורות: " + companies.join(", ") + (last ? " · משיכה אחרונה: " + new Date(last).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
+}
+
+/* ---------- data ---------- */
+function showBanner(title, text, actionLabel, action) {
+  const b = $("banner");
+  b.innerHTML = `<div><strong>${esc(title)}</strong>${esc(text)}</div>` + (actionLabel ? `<button class="btn act" id="bannerAct">${esc(actionLabel)}</button>` : "");
+  b.hidden = false;
+  if (action) $("bannerAct").onclick = action;
+}
+const hideBanner = () => { $("banner").hidden = true; };
+
+function handleError(key, err) {
+  const code = err && err.code;
+  if (code === "tool_error" && (key === "bank" || key === "apple" || key === "manual")) { data[key] = []; afterData(); return; } // tab missing: treat as not connected
+  if (code === "tool_error" && key === "settings") { data.settings = []; afterData(); return; }
+  const retract = ["needs_reauth", "server_not_connected", "selection_required", "approval_required", "not_in_manifest", "consent_required", "blocked_by_policy"];
+  if (retract.includes(code)) { data.manual = data.apple = data.bank = null; tx = []; }
+  if (code === "needs_reauth") showBanner("החיבור ל-Google Sheets פג", "חברו אותו מחדש ב-claude.ai ← הגדרות ← מחברים.", "רענון", refresh);
+  else if (code === "server_not_connected" || code === "selection_required") showBanner("Google Sheets לא מחובר", "הוסיפו את המחבר Google Sheets ב-claude.ai ← הגדרות ← מחברים.", "נסו שוב", refresh);
+  else if (code === "approval_required" || code === "not_in_manifest" || code === "consent_required") showBanner("צריך אישור לקרוא את הגיליון", "העמוד קורא רק את קובץ ההוצאות שלכם.", "אישור וטעינה", refresh);
+  else if (code === "blocked_by_policy") showBanner("הגישה חסומה", "מדיניות הארגון לא מאפשרת לעמוד לקרוא את Google Sheets.");
+  else if (code === "server_unavailable" || code === "rate_limited") {
+    if (data.manual === null && data.apple === null && data.bank === null) showBanner("Google Sheets לא עונה כרגע", "זה בדרך כלל עובר תוך דקה.", "נסו שוב", refresh);
+  } else showBanner("לא הצלחתי לטעון את הגיליון", "נסו לרענן בעוד רגע.", "רענון", refresh);
+}
+
+function afterData() {
+  if (data.manual !== null || data.apple !== null || data.bank !== null) hideBanner();
+  build(); render(); renderBankStatus(); renderCardMap();
+  try { renderYear(); renderCatSheet(); } catch (e) { console.error(e); }
+}
+
+function onData(key, payload, result) {
+  const values = (payload && payload.values) || [];
+  if (key === "settings") { applySettings(values); askSalary(); }
+  else data[key] = values;
+  afterData(); stamp(result);
+}
+
+function stamp(result) {
+  const t = result && result.cache && result.cache.storedAt ? new Date(result.cache.storedAt) : new Date();
+  $("foot").innerHTML = `<span>עודכן ב-${t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })} · מתעדכן כל שעה</span><button class="btn ghost" id="refreshBtn" style="padding:3px 12px;font-size:.78rem">רענון</button>`;
+  $("refreshBtn").onclick = refresh;
+}
+
+let mcp = null;
+const SOURCES = { settings: R_SETTINGS, manual: R_MANUAL, apple: R_APPLE, bank: R_BANK };
+async function refresh() {
+  if (!mcp) return;
+  for (const [key, range] of Object.entries(SOURCES)) {
+    try {
+      const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: SHEET_ID, range }, { cache: { refresh: true } });
+      onData(key, res.payload, res);
+    } catch (err) { handleError(key, err); }
+  }
+  for (const id of HISTORY) {
+    try {
+      const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: id, range: R_MANUAL }, { cache: { refresh: true } });
+      data.hist[id] = (res.payload && res.payload.values) || [];
+    } catch (err) {}
+  }
+  afterData();
+}
+
+async function saveIncome(e) {
+  e.preventDefault();
+  const raw = $("incomeInput").value.trim();
+  const next = { ...salaries };
+  const k = mkey(view.y, view.m);
+  if (raw === "") delete next[k]; else next[k] = Math.max(0, Math.round(parseFloat(raw) * 100) / 100 || 0);
+  $("incomeMsg").textContent = "שומר…";
+  try {
+    await writeSalaries(next);
+    editingIncome = false; render();
+  } catch (err) { $("incomeMsg").textContent = writeError(err); }
+}
+
+/* ---------- settings (tab "הגדרות": A category, B fixed, D payment method, F month, G salary) ---------- */
+function applySettings(values) {
+  data.settings = values;
+  const cats = [], pay = [], sal = {}, cm = {}, mrules = {};
+  values.forEach(v => {
+    const c = (v[0] || "").trim();
+    if (c && c !== "הכנסה" && !cats.some(x => x.name === c)) {
+      const [ic, hu] = String(v[2] || "").split("|");
+      cats.push({ name: c, fixed: (v[1] || "").trim() === "כן", icon: ICONS[ic] ? ic : "", hue: ic && !isNaN(+hu) ? +hu : null });
+    }
+    const p = (v[3] || "").trim(); if (p && !pay.includes(p)) pay.push(p);
+    const mk = (v[5] || "").trim(); const amt = parseAmount(v[6]);
+    if (/^\d{4}-\d{2}$/.test(mk) && amt !== null) sal[mk] = amt;
+    const raw = (v[8] || "").trim(), to = (v[9] || "").trim(); if (raw && to) cm[raw] = to;
+    const mr = (v[11] || "").trim(); if (mr && ((v[12] || "").trim() || (v[13] || "").trim())) mrules[mr] = { name: (v[12] || "").trim(), cat: (v[13] || "").trim() };
+  });
+  cardMap = cm; merchantRules = mrules;
+  if (cats.length) {
+    CATS = cats.map(c => c.name); FIXED = new Set(cats.filter(c => c.fixed).map(c => c.name));
+    catStyle = {}; cats.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue == null ? autoIcon(c.name)[1] : c.hue }; });
+  }
+  if (pay.length) PAY = pay;
+  salaries = sal;
+  if (!adminDirty.cats) draftCats = cats.length ? cats.map(c => ({ ...c })) : CATS.map(n => ({ name: n, fixed: FIXED.has(n) }));
+  if (!adminDirty.pay) draftPay = PAY.slice();
+  if (!adminDirty.sal) renderSal();
+  renderAdminLists();
+}
+
+function writeError(err) {
+  const c = err && err.code;
+  return c === "approval_required" || c === "not_in_manifest" ? "צריך לאשר לאתר לכתוב לגיליון. לחצו שוב על שמירה ואשרו."
+    : c === "needs_reauth" ? "החיבור פג. התחברו מחדש."
+    : c === "server_unavailable" || c === "upstream_error" ? "לא בטוח שהשמירה עברה. רעננו ובדקו."
+    : "השמירה נכשלה. נסו שוב.";
+}
+const pad = (rows, n, width) => { const out = rows.slice(0, n); while (out.length < n) out.push(new Array(width).fill("")); return out; };
+async function writeRange(range, values) {
+  if (!mcp) throw { code: "not_granted" };
+  await mcp.callTool(SERVER, "update_values", { spreadsheetId: SHEET_ID, range, values });
+  try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+}
+async function writeSalaries(next) {
+  const rows = Object.entries(next).sort((a, b) => b[0].localeCompare(a[0])).map(([k, v]) => [k, v]);
+  await writeRange("'הגדרות'!F2:G201", pad(rows, 200, 2));
+  salaries = next; build(); render();
+}
+
+let draftCats = [], draftPay = [];
+const adminDirty = { cats: false, pay: false, sal: false };
+let pickerOpen = -1;
+function draftIcon(c) {
+  const auto = autoIcon(c.name.trim());
+  return c.icon ? [c.icon, c.hue == null ? auto[1] : c.hue, 55] : auto;
+}
+function drawCatList() {
+  $("catList").innerHTML = draftCats.map((c, i) => {
+    const [icon, hue, sat] = draftIcon(c);
+    const picker = pickerOpen !== i ? "" : `<div class="picker" style="grid-column:1/-1">
+      <div class="picker-icons">${Object.keys(ICONS).filter(k => k !== "question" && k !== "income").map(k => `<button type="button" class="pick-ic ${k === icon ? "on" : ""}" data-pick-icon="${k}" data-i="${i}" aria-label="${k}">${glyph(k, hue, sat, true)}</button>`).join("")}</div>
+      <div class="picker-hues">${HUES.map(h => `<button type="button" class="pick-hue ${h === hue ? "on" : ""}" data-pick-hue="${h}" data-i="${i}" style="--h:${h}" aria-label="צבע"></button>`).join("")}</div>
+      <div class="row"><button type="button" class="btn ghost" data-pick-auto="${i}" style="padding:5px 12px;font-size:.8rem">לפי השם (אוטומטי)</button><button type="button" class="btn ghost" data-pick-close="1" style="padding:5px 12px;font-size:.8rem">סגירה</button></div>
+    </div>`;
+    return `<div class="edit-row cat-edit">
+      <button type="button" class="ic-btn" data-pick-open="${i}" aria-label="בחירת אייקון">${glyph(icon, hue, sat)}</button>
+      <input type="text" id="cat-${i}" value="${esc(c.name)}" aria-label="שם קטגוריה" data-i="${i}" data-f="name">
+      <label class="fx"><input type="checkbox" id="catfx-${i}" ${c.fixed ? "checked" : ""} data-i="${i}" data-f="fixed">קבועה</label>
+      <button class="del" data-del="${i}" aria-label="מחיקת ${esc(c.name)}">✕</button>${picker}</div>`;
+  }).join("");
+}
+function renderAdminLists() {
+  if (!adminDirty.cats) drawCatList();
+  if (!adminDirty.pay) {
+    $("payList").innerHTML = draftPay.map((p, i) => `<div class="edit-row pay">
+      <input type="text" id="pay-${i}" value="${esc(p)}" aria-label="אמצעי תשלום" data-i="${i}">
+      <button class="del" data-del="${i}" aria-label="מחיקת ${esc(p)}">✕</button></div>`).join("");
+  }
+}
+function renderSal() {
+  const rows = [];
+  const months = today.getFullYear() * 12 + today.getMonth() - FIRST_MONTH + 1;
+  for (let i = 0; i < Math.max(months, 1); i++) {
+    let y = today.getFullYear(), m = today.getMonth() - i;
+    while (m < 0) { m += 12; y--; }
+    const k = mkey(y, m);
+    rows.push(`<div class="sal-row ${i === 0 ? "cur" : ""}"><span>${MONTHS[m]} ${y}</span>
+      <label class="money-in"><span aria-hidden="true">₪</span><input type="text" inputmode="decimal" autocomplete="off" id="sal-${k}" data-k="${k}" value="${salaries[k] != null ? withCommas(String(salaries[k])) : ""}" placeholder="0" aria-label="משכורת ${MONTHS[m]} ${y}"></label></div>`);
+  }
+  $("salList").innerHTML = rows.join("");
+}
+function flash(id, ok, text) { $(id).className = ok ? "ok" : "err"; $(id).textContent = text; }
+
+$("catList").addEventListener("input", e => {
+  const i = +e.target.dataset.i; if (isNaN(i)) return;
+  adminDirty.cats = true;
+  if (e.target.dataset.f === "fixed") draftCats[i].fixed = e.target.checked; else draftCats[i].name = e.target.value;
+  $("catMsg").textContent = "";
+});
+$("catList").addEventListener("click", e => {
+  const op = e.target.closest("[data-pick-open]"), pi = e.target.closest("[data-pick-icon]"), ph = e.target.closest("[data-pick-hue]"),
+        pa = e.target.closest("[data-pick-auto]"), pc = e.target.closest("[data-pick-close]");
+  if (op) { pickerOpen = pickerOpen === +op.dataset.pickOpen ? -1 : +op.dataset.pickOpen; drawCatList(); return; }
+  if (pi || ph) {
+    const i = +(pi || ph).dataset.i, c = draftCats[i], cur = draftIcon(c);
+    c.icon = pi ? pi.dataset.pickIcon : cur[0]; c.hue = ph ? +ph.dataset.pickHue : cur[1];
+    adminDirty.cats = true; $("catMsg").textContent = "שינויים לא נשמרו. לחצו על \"שמירת קטגוריות\"."; drawCatList(); return;
+  }
+  if (pa) { const c = draftCats[+pa.dataset.pickAuto]; c.icon = ""; c.hue = null; adminDirty.cats = true; drawCatList(); return; }
+  if (pc) { pickerOpen = -1; drawCatList(); return; }
+  const d = e.target.closest("[data-del]"); if (!d) return;
+  draftCats.splice(+d.dataset.del, 1); adminDirty.cats = false; renderAdminLists(); adminDirty.cats = true;
+});
+$("addCatRow").onclick = () => {
+  draftCats.push({ name: "", fixed: false }); adminDirty.cats = false; renderAdminLists(); adminDirty.cats = true;
+  $("cat-" + (draftCats.length - 1)).focus();
+};
+$("saveCats").onclick = async () => {
+  const seenN = new Set(); const list = [];
+  for (const c of draftCats) { const n = c.name.trim(); if (!n || seenN.has(n)) continue; if (n === "הכנסה") { flash("catMsg", false, "\"הכנסה\" שמורה למשכורת ולהכנסות."); return; } seenN.add(n); list.push({ name: n, fixed: c.fixed, icon: c.icon || "", hue: c.icon ? (c.hue == null ? autoIcon(n)[1] : c.hue) : null }); }
+  if (!list.length) { flash("catMsg", false, "צריך לפחות קטגוריה אחת."); return; }
+  const btn = $("saveCats"); btn.disabled = true; flash("catMsg", true, "שומר…");
+  try {
+    await writeRange("'הגדרות'!A2:C121", pad(list.map(c => [c.name, c.fixed ? "כן" : "", c.icon ? c.icon + "|" + c.hue : ""]), 120, 3));
+    CATS = list.map(c => c.name); FIXED = new Set(list.filter(c => c.fixed).map(c => c.name));
+    catStyle = {}; list.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue }; }); pickerOpen = -1;
+    draftCats = list.map(c => ({ ...c })); adminDirty.cats = false; renderAdminLists(); build(); render();
+    flash("catMsg", true, "נשמר");
+  } catch (err) { flash("catMsg", false, writeError(err)); }
+  btn.disabled = false;
+};
+
+$("payList").addEventListener("input", e => {
+  const i = +e.target.dataset.i; if (isNaN(i)) return;
+  adminDirty.pay = true; draftPay[i] = e.target.value; $("payMsg").textContent = "";
+});
+$("payList").addEventListener("click", e => {
+  const d = e.target.closest("[data-del]"); if (!d) return;
+  draftPay.splice(+d.dataset.del, 1); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
+});
+$("addPayRow").onclick = () => {
+  draftPay.push(""); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
+  $("pay-" + (draftPay.length - 1)).focus();
+};
+$("savePay").onclick = async () => {
+  const list = [...new Set(draftPay.map(p => p.trim()).filter(Boolean))];
+  if (!list.length) { flash("payMsg", false, "צריך לפחות אמצעי תשלום אחד."); return; }
+  const btn = $("savePay"); btn.disabled = true; flash("payMsg", true, "שומר…");
+  try {
+    await writeRange("'הגדרות'!D2:D61", pad(list.map(p => [p]), 60, 1));
+    PAY = list; draftPay = list.slice(); adminDirty.pay = false; renderAdminLists();
+    flash("payMsg", true, "נשמר");
+  } catch (err) { flash("payMsg", false, writeError(err)); }
+  btn.disabled = false;
+};
+
+/* "10097.83" → "10,097.83", also while typing */
+function withCommas(raw) {
+  let s = String(raw).replace(/[^\d.]/g, "");
+  const dot = s.indexOf(".");
+  let int = dot < 0 ? s : s.slice(0, dot), frac = dot < 0 ? null : s.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+  int = int.replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return frac === null ? int : (int || "0") + "." + frac;
+}
+$("salList").addEventListener("input", e => {
+  const el = e.target;
+  if (el.matches && el.matches("input[data-k]")) {
+    const fromEnd = el.value.length - (el.selectionEnd == null ? el.value.length : el.selectionEnd);
+    el.value = withCommas(el.value);
+    const p = Math.max(0, el.value.length - fromEnd); try { el.setSelectionRange(p, p); } catch (err) {}
+  }
+  adminDirty.sal = true; $("salMsg").textContent = "";
+});
+$("saveSal").onclick = async () => {
+  const next = { ...salaries };
+  $("salList").querySelectorAll("input[data-k]").forEach(inp => {
+    const k = inp.dataset.k, v = inp.value.replace(/,/g, "").trim();
+    if (v === "") delete next[k]; else next[k] = Math.max(0, Math.round(parseFloat(v) * 100) / 100 || 0);
+  });
+  const btn = $("saveSal"); btn.disabled = true; flash("salMsg", true, "שומר…");
+  try { await writeSalaries(next); adminDirty.sal = false; renderSal(); flash("salMsg", true, "נשמר"); }
+  catch (err) { flash("salMsg", false, writeError(err)); }
+  btn.disabled = false;
+};
+
+let currentView = "flow";
+function showView(v) {
+  if (v === "home") v = "flow";
+  // leaving the transactions screen drops any category or card filter, so the next visit starts from everything
+  if (currentView === "tx" && v !== "tx" && (filterCat || filterAcc)) { filterCat = null; filterAcc = null; showAll = false; openTx = null; render(); }
+  currentView = v;
+  $("navHome").setAttribute("aria-pressed", v === "flow"); $("navTx").setAttribute("aria-pressed", v === "tx"); $("tabYear").setAttribute("aria-pressed", v === "year"); $("tabAdmin").setAttribute("aria-pressed", v === "admin");
+  $("flowView").hidden = v !== "flow"; $("txView").hidden = v !== "tx"; $("yearView").hidden = v !== "year"; $("adminView").hidden = v !== "admin";
+  $("monthBar").hidden = v === "year" || v === "admin";
+  if (v === "admin") { if (!adminDirty.sal) renderSal(); renderAdminLists(); }
+  if (v === "year") renderYear();
+  window.scrollTo(0, 0);
+}
+$("navHome").onclick = () => showView("flow");
+$("navTx").onclick = () => { if (filterCat || filterAcc) { filterCat = null; filterAcc = null; render(); } showView("tx"); };
+$("tabYear").onclick = () => showView("year");
+
+/* ---------- year view ---------- */
+let yearSel = today.getFullYear();
+function yearMonths(y) {
+  const out = [];
+  for (let m = 0; m < 12; m++) {
+    const idx = y * 12 + m;
+    if (idx < FIRST_MONTH || idx > today.getFullYear() * 12 + today.getMonth()) continue;
+    const f = monthFigures(y, m);
+    const sal = salaryFor(y, m, false);
+    out.push({ y, m, f, income: sal.amount + f.income, expense: f.fixed + f.variable, fixed: f.fixed, variable: f.variable });
+  }
+  return out;
+}
+function tipOn(box, html, x, y) {
+  let t = box.querySelector(".tip");
+  if (!t) { t = document.createElement("div"); t.className = "tip"; box.appendChild(t); }
+  t.innerHTML = html; t.style.left = x + "px"; t.style.top = y + "px"; t.hidden = false;
+}
+function tipOff(box) { const t = box.querySelector(".tip"); if (t) t.hidden = true; }
+function bindTips(box) {
+  box.onmousemove = e => {
+    const el = e.target.closest("[data-tip]");
+    if (!el) return tipOff(box);
+    const r = box.getBoundingClientRect();
+    tipOn(box, el.dataset.tip, e.clientX - r.left + box.scrollLeft, e.clientY - r.top - 10);
+  };
+  box.onmouseleave = () => tipOff(box);
+  box.ontouchstart = e => box.onmousemove(e.touches[0] ? Object.assign({}, e, { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, target: e.target }) : e);
+}
+
+function renderYear() {
+  if (currentView !== "year") return;
+  const firstY = Math.floor(FIRST_MONTH / 12), lastY = today.getFullYear();
+  const years = []; for (let y = firstY; y <= lastY; y++) years.push(y);
+  if (!years.includes(yearSel)) yearSel = lastY;
+  $("yearPick").innerHTML = years.map(y => `<button data-y="${y}" aria-pressed="${y === yearSel}">${y}</button>`).join("");
+  const months = yearMonths(yearSel);
+  const inc = months.reduce((s, x) => s + x.income, 0);
+  const fixed = months.reduce((s, x) => s + x.fixed, 0);
+  const variable = months.reduce((s, x) => s + x.variable, 0);
+  const exp = fixed + variable, left = inc - exp;
+  $("yBig").textContent = left > 0 ? ltr("+" + fmt(left)) : fmt(left);
+  $("yBig").classList.toggle("neg", left < 0);
+  $("yInc").textContent = fmt(inc); $("yExp").textContent = fmt(exp); $("yLeft").textContent = fmt(left);
+
+  renderMonthsChart(months);
+  renderDonut(months);
+  renderHighlights(months);
+  try { renderHeatmap(); renderWhatIf(); renderCompare(); } catch (e) { console.error(e); }
+}
+
+function niceStep(max) {
+  const raw = max / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+function renderMonthsChart(months) {
+  const box = $("monthsChart");
+  if (!months.length) { box.innerHTML = `<div class="empty">אין נתונים לשנה הזו.</div>`; return; }
+  const W = 600, H = 250, L = 46, R = 8, T = 12, B = 44;
+  const max = Math.max(...months.map(x => Math.max(x.income, x.expense)), 1);
+  const step = niceStep(max), top = Math.ceil(max / step) * step;
+  const y = v => T + (H - T - B) * (1 - v / top);
+  const n = months.length, slot = (W - L - R) / n, bw = Math.min(22, slot * 0.32);
+  let g = "";
+  for (let v = 0; v <= top + 0.01; v += step) {
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`;
+    g += `<text x="${L - 6}" y="${y(v) + 4}" font-size="11" fill="var(--muted)" text-anchor="end" direction="ltr">${v >= 1000 ? (v / 1000) + "K" : v}</text>`;
+  }
+  months.forEach((x, i) => {
+    // RTL: first month on the right
+    const cx = W - R - (i + 0.5) * slot;
+    const bar = (v, xx, c) => {
+      if (v <= 0) return "";
+      const h = y(0) - y(v), r = Math.min(4, h);
+      return `<path d="M${xx},${y(0)} V${y(v) + r} Q${xx},${y(v)} ${xx + r},${y(v)} H${xx + bw - r} Q${xx + bw},${y(v)} ${xx + bw},${y(v) + r} V${y(0)} Z" fill="${c}"/>`;
+    };
+    g += bar(x.income, cx + 1, "var(--s1)") + bar(x.expense, cx - bw - 1, "var(--s2)");
+    const net = x.income - x.expense;
+    g += `<text x="${cx}" y="${H - 26}" font-size="11.5" fill="var(--ink)" text-anchor="middle">${MONTHS[x.m].slice(0, 3)}</text>`;
+    g += `<text x="${cx}" y="${H - 9}" font-size="10.5" fill="${net >= 0 ? "var(--muted)" : "var(--bad)"}" text-anchor="middle" direction="ltr">${net >= 0 ? "+" : "−"}${Math.abs(Math.round(net / 100) / 10)}K</text>`;
+    g += `<rect x="${cx - slot / 2}" y="${T}" width="${slot}" height="${H - T - B + 30}" fill="transparent" data-tip="<b>${MONTHS[x.m]} ${x.y}</b><br>הכנסות ${fmt(x.income)}<br>הוצאות ${fmt(x.expense)}<br>${net >= 0 ? "נשאר" : "חסר"} ${fmt(Math.abs(net))}"/>`;
+  });
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="הכנסות מול הוצאות לפי חודש">${g}</svg>`;
+  bindTips(box);
+}
+
+function renderDonut(months) {
+  const box = $("donut");
+  const m = new Map();
+  months.forEach(x => x.f.spend.forEach(t => m.set(t.category, (m.get(t.category) || 0) + (t.refund ? -t.amount : t.amount))));
+  let rows = [...m.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]);
+  const total = rows.reduce((s, r) => s + r[1], 0);
+  if (!total) { box.innerHTML = ""; $("catLegend").innerHTML = `<div class="empty">אין הוצאות בשנה הזו.</div>`; return; }
+  donutOther = [];
+  const S = 200, cxy = S / 2, R1 = 92, R0 = 60;
+  let a0 = -Math.PI / 2, g = "";
+  rows.forEach(([name, v], i) => {
+    const a1 = a0 + v / total * Math.PI * 2;
+    const big = a1 - a0 > Math.PI ? 1 : 0;
+    const p = (r, a) => (cxy + r * Math.cos(a)).toFixed(2) + "," + (cxy + r * Math.sin(a)).toFixed(2);
+    const c = `hsl(${iconFor(name)[1]} 62% var(--slice-l))`; // same hue as the category's icon
+    // clockwise in RTL reading: slices run from 12 o'clock to the left
+    const d = rows.length === 1
+      ? `M${cxy},${cxy - R1} A${R1},${R1} 0 1 0 ${cxy - 0.01},${cxy - R1} L${cxy - 0.01},${cxy - R0} A${R0},${R0} 0 1 1 ${cxy},${cxy - R0} Z`
+      : `M${p(R1, a0)} A${R1},${R1} 0 ${big} 1 ${p(R1, a1)} L${p(R0, a1)} A${R0},${R0} 0 ${big} 0 ${p(R0, a0)} Z`;
+    g += `<path d="${d}" fill="${c}" stroke="var(--surface)" stroke-width="2" transform="scale(-1,1) translate(-${S},0)" data-cat="${esc(name)}" style="cursor:pointer" data-tip="<b>${esc(name)}</b><br>${fmt(v)} · ${Math.round(v / total * 100)}%"/>`;
+    rows[i].push(c);
+    a0 = a1;
+  });
+  g += `<text x="${cxy}" y="${cxy - 4}" text-anchor="middle" font-size="12" fill="var(--muted)">סך ההוצאות</text>`;
+  g += `<text x="${cxy}" y="${cxy + 18}" text-anchor="middle" font-size="19" font-weight="700" fill="var(--ink)">${fmt(total)}</text>`;
+  box.innerHTML = `<svg viewBox="0 0 ${S} ${S}" style="min-width:0;max-width:200px" role="img" aria-label="הוצאות לפי קטגוריה">${g}</svg>`;
+  bindTips(box);
+  $("catLegend").innerHTML = rows.map(([name, v, c]) => `<button type="button" data-cat="${esc(name)}" aria-label="כל ההוצאות של ${esc(name)}">${catIcon(name, true)}<span class="n">${esc(name)}</span><b class="num">${fmt(v)}</b><span class="p num">${Math.round(v / total * 100)}%</span><span class="chev" aria-hidden="true">‹</span></button>`).join("");
+}
+
+/* ---------- month vs month ---------- */
+let cmpA = null, cmpB = null;
+function monthIdxList() { const out = []; for (let k = today.getFullYear() * 12 + today.getMonth(); k >= FIRST_MONTH; k--) out.push(k); return out; }
+function catTotals(y, m) {
+  const map = new Map();
+  monthFigures(y, m).spend.forEach(t => map.set(t.category, (map.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
+  return map;
+}
+function renderCompare() {
+  const ks = monthIdxList(); if (ks.length < 2) { $("cmpRows").innerHTML = `<div class="empty">צריך לפחות שני חודשים של נתונים.</div>`; return; }
+  if (cmpA == null || !ks.includes(cmpA)) cmpA = ks[1];
+  if (cmpB == null || !ks.includes(cmpB)) cmpB = ks[2] != null ? ks[2] : ks[0];
+  const opt = sel => ks.map(k => `<option value="${k}"${k === sel ? " selected" : ""}>${MONTHS[k % 12]} ${Math.floor(k / 12)}</option>`).join("");
+  $("cmpA").innerHTML = opt(cmpA); $("cmpB").innerHTML = opt(cmpB);
+  const [ya, ma, yb, mb] = [Math.floor(cmpA / 12), cmpA % 12, Math.floor(cmpB / 12), cmpB % 12];
+  const nA = MONTHS[ma], nB = MONTHS[mb] + (yb !== ya ? " " + yb : "");
+  const A = catTotals(ya, ma), B = catTotals(yb, mb);
+  const cats = [...new Set([...A.keys(), ...B.keys()])].map(c => [c, Math.max(0, A.get(c) || 0), Math.max(0, B.get(c) || 0)])
+    .filter(r => r[1] > 0 || r[2] > 0).sort((x, y) => Math.abs(y[1] - y[2]) - Math.abs(x[1] - x[2]));
+  const tA = cats.reduce((s, r) => s + r[1], 0), tB = cats.reduce((s, r) => s + r[2], 0);
+  const max = Math.max(1, ...cats.map(r => Math.max(r[1], r[2])));
+  const side = (cls, v, scale) => `<span class="cmp-side ${cls}"><span class="bar" style="width:${v > 0 ? Math.max(2, v / scale * 100).toFixed(1) : 0}%"></span><span class="v">${v > 0 ? fmt(v) : "—"}</span></span>`;
+  const diffTag = (a, b) => { const d = b - a; if (Math.abs(d) < 1) return `<span class="d">שווה</span>`; return `<span class="d ${d > 0 ? "up" : "down"}">${ltr((d > 0 ? "+" : "−") + fmt(Math.abs(d)))}</span>`; };
+  let html = `<div class="cmp-row total">${side("a", tA, Math.max(tA, tB))}<span class="cmp-lbl"><span>סך הכול</span>${diffTag(tA, tB)}</span>${side("b", tB, Math.max(tA, tB))}</div>`;
+  html += cats.map(([c, a, b]) => `<button type="button" class="cmp-row" data-cmp="${esc(c)}">${side("a", a, max)}<span class="cmp-lbl">${catIcon(c, true)}<span>${esc(c)}</span>${diffTag(a, b)}</span>${side("b", b, max)}</button>`).join("");
+  $("cmpRows").innerHTML = html;
+  // one sentence on what made the difference
+  const d = tB - tA, top = cats[0];
+  if (!cats.length) $("cmpSum").textContent = "";
+  else if (Math.abs(d) < 1) $("cmpSum").innerHTML = `ב${nA} וב${nB} הוצאתם בדיוק אותו סכום.`;
+  else {
+    // the biggest change pointing the same way as the overall difference
+    const drv = cats.filter(r => Math.sign(r[2] - r[1]) === Math.sign(d))[0];
+    const td = drv ? drv[2] - drv[1] : 0;
+    $("cmpSum").innerHTML = `ב<b>${nB}</b> הוצאתם <b class="num">${fmt(Math.abs(d))}</b> ${d < 0 ? "פחות" : "יותר"} מאשר ב${nA}` +
+      (drv ? `, בעיקר ב<b>${esc(drv[0])}</b> (${td < 0 ? "פחות" : "יותר"} ${fmt(Math.abs(td))}).` : ".");
+  }
+}
+$("cmpA").addEventListener("change", e => { cmpA = +e.target.value; renderCompare(); });
+$("cmpB").addEventListener("change", e => { cmpB = +e.target.value; renderCompare(); });
+$("cmpRows").addEventListener("click", e => {
+  const r = e.target.closest("[data-cmp]"); if (!r) return;
+  catSheet = { label: r.dataset.cmp, names: [r.dataset.cmp], months: [cmpA, cmpB] };
+  openTx = null; confirmTx = null; txMsgText = "";
+  renderCatSheet(); $("catSheetBg").hidden = false;
+});
+
+function renderHeatmap() {
+  const y = yearSel, box = $("heatmap");
+  const byDay = new Map();
+  tx.forEach(t => { if (t.income || t.date.getFullYear() !== y) return; const k = iso(t.date); byDay.set(k, (byDay.get(k) || 0) + (t.refund ? -t.amount : t.amount)); });
+  const vals = [...byDay.values()].filter(v => v > 0).sort((a, b) => a - b);
+  const q = p => vals.length ? vals[Math.min(vals.length - 1, Math.floor(p * vals.length))] : 0;
+  const cuts = [q(.25), q(.5), q(.75)];
+  const lvl = v => v <= 0 ? 0 : v <= cuts[0] ? 1 : v <= cuts[1] ? 2 : v <= cuts[2] ? 3 : 4;
+  let html = "";
+  for (let m = 0; m < 12; m++) {
+    if (y * 12 + m < FIRST_MONTH || y * 12 + m > today.getFullYear() * 12 + today.getMonth()) continue;
+    const first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate();
+    let cells = "";
+    for (let i = 0; i < first.getDay(); i++) cells += `<i class="e"></i>`;
+    for (let d = 1; d <= days; d++) {
+      const dt = new Date(y, m, d), v = byDay.get(iso(dt)) || 0, fut = dt > today;
+      cells += `<i class="hl${fut ? 0 : lvl(v)}${fut ? " f" : ""}" data-tip="<b>${WEEKDAYS[dt.getDay()]}, ${d}.${m + 1}</b><br>${v > 0 ? fmt(v) : "בלי הוצאות"}"></i>`;
+    }
+    html += `<div class="heat-m"><h4>${MONTHS[m]}</h4><div class="heat-grid">${cells}</div></div>`;
+  }
+  box.innerHTML = html ? `<div class="heat-months">${html}</div>` : `<div class="empty">אין נתונים לשנה הזו.</div>`;
+  bindTips(box);
+  // which weekdays cost the most on average
+  const wd = new Array(7).fill(0), wn = new Array(7).fill(0);
+  const from = new Date(Math.max(new Date(y, 0, 1), new Date(Math.floor(FIRST_MONTH / 12), FIRST_MONTH % 12, 1)));
+  const to = new Date(Math.min(new Date(y, 11, 31), today));
+  for (let d = from; d <= to; d = addDays(d, 1)) { wd[d.getDay()] += Math.max(0, byDay.get(iso(d)) || 0); wn[d.getDay()]++; }
+  const avg = wd.map((v, i) => wn[i] ? v / wn[i] : 0);
+  const order = avg.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+  const zero = [...Array(daysBetween(from, to) + 1).keys()].filter(i => !(byDay.get(iso(addDays(from, i))) > 0)).length;
+  $("heatNote").textContent = vals.length ? `בממוצע ימי ${WEEKDAYS[order[0][1]]} הכי יקרים (${fmt(order[0][0])} ליום) וימי ${WEEKDAYS[order[6][1]]} הכי זולים. ${zero} ימים השנה עברו בלי הוצאה בכלל.` : "";
+}
+
+const whatIfCut = {};
+function renderWhatIf() {
+  // average monthly spend per variable category over the last three full months
+  const ms = []; let y = today.getFullYear(), m = today.getMonth();
+  for (let i = 0; i < 3; i++) { [y, m] = prevYM(y, m); if (y * 12 + m >= FIRST_MONTH) ms.push(monthFigures(y, m)); }
+  const sum = new Map();
+  ms.forEach(f => f.spend.forEach(t => { if (FIXED.has(t.category)) return; sum.set(t.category, (sum.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)); }));
+  const rows = [...sum.entries()].map(([c, v]) => [c, v / Math.max(ms.length, 1)]).filter(r => r[1] > 50 && r[0] !== "לא מסווג").sort((a, b) => b[1] - a[1]).slice(0, 6);
+  $("whatif").innerHTML = rows.length ? rows.map(([c, avg], i) => {
+    const cut = whatIfCut[c] || 0;
+    return `<div class="wi-row">${catIcon(c, true)}<span class="nm">${esc(c)} <small class="num">${fmt(avg)} בחודש</small></span><span class="cut" id="wic-${i}">${cut ? ltr("−" + cut + "%") : ""}</span>
+      <input type="range" min="0" max="100" step="5" value="${cut}" id="wi-${i}" data-cat="${esc(c)}" data-avg="${avg}" aria-label="כמה לקצץ ב${esc(c)}"></div>`;
+  }).join("") : `<div class="empty">צריך לפחות חודש מלא אחד של נתונים.</div>`;
+  updateWhatIf();
+}
+function updateWhatIf() {
+  let total = 0;
+  $("whatif").querySelectorAll("input[type=range]").forEach((r, i) => {
+    const cut = +r.value; whatIfCut[r.dataset.cat] = cut; total += +r.dataset.avg * cut / 100;
+    const lbl = $("wic-" + i); if (lbl) lbl.textContent = cut ? ltr("−" + cut + "%") : "";
+  });
+  $("wiMonth").textContent = fmt(total); $("wiYear").textContent = fmt(total * 12);
+}
+$("whatif").addEventListener("input", updateWhatIf);
+
+function renderHighlights(months) {
+  if (!months.length) { $("highlights").innerHTML = ""; return; }
+  const withNet = months.map(x => ({ ...x, net: x.income - x.expense }));
+  const best = withNet.slice().sort((a, b) => b.net - a.net)[0];
+  const worst = withNet.slice().sort((a, b) => b.expense - a.expense)[0];
+  const all = months.flatMap(x => x.f.spend.filter(t => !t.refund));
+  const biggest = netPurchases(months.flatMap(x => x.f.spend)).sort((a, b) => b.net - a.net).map(t => ({ ...t, amount: t.net }))[0];
+  const avg = months.reduce((s, x) => s + x.expense, 0) / months.length;
+  const items = [
+    ["החודש הכי טוב", fmt(best.net), `${MONTHS[best.m]}: ${best.net >= 0 ? "נשאר" : "חסר"} הכי הרבה`],
+    ["החודש הכי יקר", fmt(worst.expense), `${MONTHS[worst.m]}`],
+    ["ההוצאה הגדולה בשנה", biggest ? fmt(biggest.amount) : "—", biggest ? `${biggest.merchant} · ${dd(biggest.date)}` : ""],
+    ["ממוצע הוצאות לחודש", fmt(avg), `על פני ${months.length} חודשים`]
+  ];
+  $("highlights").innerHTML = items.map(([k, v, d]) => `<div class="hl"><div class="k">${k}</div><div class="v num">${v}</div><div class="d">${esc(d)}</div></div>`).join("");
+}
+let donutOther = [], catSheet = null; // {label, names}
+function openCatSheet(label) {
+  catSheet = { label, names: label === "אחר" ? donutOther.slice() : [label], months: null };
+  openTx = null; confirmTx = null; txMsgText = "";
+  renderCatSheet(); $("catSheetBg").hidden = false;
+}
+function closeCatSheet() { catSheet = null; $("catSheetBg").hidden = true; openTx = null; confirmTx = null; }
+function renderCatSheet() {
+  if (!catSheet) return;
+  const months = catSheet.months ? catSheet.months.map(k => ({ f: monthFigures(Math.floor(k / 12), k % 12) })) : yearMonths(yearSel);
+  const list = months.flatMap(x => x.f.spend).filter(t => catSheet.names.includes(t.category))
+    .sort((a, b) => catSheet.months ? catSheet.months.indexOf(a.date.getFullYear() * 12 + a.date.getMonth()) - catSheet.months.indexOf(b.date.getFullYear() * 12 + b.date.getMonth()) || b.date - a.date : b.date - a.date || b.order - a.order);
+  const total = list.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+  $("catSheetTitle").innerHTML = (catSheet.label === "אחר" ? glyph("tag", 220, 10) : catIcon(catSheet.label)) + `<span>${esc(catSheet.label)} · ${catSheet.months ? catSheet.months.map(k => MONTHS[k % 12]).join(" מול ") : yearSel}</span>`;
+  $("catSheetSum").innerHTML = `<span>סה״כ <b>${fmtX(total)}</b></span><span><b>${list.length}</b> תנועות</span>` +
+    (catSheet.label === "אחר" ? `<span>${esc(catSheet.names.join(", "))}</span>` : "");
+  if (!list.length) { $("catSheetList").innerHTML = `<div class="empty">אין הוצאות בקטגוריה הזו ${catSheet.months ? "בחודשים האלה" : "השנה"}.</div>`; return; }
+  const groups = new Map();
+  list.forEach(t => { const k = t.date.getFullYear() * 12 + t.date.getMonth(); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); });
+  $("catSheetList").innerHTML = [...groups.values()].map(g => {
+    const d = g[0].date, sum = g.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+    return `<div><div class="day-head"><span>${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="num">${fmtX(sum)}</span></div>${g.map(t => txRowHtml(t, true)).join("")}</div>`;
+  }).join("");
+}
+$("catLegend").addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (b) openCatSheet(b.dataset.cat); });
+$("donut").addEventListener("click", e => { const p = e.target.closest("[data-cat]"); if (p) openCatSheet(p.dataset.cat); });
+$("closeCatSheet").onclick = closeCatSheet;
+$("catSheetBg").addEventListener("click", e => { if (e.target.id === "catSheetBg") closeCatSheet(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("catSheetBg").hidden && $("sheetBg").hidden) closeCatSheet(); });
+
+$("yearPick").addEventListener("click", e => { const b = e.target.closest("[data-y]"); if (!b) return; yearSel = +b.dataset.y; renderYear(); });
+$("tabAdmin").onclick = () => showView("admin");
+draftCats = CATS.map(n => ({ name: n, fixed: FIXED.has(n) })); draftPay = PAY.slice();
+
+async function boot() {
+  mcp = await startApp();
+  if (!mcp) { $("foot").textContent = "פתחו את העמוד ב-claude.ai כדי לראות את הנתונים מהגיליון."; return; }
+  for (const [key, range] of Object.entries(SOURCES)) {
+    mcp.watchTool(SERVER, "get_values", { spreadsheetId: SHEET_ID, range }, ev => {
+      if (ev.type === "data") onData(key, ev.result.payload, ev.result);
+      else handleError(key, ev.error);
+    }, { refetchInterval: 3600000 });
+  }
+  HISTORY.forEach(id => {
+    mcp.watchTool(SERVER, "get_values", { spreadsheetId: id, range: R_MANUAL }, ev => {
+      if (ev.type === "data") { data.hist[id] = (ev.result.payload && ev.result.payload.values) || []; scheduleBuild(); }
+      else if (ev.error && ev.error.code === "tool_error") { data.hist[id] = []; }
+    }, { refetchInterval: 6 * 3600000 });
+  });
+}
+let buildTimer = null;
+function scheduleBuild() { clearTimeout(buildTimer); buildTimer = setTimeout(afterData, 150); }
+
+/* ---------- delete entry ---------- */
+let openTx = null, confirmTx = null;
+const arrOf = key => key === "manual" ? data.manual : key === "apple" ? data.apple : key === "bank" ? data.bank : data.hist[key.slice(5)];
+const txByKey = k => tx.find(t => txKey(t) === k);
+const trimRow = r => { const a = (r || []).map(x => String(x)); while (a.length && a[a.length - 1] === "") a.pop(); return a; };
+function redrawLists() { txMsgText = ""; render(); renderCatSheet(); }
+async function onTxListClick(e) {
+  const ask = e.target.closest("[data-ask]"), del = e.target.closest("[data-del]"), cancel = e.target.closest("[data-cancel]"), ed = e.target.closest("[data-edit]");
+  if (ed) { const t = txByKey(ed.dataset.edit); if (t) openEdit(t); return; }
+  if (ask) { confirmTx = ask.dataset.ask; redrawLists(); return; }
+  if (cancel) { confirmTx = null; openTx = null; redrawLists(); return; }
+  if (del) { await deleteTx(del.dataset.del, del); return; }
+  if (e.target.closest(".tx-acts")) return;
+  if (swipeJustHappened) return;
+  const row = e.target.closest(".tx-sw[data-k]"); if (!row) return;
+  openTx = openTx === row.dataset.k ? null : row.dataset.k; confirmTx = null; redrawLists();
+}
+$("days").addEventListener("click", onTxListClick);
+/* swipe a row to the right to show edit / delete, to the left to close it */
+let swipe = null, swipeJustHappened = false;
+function swipeStart(e) {
+  const sw = e.target.closest(".tx-sw[data-k]"); if (!sw || e.target.closest(".tx-acts")) return;
+  const p = e.touches ? e.touches[0] : e;
+  swipe = { sw, x: p.clientX, y: p.clientY, dx: 0, lock: null, base: sw.classList.contains("open") ? 152 : 0 };
+}
+function swipeMove(e) {
+  if (!swipe) return;
+  const p = e.touches ? e.touches[0] : e;
+  const dx = p.clientX - swipe.x, dy = p.clientY - swipe.y;
+  if (!swipe.lock) { if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; swipe.lock = Math.abs(dx) > Math.abs(dy) ? "x" : "y"; }
+  if (swipe.lock !== "x") { swipe = null; return; }
+  swipe.dx = dx; swipe.sw.classList.add("moving");
+  const x = Math.max(0, Math.min(170, swipe.base + dx));
+  const row = swipe.sw.querySelector(".tx"); row.style.transition = "none"; row.style.transform = `translateX(${x}px)`;
+}
+function swipeEnd() {
+  if (!swipe) return;
+  const { sw, dx, base, lock } = swipe; swipe = null;
+  const row = sw.querySelector(".tx"); row.style.transition = ""; row.style.transform = ""; sw.classList.remove("moving");
+  if (lock !== "x") return;
+  swipeJustHappened = true; setTimeout(() => { swipeJustHappened = false; }, 350);
+  const k = sw.dataset.k, openIt = base + dx > 70;
+  if (openIt && openTx !== k) { openTx = k; confirmTx = null; redrawLists(); }
+  else if (!openIt && openTx === k) { openTx = null; confirmTx = null; redrawLists(); }
+}
+["days", "catSheetList"].forEach(id => {
+  const el = $(id);
+  el.addEventListener("touchstart", swipeStart, { passive: true });
+  el.addEventListener("touchmove", swipeMove, { passive: true });
+  el.addEventListener("touchend", swipeEnd);
+  el.addEventListener("touchcancel", swipeEnd);
+});
+$("insights").addEventListener("click", e => {
+  const b = e.target.closest("[data-off]"); if (!b) return;
+  const off = readDismissed(); off[b.dataset.off] = 1;
+  try { localStorage.setItem("insightsOff", JSON.stringify(off)); } catch (err) {}
+  b.closest(".insight").remove();
+});
+$("txSearch").addEventListener("input", e => { searchQ = e.target.value; showAll = false; openTx = null; render(); });
+$("catSheetList").addEventListener("click", onTxListClick);
+async function deleteTx(k, btn) {
+  const t = txByKey(k); if (!t || !mcp) return;
+  btn.disabled = true; btn.textContent = "מוחק…";
+  const msg = text => { txMsgText = esc(text); btn.disabled = false; btn.textContent = "מחיקה"; document.querySelectorAll(".tx-msg").forEach(m => m.textContent = text); };
+  try {
+    // check the row still holds this transaction before deleting it (rows shift when the sheet changes)
+    const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
+    const now = trimRow(((res.payload && res.payload.values) || [[]])[0]);
+    if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) { msg("הגיליון השתנה. רעננו ונסו שוב."); return; }
+    const arr = arrOf(t.del.key);
+    if (t.del.mode === "mark") {
+      await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: t.del.mark, values: [["מחוק"]] });
+      const r = arr[t.del.index]; while (r.length < 8) r.push(""); r[7] = "מחוק";
+    } else {
+      await mcp.callTool(SERVER, "update_spreadsheet", { spreadsheetId: t.del.file, requests: [{ deleteDimension: { range: { sheetId: t.del.sheetId, dimension: "ROWS", startIndex: t.del.row - 1, endIndex: t.del.row } } }] });
+      arr.splice(t.del.index, 1);
+    }
+    openTx = null; confirmTx = null; afterData();
+    try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
+  } catch (err) { msg(writeError(err)); }
+}
+
+/* ---------- add entry ---------- */
+let addKind = "exp";
+function setKind(k) {
+  addKind = k;
+  $("kExp").setAttribute("aria-pressed", k === "exp"); $("kInc").setAttribute("aria-pressed", k === "inc");
+  const cats = k === "inc" ? ["הכנסה", ...CATS] : CATS;
+  const prev = $("addCat").value;
+  $("addCat").innerHTML = cats.map(c => `<option>${esc(c)}</option>`).join("");
+  if (cats.includes(prev)) $("addCat").value = prev;
+  $("addCardLbl").textContent = k === "inc" ? "התקבל ל" : "אמצעי תשלום";
+  if (k === "inc") $("addCard").value = "חשבון בנק";
+  $("addHint").hidden = k !== "inc";
+  instShown();
+}
+const MAX_INST = 36;
+$("addInst").innerHTML = Array.from({ length: MAX_INST }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+function instShown() {
+  const can = addKind === "exp" && (!editTx || editTx.del.key === "apple");
+  $("instField").style.visibility = can ? "" : "hidden";
+  if (!can) $("addInst").value = "1";
+  const n = +$("addInst").value, a = parseFloat($("addAmount").value) || 0;
+  $("instHint").hidden = !(can && n > 1);
+  if (can && n > 1) $("instHint").textContent = `הסכום הוא המחיר המלא. ${n} תשלומים של ${fmt2(Math.round(a / n * 100) / 100)}, כל חודש עד ${MONTHS[addMonths(parseDate($("addDate").value) || today, n - 1).getMonth()]}.`;
+}
+$("addInst").addEventListener("change", instShown);
+$("addAmount").addEventListener("input", instShown);
+$("addDate").addEventListener("change", instShown);
+let editTx = null;
+function openAdd() {
+  editTx = null;
+  $("addTitle").textContent = "הוספת תנועה"; $("addCard").disabled = false;
+  $("addCard").innerHTML = PAY.map(c => `<option>${esc(c)}</option>`).join("");
+  $("addCard").value = PAY[0];
+  $("addAmount").value = ""; $("addDesc").value = ""; $("addMsg").textContent = "";
+  $("addDate").value = iso(new Date()); // the date when the form opens, even if the page stayed open overnight
+  $("addInst").value = "1";
+  setKind("exp");
+  $("addSave").disabled = false; $("addSave").textContent = "שמירה";
+  $("sheetBg").hidden = false;
+  setTimeout(() => $("addAmount").focus(), 50);
+}
+function closeAdd() { $("sheetBg").hidden = true; editTx = null; }
+function openEdit(t) {
+  openAdd();
+  editTx = t;
+  $("addTitle").textContent = "עריכת תנועה";
+  const inc = t.income || t.refund;
+  setKind(inc ? "inc" : "exp");
+  const catOpts = [...$("addCat").options].map(o => o.value);
+  if (!catOpts.includes(t.category)) $("addCat").insertAdjacentHTML("beforeend", `<option>${esc(t.category)}</option>`);
+  $("addCat").value = t.category;
+  if (t.del.key === "bank") { $("addCard").innerHTML = `<option>${esc(t.account)}</option>`; $("addCard").disabled = true; }
+  else {
+    if (t.account && !PAY.includes(t.account)) $("addCard").insertAdjacentHTML("beforeend", `<option>${esc(t.account)}</option>`);
+    if (t.account) $("addCard").value = t.account;
+  }
+  const src = t.del.key === "apple" ? t.del.raw : null;
+  $("addInst").value = String(src ? Math.max(1, parseInt(src[8], 10) || 1) : 1);
+  // a purchase in payments is edited as the whole purchase: full price and the first payment's date
+  $("addAmount").value = t.gen ? t.total : t.amount; $("addDesc").value = t.merchant; $("addDate").value = iso(t.gen ? parseDate(src[0]) : t.date);
+  instShown();
+  $("addSave").textContent = "שמירת שינויים";
+}
+async function saveEdit(t, amount, desc, date, cat, card, kind) {
+  const d = parseDate(date);
+  const ddmm = String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
+  const type = kind === "inc" ? "הכנסה" : "הוצאה";
+  let range, values;
+  if (t.del.key === "apple") { const r = t.del.raw; range = "'עסקאות'!A" + t.del.row + ":I" + t.del.row; const n = +$("addInst").value; values = [[date, amount, desc, card, cat, type, r[6] || "", r[7] || "", n > 1 ? n : ""]]; }
+  else if (t.del.key === "bank") { range = "'_moneyman'!A" + (t.del.index + 2) + ":E" + (t.del.index + 2); values = [[ddmm, kind === "inc" ? amount : -amount, desc, t.del.raw[3] || "", cat]]; }
+  else { range = "'הוצאות יומיות'!D" + t.del.row + ":I" + t.del.row; values = [["=DATE(" + d.getFullYear() + "," + (d.getMonth() + 1) + "," + d.getDate() + ")", type, cat, desc, card, amount]]; }
+  // same safety check as delete: the row must still hold this transaction
+  const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
+  const now = trimRow(((res.payload && res.payload.values) || [[]])[0]);
+  if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) throw { code: "changed" };
+  await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range, values });
+  const back = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
+  arrOf(t.del.key)[t.del.index] = ((back.payload && back.payload.values) || [[]])[0] || [];
+  // remember the viewer's choice for this business, so the next payment there is named and sorted the same way
+  if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && (desc !== t.merchant || cat !== t.category)) {
+    const next = { ...merchantRules, [t.rawMerchant]: { name: desc, cat } };
+    try { await writeRange("'הגדרות'!L2:N201", pad(Object.entries(next).map(([k, r]) => [k, r.name, r.cat]), 200, 3)); merchantRules = next; } catch (e) {}
+  }
+  view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
+}
+$("fab").onclick = openAdd;
+$("closeAdd").onclick = closeAdd;
+$("sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") closeAdd(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheetBg").hidden) closeAdd(); if (e.key === "Escape" && !$("salBg").hidden) salLater(); });
+$("kExp").onclick = () => setKind("exp");
+$("kInc").onclick = () => setKind("inc");
+$("addDesc").addEventListener("input", () => {
+  if (addKind !== "exp") return;
+  const g = guessCategory($("addDesc").value, "");
+  if (CATS.includes(g)) $("addCat").value = g;
+});
+$("addForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const amount = Math.round((parseFloat($("addAmount").value) || 0) * 100) / 100;
+  const desc = $("addDesc").value.trim();
+  const date = $("addDate").value;
+  if (amount <= 0) { $("addMsg").textContent = "הזינו סכום גדול מאפס."; $("addAmount").focus(); return; }
+  if (!desc) { $("addMsg").textContent = "הוסיפו תיאור קצר."; $("addDesc").focus(); return; }
+  if (!date) { $("addMsg").textContent = "בחרו תאריך."; return; }
+  if (!mcp) { $("addMsg").textContent = "אפשר להוסיף רק כשהעמוד פתוח ב-claude.ai."; return; }
+  if (editTx) {
+    const btn = $("addSave"); btn.disabled = true; btn.textContent = "שומר…"; $("addMsg").textContent = "";
+    try {
+      await saveEdit(editTx, amount, desc, date, $("addCat").value, $("addCard").value, addKind);
+      openTx = null; confirmTx = null; closeAdd(); afterData();
+      try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
+    } catch (err) {
+      $("addMsg").textContent = err && err.code === "changed" ? "הגיליון השתנה. רעננו ונסו שוב." : writeError(err);
+      btn.disabled = false; btn.textContent = "שמירת שינויים";
+    }
+    return;
+  }
+  const nInst = addKind === "exp" ? +$("addInst").value : 1;
+  const row = [date, amount, desc, $("addCard").value, $("addCat").value, addKind === "inc" ? "הכנסה" : "הוצאה", "ידני", "m-" + Date.now(), nInst > 1 ? nInst : ""];
+  const btn = $("addSave"); btn.disabled = true; btn.textContent = "שומר…"; $("addMsg").textContent = "";
+  try {
+    await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: [row] });
+    data.apple = [...(data.apple || []), row];
+    const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
+    closeAdd(); afterData();
+    try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
+  } catch (err) {
+    const c = err && err.code;
+    $("addMsg").textContent = c === "approval_required" || c === "not_in_manifest" ? "צריך לאשר לאתר לכתוב לגיליון. לחצו שוב על שמירה ואשרו."
+      : c === "server_unavailable" || c === "upstream_error" ? "לא בטוח שהשמירה עברה. רעננו את העמוד ובדקו לפני שמנסים שוב."
+      : c === "needs_reauth" ? "החיבור פג. התחברו מחדש."
+      : "השמירה נכשלה. נסו שוב.";
+    btn.disabled = false; btn.textContent = "שמירה";
+  }
+});
+
+/* ---------- events ---------- */
+$("prev").onclick = () => { shift(-1); showAll = false; render(); };
+$("next").onclick = () => { shift(1); showAll = false; render(); };
+$("cats").addEventListener("click", e => {
+  const b = e.target.closest(".bub"); if (!b) return;
+  filterCat = b.dataset.cat; filterAcc = null; txKind = "all"; showAll = false; render(); showView("tx");
+});
+$("clearFilter").onclick = () => { filterCat = null; filterAcc = null; render(); };
+$("segVar").onclick = () => { catMode = "var"; $("segVar").setAttribute("aria-pressed", "true"); $("segFixed").setAttribute("aria-pressed", "false"); render(); };
+$("segFixed").onclick = () => { catMode = "fixed"; $("segFixed").setAttribute("aria-pressed", "true"); $("segVar").setAttribute("aria-pressed", "false"); render(); };
+$("startDay").addEventListener("change", e => {
+  const v = Math.min(28, Math.max(1, parseInt(e.target.value, 10) || 1));
+  e.target.value = v; startDay = v;
+  try { localStorage.setItem("startDay", v); } catch (err) {}
+  view = { y: now.getFullYear(), m: now.getMonth() };
+  if (now.getDate() < startDay) shift(-1);
+  render();
+});
+
+/* every card can be folded; the choice is remembered on this device */
+const FOLDED_BY_DEFAULT = ["חודש מול חודש", "לוח ההוצאות של השנה", "מה אם הייתי מוציא פחות"];
+function readFolds() { try { return JSON.parse(localStorage.getItem("folds") || "{}"); } catch (e) { return {}; } }
+document.querySelectorAll(".card > h2").forEach(h => {
+  const card = h.parentElement, key = h.textContent.replace(/\s+/g, " ").trim().slice(0, 40);
+  const main = document.createElement("span"); main.className = "fold-main";
+  while (h.firstChild) main.appendChild(h.firstChild);
+  const btn = document.createElement("button"); btn.type = "button"; btn.className = "fold-btn";
+  btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  h.append(main, btn); h.classList.add("fold-h");
+  const set = c => { card.classList.toggle("collapsed", c); btn.setAttribute("aria-expanded", String(!c)); btn.setAttribute("aria-label", c ? "פתיחה" : "מזעור"); };
+  const saved = readFolds();
+  set(key in saved ? !!saved[key] : FOLDED_BY_DEFAULT.some(t => key.startsWith(t)));
+  h.addEventListener("click", e => {
+    if (e.target.closest("button:not(.fold-btn), select, input, a")) return;
+    const c = !card.classList.contains("collapsed"); set(c);
+    const f = readFolds(); f[key] = c ? 1 : 0;
+    try { localStorage.setItem("folds", JSON.stringify(f)); } catch (err) {}
+  });
+});
+
+render();
+boot();
+</script>
+
+</body>
+</html>
