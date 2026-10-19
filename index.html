@@ -742,6 +742,7 @@ body { margin: 0; }
           <li>שדות טקסט: <code>token</code> = המפתח האישי <button class="btn ghost" type="button" id="copyPayTok" style="padding:3px 12px;font-size:.8rem">העתקה</button>, <code>amount</code> = כמות, <code>merchant</code> = בית העסק, <code>card</code> = כרטיס.</li>
           <li>אחריה פעולה <b>הצגת עדכון</b> עם "תוכן של כתובת אינטרנט", כדי לראות שזה נרשם.</li>
         </ol>
+        <div class="field"><label for="payTokShow">המפתח האישי שלך</label><input id="payTokShow" readonly dir="ltr" style="font-family:ui-monospace,monospace;font-size:15px"></div>
         <p class="note" style="margin:0" id="payCopied"></p>
       </div>
     </details>
@@ -901,7 +902,19 @@ async function startApp() {
   PROFILE = prof || { settings: [] };
   USER_NAME = (PROFILE.display_name || PROFILE.username || "").trim();
   const payUrl = SUPA_URL + "/rest/v1/rpc/add_pay?apikey=" + SUPA_KEY;
-  const copy = (txt, label) => { try { navigator.clipboard.writeText(txt); document.getElementById("payCopied").textContent = label + " הועתק."; } catch (e) { prompt("העתיקו:", txt); } };
+  // copy for real (and say so only when it worked); otherwise select the text so it can be copied by hand
+  const copy = async (txt, label) => {
+    const note = document.getElementById("payCopied");
+    if (!txt) { note.textContent = "המפתח עוד לא נטען. רעננו את הדף ונסו שוב."; return; }
+    try { await navigator.clipboard.writeText(txt); note.textContent = label + " הועתק."; return; } catch (e) {}
+    const t = document.createElement("textarea"); t.value = txt; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select(); t.setSelectionRange(0, txt.length);
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+    t.remove();
+    note.textContent = ok ? label + " הועתק." : "לא הצלחתי להעתיק. סמנו את המפתח בתיבה והעתיקו ידנית.";
+  };
+  document.getElementById("payTokShow").value = PROFILE.pay_token || "";
+  freshProf.then(p => { if (p && p.pay_token) { PROFILE.pay_token = p.pay_token; document.getElementById("payTokShow").value = p.pay_token; } }).catch(() => {});
   document.getElementById("copyPayUrl").onclick = () => copy(payUrl, "הכתובת");
   document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
   document.getElementById("whoAmI").textContent = "מחובר בתור " + (PROFILE.username || "");
