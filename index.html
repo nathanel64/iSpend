@@ -504,6 +504,21 @@ body { margin: 0; }
 .auth .btn { padding: 13px; font-size: 1rem; }
 .auth-msg { min-height: 1.2em; margin: 0; font-size: .85rem; color: var(--bad); }
 .auth-note { margin: 0; font-size: .78rem; color: var(--muted); text-align: center; }
+/* guided tour */
+.tour { position: fixed; inset: 0; z-index: 70; }
+.tour-dim { position: absolute; inset: 0; background: rgba(18, 17, 23, .6); }
+.tour-spot { position: fixed; border-radius: 20px; box-shadow: 0 0 0 9999px rgba(18, 17, 23, .62), 0 0 0 3px #fff; transition: all .35s cubic-bezier(.3, .8, .3, 1); pointer-events: none; }
+.tour-tip { position: fixed; inset-inline: 16px; margin: 0 auto; max-width: 360px; background: var(--surface); color: var(--ink); border-radius: 22px; padding: 18px; box-shadow: 0 18px 44px rgba(0,0,0,.3); display: flex; flex-direction: column; gap: 8px; transition: top .35s, bottom .35s; }
+.tour-tip h3 { margin: 0; font-size: 1.15rem; }
+.tour-tip p { margin: 0; font-size: .92rem; line-height: 1.55; color: var(--muted); }
+.tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.tour-dots { display: flex; gap: 5px; flex: 1; }
+.tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.tour-dots i.on { background: var(--brand); width: 18px; border-radius: 4px; }
+.tour-skip { border: 0; background: none; color: var(--muted); font-size: .85rem; padding: 6px; }
+.tour-emoji { font-size: 2rem; line-height: 1; }
+@media (prefers-reduced-motion: no-preference) { .tour-tip { animation: tourIn .3s ease; } }
+@keyframes tourIn { from { opacity: 0; transform: translateY(10px); } }
 </style>
 </head>
 <body>
@@ -717,7 +732,7 @@ body { margin: 0; }
       </div>
     </details>
 
-    <details>
+    <details id="payBox">
       <summary>חיבור Apple Pay (כל תשלום נכנס לבד)</summary>
       <div class="body">
         <p class="note" style="margin:0">באייפון: <b>קיצורים ← אוטומציה ← + ← עסקה</b>, בוחרים את כל הכרטיסים ו<b>הפעל מיד</b>. מוסיפים פעולה <b>קבלת התוכן של כתובת אינטרנט</b>:</p>
@@ -734,6 +749,15 @@ body { margin: 0; }
     <section class="card">
       <h2>החשבון שלי</h2>
       <div class="row" style="justify-content:space-between"><span class="note" id="whoAmI"></span><button class="btn ghost" type="button" id="logoutBtn">התנתקות</button></div>
+      <button class="btn ghost" type="button" id="tourAgain">סיור מודרך באתר</button>
+    </section>
+
+    <section class="card" id="sheetBox" hidden>
+      <h2>חיבור לקובץ Google Sheets</h2>
+      <p class="note" style="margin:0" id="sheetState">החשבון יקרא ויכתוב לגיליונות שלך במקום לשמור כאן.</p>
+      <div class="field"><label for="sheetUrl">כתובת ה-Web App (מסתיימת ב-/exec)</label><input id="sheetUrl" type="url" dir="ltr" autocomplete="off"></div>
+      <div class="field"><label for="sheetKey">מפתח גישה</label><input id="sheetKey" type="password" dir="ltr" autocomplete="off"></div>
+      <div class="save-row"><button class="btn" type="button" id="sheetSave">חיבור</button><button class="btn ghost" type="button" id="sheetOff">ניתוק</button><span class="note" id="sheetMsg"></span></div>
     </section>
 
   </div>
@@ -813,7 +837,7 @@ body { margin: 0; }
 /* accounts and storage on Supabase. The page code talks to it through the same small set of calls it used with the sheet. */
 const SUPA_URL = "https://kgggpqoaporqkxcdngqn.supabase.co", SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2dwcW9hcG9ycWt4Y2RuZ3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjY5MDIsImV4cCI6MjEwODAwMjkwMn0.5VIFb-E28SroABOSisX4CYR2COEO1Bcfj2K_yx-wzJQ";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-let USER_NAME = "", PROFILE = null;
+let USER_NAME = "", PROFILE = null, SHEET_MODE = false, TOUR_PENDING = false, USER_ID = "", JUST_SIGNED_UP = false;
 // any user name (Hebrew too) becomes a technical e-mail address the login system accepts
 const emailOf = u => "u" + Array.from(new TextEncoder().encode(u.trim().toLowerCase())).map(b => b.toString(16).padStart(2, "0")).join("") + "@users.ispend.app";
 
@@ -838,6 +862,7 @@ function showLogin() {
       g("authGo").disabled = true; msg("");
       try {
         let res;
+        if (mode === "signup") JUST_SIGNED_UP = true;
         if (mode === "signup") res = await sb.auth.signUp({ email: emailOf(user), password: pass, options: { data: { username: user, display_name: name || user } } });
         else res = await sb.auth.signInWithPassword({ email: emailOf(user), password: pass });
         if (res.error) {
@@ -868,8 +893,60 @@ async function startApp() {
   document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
   document.getElementById("whoAmI").textContent = "מחובר בתור " + (PROFILE.username || "");
   document.getElementById("logoutBtn").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  USER_ID = uid;
+  // linked account: read and write the owner's own Google Sheets through his Apps Script
+  const sh = PROFILE.sheet_api;
+  const box = document.getElementById("sheetBox");
+  if (sh || location.hash === "#sheet") box.hidden = false;
+  if (sh) { document.getElementById("sheetUrl").value = sh.url || ""; document.getElementById("sheetState").textContent = "מחובר לגיליונות שלך. כל הנתונים נקראים ונכתבים לשם."; }
+  document.getElementById("sheetSave").onclick = async () => {
+    const url = document.getElementById("sheetUrl").value.trim(), key = document.getElementById("sheetKey").value.trim(), m = document.getElementById("sheetMsg");
+    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url) || !key) { m.textContent = "צריך כתובת שמסתיימת ב-/exec ומפתח."; return; }
+    m.textContent = "בודק…";
+    try { await sheetCall(url, key, "config"); } catch (e) { m.textContent = "החיבור נכשל: " + (e.message || "בדקו את הכתובת והמפתח"); return; }
+    const { error } = await sb.from("profiles").update({ sheet_api: { url, key } }).eq("id", uid);
+    if (error) { m.textContent = "השמירה נכשלה."; return; }
+    location.reload();
+  };
+  document.getElementById("sheetOff").onclick = async () => { await sb.from("profiles").update({ sheet_api: null }).eq("id", uid); location.reload(); };
+  if (sh && sh.url && sh.key) {
+    try {
+      const cfg = await sheetCall(sh.url, sh.key, "config");
+      HISTORY = cfg.history || []; FIRST_MONTH = cfg.first || FIRST_MONTH; SHEET_MODE = true;
+      document.getElementById("payBox").hidden = true;
+      try { render(); } catch (e) {}
+      return makeSheetAdapter(sh.url, sh.key);
+    } catch (e) { document.getElementById("sheetState").textContent = "לא הצלחתי להתחבר לגיליונות: " + (e.message || ""); }
+  }
+  let tourDone = false; try { tourDone = localStorage.getItem("tourDone-" + uid) === "1"; } catch (e) {}
+  TOUR_PENDING = !tourDone && JUST_SIGNED_UP;
+  if (TOUR_PENDING) setTimeout(() => startTour(), 700);
   try { render(); } catch (e) {}
   return makeSupaAdapter(uid);
+}
+
+async function sheetCall(url, key, fn, ...args) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ api: key, fn, args }) });
+  const j = await r.json();
+  if (j.error) throw { code: "tool_error", message: j.error };
+  return j.result;
+}
+function makeSheetAdapter(url, key) {
+  const run = (tool, input) => {
+    if (tool === "get_values") return sheetCall(url, key, "getValues", input.spreadsheetId, input.range).then(p => ({ payload: p }));
+    if (tool === "update_values") return sheetCall(url, key, "updateValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
+    if (tool === "append_values") return sheetCall(url, key, "appendValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
+    if (tool === "update_spreadsheet") { const r = input.requests[0].deleteDimension.range; return sheetCall(url, key, "deleteRow", input.spreadsheetId, r.sheetId, r.startIndex).then(p => ({ payload: p })); }
+    return Promise.reject({ code: "bad_request" });
+  };
+  return {
+    callTool: (server, tool, input) => run(tool, input),
+    watchTool: (server, tool, input, handler, opts) => {
+      const go = () => run(tool, input).then(result => handler({ type: "data", result }), error => handler({ type: "error", error }));
+      go(); const t = setInterval(go, (opts && opts.refetchInterval) || 3600000); return () => clearInterval(t);
+    },
+    invalidate: () => Promise.resolve()
+  };
 }
 
 function makeSupaAdapter(uid) {
@@ -954,7 +1031,7 @@ const R_BANK = "'_moneyman'!A2:L";
 const R_SETTINGS = "'הגדרות'!A2:O300";
 const R_MANUAL = "'הוצאות יומיות'!D4:I";
 // Earlier monthly files (July 2025 – September 2026), read as they are. October 2026 onward lives in the main file.
-const HISTORY = [];
+let HISTORY = []; // filled when the account is linked to Google Sheets
 let FIRST_MONTH = new Date().getFullYear() * 12 + new Date().getMonth(); // moved back to the first transaction once data loads
 const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 const WEEKDAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
@@ -1860,7 +1937,7 @@ function afterData() {
 
 function onData(key, payload, result) {
   const values = (payload && payload.values) || [];
-  if (key === "settings") { applySettings(values); askSalary(); }
+  if (key === "settings") { applySettings(values); if (!TOUR_PENDING) askSalary(); }
   else data[key] = values;
   afterData(); stamp(result);
 }
@@ -2654,6 +2731,57 @@ document.querySelectorAll(".card > h2").forEach(h => {
 
 render();
 boot();
+</script>
+
+<script>
+/* first-visit guided tour: one highlight at a time, then straight to entering this month's salary */
+const TOUR = [
+  { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולהתחיל לחסוך. בואו נעשה סיור קצר, פחות מדקה." },
+  { t: "#status .ring-wrap", h: "כמה נשאר לך החודש", b: "הטבעת מתמלאת לפי מה שהוצאת מתוך מה שנכנס. ירוק: אתם בקצב. כתום: מתקרבים לגבול. אדום: עברתם אותו." },
+  { t: "#fab", h: "הוספת הוצאה", b: "בכפתור הזה מוסיפים כל הוצאה, או כסף שקיבלתם. בוחרים קטגוריה, כרטיס, ואם צריך גם מספר תשלומים." },
+  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. ככל שהוצאתם בה יותר, הוא גדול יותר. לחיצה עליו מציגה את כל ההוצאות שלה." },
+  { t: "#navTx", h: "כל התנועות", b: "כאן כל ההוצאות וההכנסות, עם חיפוש וסינון. מחליקים תנועה ימינה כדי לערוך או למחוק אותה." },
+  { t: "#tabYear", h: "התמונה השנתית", b: "גרפים של כל השנה, השוואה בין חודשים, ו\"מה אם הייתי מוציא פחות\" שמראה כמה אפשר לחסוך." },
+  { t: "#tabAdmin", h: "הגדרות", b: "קטגוריות ואמצעי תשלום משלכם, משכורת לכל חודש, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
+  { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
+];
+let tourEl = null, tourI = 0;
+function startTour() {
+  if (tourEl) tourEl.remove();
+  showView("flow"); window.scrollTo(0, 0);
+  tourEl = document.createElement("div"); tourEl.className = "tour"; tourEl.dir = "rtl"; tourEl.lang = "he";
+  tourEl.innerHTML = '<div class="tour-dim"></div><div class="tour-spot" hidden></div><div class="tour-tip" role="dialog" aria-modal="true" aria-live="polite"></div>';
+  document.body.appendChild(tourEl); tourI = 0; tourStep();
+}
+function endTour() {
+  try { localStorage.setItem("tourDone-" + USER_ID, "1"); } catch (e) {}
+  if (tourEl) { tourEl.remove(); tourEl = null; }
+  window.scrollTo(0, 0);
+  if (TOUR_PENDING) { TOUR_PENDING = false; salAsked = false; askSalary(); }
+}
+function tourStep() {
+  const s = TOUR[tourI], spot = tourEl.querySelector(".tour-spot"), tip = tourEl.querySelector(".tour-tip"), dim = tourEl.querySelector(".tour-dim");
+  let el = s.t ? document.querySelector(s.t) : null; if (el && s.card) el = el.closest(".card") || el;
+  const fixed = el && getComputedStyle(el.closest(".nav") || el).position === "fixed";
+  if (el && !fixed) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  tip.innerHTML = (s.e ? `<div class="tour-emoji">${s.e}</div>` : "") + `<h3>${typeof s.h === "function" ? s.h() : s.h}</h3><p>${s.b}</p>
+    <div class="tour-foot"><div class="tour-dots">${TOUR.map((_, i) => `<i class="${i === tourI ? "on" : ""}"></i>`).join("")}</div>
+    ${s.last ? "" : `<button class="tour-skip" type="button" data-skip>דלג</button>`}<button class="btn" type="button" data-next>${s.last ? "יאללה" : tourI === 0 ? "בואו נתחיל" : "הבא"}</button></div>`;
+  tip.querySelector("[data-next]").onclick = () => { if (s.last) endTour(); else { tourI++; tourStep(); } };
+  const sk = tip.querySelector("[data-skip]"); if (sk) sk.onclick = endTour;
+  const place = () => {
+    if (!el) { spot.hidden = true; dim.hidden = false; tip.style.top = "50%"; tip.style.bottom = "auto"; tip.style.transform = "translateY(-50%)"; return; }
+    dim.hidden = true; spot.hidden = false; tip.style.transform = "none";
+    const r = el.getBoundingClientRect(), pad = 8;
+    Object.assign(spot.style, { top: r.top - pad + "px", left: r.left - pad + "px", width: r.width + pad * 2 + "px", height: r.height + pad * 2 + "px" });
+    if (r.top + r.height / 2 > innerHeight / 2) { tip.style.top = "auto"; tip.style.bottom = (innerHeight - r.top + pad + 14) + "px"; }
+    else { tip.style.bottom = "auto"; tip.style.top = (r.bottom + pad + 14) + "px"; }
+  };
+  place(); setTimeout(place, 450);
+  tip.querySelector("[data-next]").focus();
+}
+addEventListener("resize", () => { if (tourEl) tourStep(); });
+document.getElementById("tourAgain").onclick = () => startTour();
 </script>
 
 </body>
