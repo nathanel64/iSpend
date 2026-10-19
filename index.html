@@ -689,7 +689,7 @@ body { margin: 0; }
 
     <section class="card">
       <h2>משכורת לפי חודש</h2>
-      <p class="note" style="margin:0">הזינו את המשכורת שנכנסה בכל חודש, מיולי 2025. בחודש שעוד לא הוזנה, האתר מעריך לפי החודש האחרון שהוזן.</p>
+      <p class="note" style="margin:0">הזינו את המשכורת שנכנסה בכל חודש. בחודש שעוד לא הוזנה, האתר מעריך לפי החודש האחרון שהוזן.</p>
       <div class="edit-list" id="salList"></div>
       <div class="save-row"><button class="btn" id="saveSal">שמירת משכורות</button><span id="salMsg"></span></div>
     </section>
@@ -1103,9 +1103,9 @@ let HISTORY = []; // filled when the account is linked to Google Sheets
 let FIRST_MONTH = new Date().getFullYear() * 12 + new Date().getMonth(); // moved back to the first transaction once data loads
 const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 const WEEKDAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
-let CATS = ["בילויים","קניות","שופינג","רכישות בדיגיטל","קניות לבית","סופר","אוכל ושתיה","טיפוח ופארם","אירועים","חופשות","מנוי חודשי","הוצאות שוטפות","מתנות","כושר","ביטוח","חתונה"];
+let CATS = ["סופר","אוכל ושתיה","תחבורה ודלק","חשבונות הבית","קניות","בילויים","בריאות וטיפוח","מנויים","חופשות","אחר"];
 let PAY = ["כרטיס אשראי","חשבון בנק","מזומן"];
-let FIXED = new Set(["מנוי חודשי", "ביטוח"]);
+let FIXED = new Set(["חשבונות הבית", "מנויים"]);
 let salaries = {};
 let cardMap = {}; // card name as Apple Pay reports it → the viewer's payment method
 const COMPANY = {
@@ -1187,6 +1187,13 @@ const MERCHANTS = [
   ["booking", "Booking", "חופשות"], ["airbnb", "Airbnb", "חופשות"], ["el al", "אל על", "חופשות"], ["israir", "ישראייר", "חופשות"], ["arkia", "ארקיע", "חופשות"],
   ["wizz", "וויז אייר", "חופשות"], ["ryanair", "ריינאייר", "חופשות"], ["fattal", "פתאל", "חופשות"], ["isrotel", "ישרוטל", "חופשות"]
 ];
+const CAT_REMAP = { "טיפוח ופארם": "בריאות וטיפוח", "כושר": "בריאות וטיפוח", "מנוי חודשי": "מנויים", "ביטוח": "חשבונות הבית", "הוצאות שוטפות": "חשבונות הבית",
+  "רכישות בדיגיטל": "קניות", "שופינג": "קניות", "קניות לבית": "קניות" };
+const TRANSPORT = ["sonol", "dor alon", "delek", "paz ", "yellow", "ten petrol", "gett", "yango", "rav kav", "ravkav", "moovit", "pango", "cellopark", "israel railways", "rakevet"];
+MERCHANTS.forEach(m => { m[2] = TRANSPORT.includes(m[0]) ? "תחבורה ודלק" : (CAT_REMAP[m[2]] || m[2]); });
+CATEGORY_RULES.forEach(r => { r[0] = CAT_REMAP[r[0]] || r[0]; });
+CATEGORY_RULES.unshift(["תחבורה ודלק", ["פז ", "דלק", "סונול", "דור אלון", "yellow", "רב קו", "rav-kav", "gett", "פנגו", "pango", "סלופארק", "cellopark", "מוביט", "moovit", "רכבת", "מונית"]]);
+ISSUER_CATS.forEach(r => { r[1] = r[0] === "דלק" || r[0] === "תחבורה" ? "תחבורה ודלק" : (CAT_REMAP[r[1]] || r[1]); });
 let merchantRules = {}; // learned from the viewer's edits: raw name → {name, cat}
 const normMerchant = raw => " " + String(raw || "").toLowerCase().replace(/[׳'`"]/g, "").replace(/\s+/g, " ").trim() + " ";
 function recognizeMerchant(raw) {
@@ -1256,6 +1263,7 @@ const ICONS = {
 const HUES = [12, 24, 44, 90, 140, 165, 192, 210, 240, 285, 322, 350];
 // built-in categories
 const CAT_ICONS = {
+  "תחבורה ודלק": ["car", 215, 55], "חשבונות הבית": ["home", 32, 60], "בריאות וטיפוח": ["health", 330, 50], "מנויים": ["repeat", 240, 50], "אחר": ["tag", 220, 15],
   "בילויים": ["glass", 285, 55], "קניות": ["bag", 24, 70], "שופינג": ["shirt", 330, 55], "רכישות בדיגיטל": ["phone", 210, 65],
   "קניות לבית": ["home", 32, 55], "סופר": ["cart", 135, 45], "אוכל ושתיה": ["food", 12, 70], "טיפוח ופארם": ["drop", 300, 45],
   "אירועים": ["cake", 345, 60], "חופשות": ["plane", 192, 65], "מנוי חודשי": ["repeat", 240, 50], "הוצאות שוטפות": ["bolt", 44, 80],
