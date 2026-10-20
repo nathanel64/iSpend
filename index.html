@@ -2170,7 +2170,8 @@ function walletCards() {
   // every card name Apple Pay has reported, plus any already mapped
   const names = new Set(Object.keys(cardMap));
   (data.apple || []).forEach(v => { if ((v[6] || "") === "Apple Pay" && (v[3] || "").trim()) names.add(v[3].trim()); });
-  return [...names].filter(n => cardMap[n] || !PAY.includes(n)).sort();
+  // an old name of a payment method (renamed later) is not a wallet card
+  return [...names].filter(n => !payAlias[n] && (cardMap[n] || !PAY.includes(n))).sort();
 }
 function renderCardMap() {
   const cards = walletCards();
