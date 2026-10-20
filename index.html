@@ -1100,7 +1100,7 @@ const SHEET_ID = "1CwS8tTfMiKgwk-ke0ScWgYEYvABhqIQltITGK3d9Px8";
 const SERVER = "Google Sheets";
 const R_APPLE = "'עסקאות'!A2:I"; // I: number of payments (empty = one)
 const R_BANK = "'_moneyman'!A2:L";
-const R_SETTINGS = "'הגדרות'!A2:O300";
+const R_SETTINGS = "'הגדרות'!A2:Q300";
 const R_MANUAL = "'הוצאות יומיות'!D4:I";
 // Earlier monthly files (July 2025 – September 2026), read as they are. October 2026 onward lives in the main file.
 let HISTORY = []; // filled when the account is linked to Google Sheets
@@ -1111,6 +1111,8 @@ let CATS = ["סופר","אוכל ושתיה","תחבורה ודלק","חשבונ
 let PAY = ["כרטיס אשראי","חשבון בנק","מזומן"];
 let FIXED = new Set(["חשבונות הבית", "מנויים"]);
 let salaries = {};
+let payAlias = {}; // renamed payment methods: old name → current name (settings P:Q), so past rows follow the rename
+const accName = n => { const k = (n || "").trim(); return payAlias[k] || k; };
 let cardMap = {}; // card name as Apple Pay reports it → the viewer's payment method
 const COMPANY = {
   isracard: "ישראכרט", amex: "אמריקן אקספרס", max: "מקס", visaCal: "כאל",
@@ -1398,7 +1400,7 @@ function build() {
       date, amount: Math.abs(amt), income: isSalary, inst: pi && { k: pi.k, n: pi.n },
       refund: (type === "הכנסה" && !isSalary) || (type === "הוצאה" && amt < 0), // a negative expense is a credit
       merchant: (pi && pi.base) || (v[3] || "").trim() || "ללא תיאור", category: isSalary ? "הכנסה" : (cat || "לא מסווג"),
-      account: (v[4] || "").trim(), source: "manual", order: base + i,
+      account: accName(v[4]), source: "manual", order: base + i,
       del: { key, index: i, file, sheetId: 1161900963, row: i + 4, range: "'הוצאות יומיות'!D" + (i + 4) + ":I" + (i + 4), raw: v }
     });
   });
@@ -1423,7 +1425,7 @@ function build() {
     const base = {
       date, amount: Math.abs(amt), income: isSalary, refund: type === "החזר" || (type === "הכנסה" && !isSalary), inst: pi && { k: pi.k, n: pi.n },
       merchant: (pi && pi.base) || name, rawMerchant: (v[2] || "").trim(), category: isSalary ? "הכנסה" : (cat || "לא מסווג"),
-      account: (v[6] || "") === "Apple Pay" ? (cardMap[(v[3] || "").trim()] || v[3] || "Apple Pay") : (v[3] || ""), rawCard: (v[3] || "").trim(), source: (v[6] || "") === "Apple Pay" ? "applepay" : "manual", order: 100000 + i,
+      account: accName((v[6] || "") === "Apple Pay" ? (cardMap[(v[3] || "").trim()] || v[3] || "Apple Pay") : (v[3] || "")), rawCard: (v[3] || "").trim(), source: (v[6] || "") === "Apple Pay" ? "applepay" : "manual", order: 100000 + i,
       del: { key: "apple", index: i, file: SHEET_ID, sheetId: 777001, row: i + 2, range: "'עסקאות'!A" + (i + 2) + ":I" + (i + 2), raw: v }
     };
     if (payments === 1) { out.push(base); return; }
@@ -1584,16 +1586,17 @@ function renderInstSuggest() {
 }
 
 /* how much went through each card this month; the bank account also shows what came in */
-const isBankAcc = t => t.account === "חשבון בנק" || t.source === "bank";
+const bankName = () => accName("חשבון בנק"); // follows a rename of the bank account
+const isBankAcc = t => t.account === bankName() || t.source === "bank";
 function renderPayMethods(f) {
   const by = new Map();
   f.inP.forEach(t => {
-    const name = isBankAcc(t) ? "חשבון בנק" : (t.account || "לא צוין");
+    const name = isBankAcc(t) ? bankName() : (t.account || "לא צוין");
     if (!by.has(name)) by.set(name, { out: 0, in: 0 });
     const r = by.get(name);
     if (t.income || t.refund) r.in += t.amount; else r.out += t.amount;
   });
-  const rows = [...by.entries()].map(([name, r]) => ({ name, bank: name === "חשבון בנק", out: r.out, in: r.in, spent: name === "חשבון בנק" ? r.out : r.out - r.in }))
+  const rows = [...by.entries()].map(([name, r]) => ({ name, bank: name === bankName(), out: r.out, in: r.in, spent: name === bankName() ? r.out : r.out - r.in }))
     .filter(r => r.out || r.in).sort((a, b) => (a.bank - b.bank) || b.spent - a.spent);
   $("payCard").hidden = !rows.length;
   const max = Math.max(1, ...rows.map(r => Math.max(r.out, r.in)));
@@ -1601,7 +1604,7 @@ function renderPayMethods(f) {
   $("payMethods").innerHTML = rows.map(r => {
     let h = 0; for (const ch of r.name) h = (h * 31 + ch.charCodeAt(0)) % 360;
     const ic = r.bank ? glyph("bank", 148, 45, true) : glyph("card", h, 55, true);
-    if (r.bank) return `<button class="cat" data-acc="חשבון בנק" aria-label="התנועות בחשבון הבנק"><span class="name">${ic}<span>חשבון בנק</span></span>
+    if (r.bank) return `<button class="cat" data-acc="${esc(bankName())}" aria-label="התנועות בחשבון הבנק"><span class="name">${ic}<span>${esc(bankName())}</span></span>
       <span class="amt num"><span>${fmt(r.in - r.out)}</span></span>
       <span class="pay-io"><span>נכנס <b class="num" style="color:var(--good)">${fmt(r.in)}</b></span><span>יצא <b class="num">${fmt(r.out)}</b></span></span></button>`;
     return `<button class="cat" data-acc="${esc(r.name)}" aria-label="החיובים ב${esc(r.name)}"><span class="name">${ic}<span style="overflow:hidden;text-overflow:ellipsis"><bdi>${esc(r.name)}</bdi></span></span>
@@ -1609,7 +1612,7 @@ function renderPayMethods(f) {
       <span class="bar"><i style="width:${(Math.max(0, r.spent) / max * 100).toFixed(1)}%"></i></span></button>`;
   }).join("");
 }
-const accOf = t => isBankAcc(t) ? "חשבון בנק" : (t.account || "לא צוין");
+const accOf = t => isBankAcc(t) ? bankName() : (t.account || "לא צוין");
 let filterAcc = null;
 $("payMethods").addEventListener("click", e => {
   const b = e.target.closest("[data-acc]"); if (!b) return;
@@ -1917,7 +1920,7 @@ function renderList(inP) {
   const kindOk = t => txKind === "all" ? true : txKind === "exp" ? !t.income && !t.refund : txKind === "inc" ? (t.income || t.refund) : !!t.inst;
   const list = (filterCat ? pool.filter(t => t.category === filterCat) : pool).filter(t => !filterAcc || accOf(t) === filterAcc).filter(kindOk).slice().sort((a, b) => b.date - a.date || b.order - a.order);
   document.querySelectorAll("#txChips button").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === txKind));
-  $("listTitle").textContent = q ? `תוצאות חיפוש (${list.length})` : filterAcc ? (filterAcc === "חשבון בנק" ? "חשבון בנק" : "החיובים ב" + filterAcc) + (filterCat ? " · " + filterCat : "") : (filterCat || "כל התנועות");
+  $("listTitle").textContent = q ? `תוצאות חיפוש (${list.length})` : filterAcc ? (filterAcc === bankName() ? bankName() : "החיובים ב" + filterAcc) + (filterCat ? " · " + filterCat : "") : (filterCat || "כל התנועות");
   $("clearFilter").hidden = !filterCat && !filterAcc;
   // the exact total of what the list shows: money in for "הכנסות", otherwise spending minus refunds
   const lt = txKind === "inc" ? list.reduce((s, t) => s + t.amount, 0) : list.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
@@ -2063,7 +2066,7 @@ async function saveIncome(e) {
 /* ---------- settings (tab "הגדרות": A category, B fixed, D payment method, F month, G salary) ---------- */
 function applySettings(values) {
   data.settings = values;
-  const cats = [], pay = [], sal = {}, cm = {}, mrules = {};
+  const cats = [], pay = [], sal = {}, cm = {}, mrules = {}, alias = {};
   values.forEach(v => {
     const c = (v[0] || "").trim();
     if (c && c !== "הכנסה" && !cats.some(x => x.name === c)) {
@@ -2074,9 +2077,10 @@ function applySettings(values) {
     const mk = (v[5] || "").trim(); const amt = parseAmount(v[6]);
     if (/^\d{4}-\d{2}$/.test(mk) && amt !== null) sal[mk] = amt;
     const raw = (v[8] || "").trim(), to = (v[9] || "").trim(); if (raw && to) cm[raw] = to;
+    const ao = (v[15] || "").trim(), an = (v[16] || "").trim(); if (ao && an && ao !== an) alias[ao] = an;
     const mr = (v[11] || "").trim(); if (mr && ((v[12] || "").trim() || (v[13] || "").trim())) mrules[mr] = { name: (v[12] || "").trim(), cat: (v[13] || "").trim() };
   });
-  cardMap = cm; merchantRules = mrules;
+  cardMap = cm; merchantRules = mrules; payAlias = alias;
   if (cats.length) {
     CATS = cats.map(c => c.name); FIXED = new Set(cats.filter(c => c.fixed).map(c => c.name));
     catStyle = {}; cats.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue == null ? autoIcon(c.name)[1] : c.hue }; });
@@ -2084,7 +2088,7 @@ function applySettings(values) {
   if (pay.length) PAY = pay;
   salaries = sal;
   if (!adminDirty.cats) draftCats = cats.length ? cats.map(c => ({ ...c })) : CATS.map(n => ({ name: n, fixed: FIXED.has(n) }));
-  if (!adminDirty.pay) draftPay = PAY.slice();
+  if (!adminDirty.pay) { draftPay = PAY.slice(); draftPayOrig = PAY.slice(); }
   if (!adminDirty.sal) renderSal();
   renderAdminLists();
 }
@@ -2108,7 +2112,7 @@ async function writeSalaries(next) {
   salaries = next; build(); render();
 }
 
-let draftCats = [], draftPay = [];
+let draftCats = [], draftPay = [], draftPayOrig = []; // draftPayOrig: each row's saved name, to spot renames
 const adminDirty = { cats: false, pay: false, sal: false };
 let pickerOpen = -1;
 function draftIcon(c) {
@@ -2197,10 +2201,10 @@ $("payList").addEventListener("input", e => {
 });
 $("payList").addEventListener("click", e => {
   const d = e.target.closest("[data-del]"); if (!d) return;
-  draftPay.splice(+d.dataset.del, 1); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
+  draftPay.splice(+d.dataset.del, 1); draftPayOrig.splice(+d.dataset.del, 1); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
 });
 $("addPayRow").onclick = () => {
-  draftPay.push(""); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
+  draftPay.push(""); draftPayOrig.push(""); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
   $("pay-" + (draftPay.length - 1)).focus();
 };
 $("savePay").onclick = async () => {
@@ -2209,7 +2213,22 @@ $("savePay").onclick = async () => {
   const btn = $("savePay"); btn.disabled = true; flash("payMsg", true, "שומר…");
   try {
     await writeRange("'הגדרות'!D2:D61", pad(list.map(p => [p]), 60, 1));
-    PAY = list; draftPay = list.slice(); adminDirty.pay = false; renderAdminLists();
+    // a renamed method: past transactions, older renames and wallet cards all move to the new name
+    const ren = {};
+    draftPay.forEach((p, i) => { const o = (draftPayOrig[i] || "").trim(), n = p.trim(); if (o && n && o !== n) ren[o] = n; });
+    if (Object.keys(ren).length) {
+      const al = {};
+      Object.entries(payAlias).forEach(([o, n]) => { al[o] = ren[n] || n; });
+      Object.assign(al, ren);
+      Object.keys(al).forEach(o => { if (al[o] === o) delete al[o]; });
+      await writeRange("'הגדרות'!P2:Q201", pad(Object.entries(al).map(([o, n]) => [o, n]), 200, 2));
+      payAlias = al;
+      const cm = {}; let cmChanged = false;
+      Object.entries(cardMap).forEach(([raw, to]) => { cm[raw] = ren[to] || to; if (ren[to]) cmChanged = true; });
+      if (cmChanged) { await writeRange("'הגדרות'!I2:J61", pad(Object.entries(cm).map(([k, v]) => [k, v]), 60, 2)); cardMap = cm; }
+    }
+    PAY = list; draftPay = list.slice(); draftPayOrig = list.slice(); adminDirty.pay = false; renderAdminLists();
+    build(); render(); renderCardMap();
     flash("payMsg", true, "נשמר");
   } catch (err) { flash("payMsg", false, writeError(err)); }
   btn.disabled = false;
@@ -2530,7 +2549,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("catShe
 
 $("yearPick").addEventListener("click", e => { const b = e.target.closest("[data-y]"); if (!b) return; yearSel = +b.dataset.y; renderYear(); });
 $("tabAdmin").onclick = () => showView("admin");
-draftCats = CATS.map(n => ({ name: n, fixed: FIXED.has(n) })); draftPay = PAY.slice();
+draftCats = CATS.map(n => ({ name: n, fixed: FIXED.has(n) })); draftPay = PAY.slice(); draftPayOrig = PAY.slice();
 
 async function boot() {
   mcp = await startApp();
@@ -2643,7 +2662,7 @@ function setKind(k) {
   $("addCat").innerHTML = cats.map(c => `<option>${esc(c)}</option>`).join("");
   if (cats.includes(prev)) $("addCat").value = prev;
   $("addCardLbl").textContent = k === "inc" ? "התקבל ל" : "אמצעי תשלום";
-  if (k === "inc") $("addCard").value = "חשבון בנק";
+  if (k === "inc") $("addCard").value = bankName();
   $("addHint").hidden = k !== "inc";
   instShown();
 }
