@@ -616,6 +616,7 @@ header.top { gap: 10px; }
 .g-under { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; margin-top: -4px; }
 .g-under .sub { font-size: .8rem; color: var(--muted); max-width: 30em; }
 .g-plus { font-size: .92rem; font-weight: 700; color: var(--good); background: var(--good-soft); border-radius: 999px; padding: 4px 12px; }
+.status.mid .g-plus { color: var(--warn); background: var(--warn-soft); }
 #ringPill { margin-top: 0; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ring-wrap.gauge #goalTxt { fill: #f3c25c; } }
 :root[data-theme="dark"] .ring-wrap.gauge #goalTxt { fill: #f3c25c; }
@@ -1997,10 +1998,11 @@ function render() {
       if (goal && isCurrent) { plus.hidden = false; plus.textContent = "אפשר להוציא עוד " + fmt(allow - spent) + " ולעמוד ביעד"; }
       pill.textContent = isCurrent ? daysTxt : goal ? "עמדת ביעד וחסכת " + fmt(incomeExpected - spent) : "סיימת את החודש בפלוס";
     } else if (stage === "goal") {
-      $("statusLabel").textContent = "חרגת מיעד החיסכון ב-";
-      countTo($("statusBig"), spent - allow, fmt);
+      // still in the plus: the balance comes first, the miss on the goal right under it
+      $("statusLabel").textContent = "יתרה מההכנסה החודשית";
+      countTo($("statusBig"), incomeExpected - spent, fmt);
       plus.hidden = false;
-      plus.textContent = (isCurrent ? "נשאר לסיים את החודש בפלוס: " : "סיימת את החודש בפלוס: ") + fmt(incomeExpected - spent);
+      plus.textContent = "חרגת מיעד החיסכון ב-" + fmt(spent - allow);
       $("statusSub").textContent = "היעד היה לחסוך " + fmt(goal) + " · הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected);
       pill.textContent = isCurrent ? daysTxt : "החודש לא עמד ביעד";
     } else {
