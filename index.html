@@ -1378,9 +1378,10 @@ let FIXED = new Set(["חשבונות הבית", "מנויים"]);
 let salaries = {};
 let goals = {}; // month → how much to save that month (settings R:S); a month without one keeps the last goal set
 let catAlias = {}; // renamed categories: old name → current name (settings T:U), so past rows follow the rename
-const catName = c => { const k = String(c || "").trim(); return catAlias[k] || k; };
+const catName = c => { const k = String(c || "").trim(); return CATS.includes(k) ? k : (catAlias[k] || k); };
 let payAlias = {}; // renamed payment methods: old name → current name (settings P:Q), so past rows follow the rename
-const accName = n => { const k = (n || "").trim(); return payAlias[k] || k; };
+// a name that is a payment method right now is itself, even if it was once renamed away
+const accName = n => { const k = (n || "").trim(); return PAY.includes(k) ? k : (payAlias[k] || k); };
 let cardMap = {}; // card name as Apple Pay reports it → the viewer's payment method
 const COMPANY = {
   isracard: "ישראכרט", amex: "אמריקן אקספרס", max: "מקס", visaCal: "כאל",
@@ -3084,6 +3085,11 @@ $("savePay").onclick = async () => {
     draftPay.forEach((p, i) => { const o = (draftPayOrig[i] || "").trim(), n = p.trim(); if (o && n && o !== n) ren[o] = n; });
     Object.entries(pendingPayMoves).forEach(([o, n]) => { if (list.includes(n)) ren[o] = n; });
     pendingPayMoves = {};
+    // an old name that is back in the list is a method of its own again
+    if (!Object.keys(ren).length && Object.keys(payAlias).some(o => list.includes(o))) {
+      const al = { ...payAlias }; Object.keys(al).forEach(o => { if (list.includes(o)) delete al[o]; });
+      await writeRange("'הגדרות'!P2:Q201", pad(Object.entries(al).map(([o, n]) => [o, n]), 200, 2)); payAlias = al;
+    }
     if (Object.keys(ren).length) {
       const al = {};
       Object.entries(payAlias).forEach(([o, n]) => { al[o] = ren[n] || n; });
