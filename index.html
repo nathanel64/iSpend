@@ -1906,7 +1906,7 @@ function build() {
     const base = {
       date, amount: Math.abs(amt), income: isSalary, refund: type === "החזר" || (type === "הכנסה" && !isSalary), inst: pi && { k: pi.k, n: pi.n },
       merchant: (pi && pi.base) || name, rawMerchant: (v[2] || "").trim(), category: isSalary ? "הכנסה" : (cat || "לא מסווג"),
-      account: accName((v[6] || "") === "Apple Pay" ? (cardMap[(v[3] || "").trim()] || v[3] || "Apple Pay") : (v[3] || "")), rawCard: (v[3] || "").trim(), source: (v[6] || "") === "Apple Pay" ? "applepay" : "manual", order: 100000 + i,
+      account: accName((v[6] || "") === "Apple Pay" && !PAY.includes((v[3] || "").trim()) ? (cardMap[(v[3] || "").trim()] || v[3] || "Apple Pay") : (v[3] || "")), rawCard: (v[3] || "").trim(), source: (v[6] || "") === "Apple Pay" ? "applepay" : "manual", order: 100000 + i,
       del: { key: "apple", index: i, file: SHEET_ID, sheetId: 777001, row: i + 2, range: "'עסקאות'!A" + (i + 2) + ":I" + (i + 2), raw: v }
     };
     if (payments === 1) { out.push(base); return; }
@@ -2821,6 +2821,7 @@ async function saveIncome(e) {
 }
 
 /* ---------- settings (tab "הגדרות": A category, B fixed, D payment method, F month, G salary) ---------- */
+let aliasHealed = false;
 function applySettings(values) {
   data.settings = values;
   const cats = [], pay = [], sal = {}, cm = {}, mrules = {}, alias = {}, gl = {}, calias = {};
@@ -2840,6 +2841,11 @@ function applySettings(values) {
     const mr = (v[11] || "").trim(); if (mr && ((v[12] || "").trim() || (v[13] || "").trim())) mrules[mr] = { name: (v[12] || "").trim(), cat: (v[13] || "").trim() };
   });
   cardMap = cm; merchantRules = mrules; payAlias = alias; catAlias = calias;
+  // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
+  // Older copies of the page let that alias win, so remove it from the settings for good.
+  { const stale = Object.keys(alias).filter(o => pay.includes(o));
+    if (stale.length && !aliasHealed) { aliasHealed = true; const al = { ...alias }; stale.forEach(o => delete al[o]); payAlias = al;
+      writeRange("'הגדרות'!P2:Q201", pad(Object.entries(al).map(([o, n]) => [o, n]), 200, 2)).catch(() => { aliasHealed = false; }); } }
   if (cats.length) {
     CATS = cats.map(c => c.name); FIXED = new Set(cats.filter(c => c.fixed).map(c => c.name));
     catStyle = {}; cats.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue == null ? autoIcon(c.name)[1] : c.hue }; });
@@ -3801,7 +3807,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261021202248";
+const BUILD_ID = "20261021203300";
 let updToast = null;
 async function checkUpdate() {
   try {
