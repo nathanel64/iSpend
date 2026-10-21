@@ -444,6 +444,20 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .ns-preview .v { font-size: 1.08rem; font-weight: 700; letter-spacing: -.01em; }
 .ns-save { border: 0; border-radius: 18px; padding: 13px; font-size: 1rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #5b4cf0, #9a52d6); box-shadow: 0 10px 24px rgba(91, 76, 240, .35); }
 .ns-save:disabled { opacity: .7; }
+/* deleting a category: where its transactions go */
+.mv-ic { width: 56px; height: 56px; margin: 0 auto 8px; }
+.mv-ic .ic { width: 56px; height: 56px; border-radius: 18px; }
+.mv-ic .ic svg { width: 26px; height: 26px; }
+.ns-kicker.mv-k { color: var(--bad); background: var(--bad-soft); }
+.mv-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-height: 38vh; overflow-y: auto; padding: 2px; }
+.mv-list button { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 5px 12px 5px 6px; background: var(--bg); color: var(--ink); font-size: .86rem; font-weight: 600; transition: transform .12s; }
+.mv-list button:active { transform: scale(.96); }
+.mv-list button .ic { width: 26px; height: 26px; border-radius: 9px; }
+.mv-list button .ic svg { width: 14px; height: 14px; }
+.mv-list button[aria-checked="true"] { background: var(--brand-soft); box-shadow: inset 0 0 0 2px var(--brand); color: var(--brand); }
+.mv-list .mv-add { padding: 7px 14px; color: var(--brand); background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--brand) 40%, transparent); }
+.mv-new { border: 2px solid var(--brand); border-radius: 16px; padding: 12px 14px; background: var(--surface); color: var(--ink); font-size: 1rem; outline: none; }
+.mv .ns-save.danger { background: linear-gradient(135deg, #e0554b, #c23a33); box-shadow: 0 10px 24px rgba(194, 58, 51, .3); }
 .sal-later { border: 0; background: none; color: var(--muted); font-size: .85rem; padding: 4px; }
 
 /* ===== redesign: calm & clear ===== */
@@ -907,7 +921,7 @@ body { margin: 0; }
 
     <section class="card">
       <h2>קטגוריות</h2>
-      <p class="note" style="margin:0">סמנו "קבועה" להוצאות שחוזרות כל חודש באותו סכום, כמו מנויים וביטוח. שינוי שם לא משנה תנועות שכבר נרשמו.</p>
+      <p class="note" style="margin:0">סמנו "קבועה" להוצאות שחוזרות כל חודש באותו סכום, כמו מנויים וביטוח. שינוי שם מעדכן גם את כל התנועות שכבר נרשמו בקטגוריה.</p>
       <div class="edit-list" id="catList"></div>
       <button class="add-row" id="addCatRow">+ קטגוריה חדשה</button>
       <div class="save-row"><button class="btn" id="saveCats">שמירת קטגוריות</button><span id="catMsg"></span></div>
@@ -1064,6 +1078,25 @@ body { margin: 0; }
   </form>
 </div>
 
+<div class="sheet-bg sal-bg" id="mvBg" hidden dir="rtl" lang="he" style="z-index:32">
+  <form class="sal-sheet ns mv" id="mvForm" role="dialog" aria-modal="true" aria-labelledby="mvTitle" novalidate>
+    <button type="button" class="ns-x" id="mvClose" aria-label="ביטול"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg></button>
+    <div class="ns-top">
+      <div class="mv-ic" id="mvIc"></div>
+      <div class="ns-kicker mv-k">מחיקת קטגוריה</div>
+      <h3 id="mvTitle"></h3>
+      <p id="mvText"></p>
+    </div>
+    <div class="ns-body">
+      <div class="mv-list" id="mvList" role="radiogroup" aria-label="לאן להעביר"></div>
+      <input type="text" class="mv-new" id="mvNew" placeholder="שם הקטגוריה החדשה" autocomplete="off" hidden aria-label="שם הקטגוריה החדשה">
+      <p class="form-msg" id="mvMsg"></p>
+      <button type="submit" class="ns-save" id="mvGo"></button>
+      <button type="button" class="sal-later" id="mvCancel">ביטול, להשאיר אותה</button>
+    </div>
+  </form>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 /* accounts and storage on Supabase. The page code talks to it through the same small set of calls it used with the sheet. */
@@ -1174,7 +1207,7 @@ async function startApp() {
       let cfg = null; try { cfg = JSON.parse(localStorage.getItem(cKey) || "null"); } catch (e) {}
       const freshCfg = sheetCall(sh.url, sh.key, "config").then(c => { try { localStorage.setItem(cKey, JSON.stringify(c)); } catch (e) {} return c; });
       if (!cfg) cfg = await freshCfg; else freshCfg.catch(() => {});
-      HISTORY = cfg.history || []; FIRST_MONTH = cfg.first || FIRST_MONTH; SHEET_MODE = true;
+      HISTORY = cfg.history || []; FIRST_MONTH = cfg.first || FIRST_MONTH; SHEET_MODE = true; useOwnerRules();
       document.getElementById("payBox").hidden = true;
       try { render(); } catch (e) {}
       return withCache(makeSheetAdapter(sh.url, sh.key), uid);
@@ -1326,7 +1359,7 @@ const SHEET_ID = "1CwS8tTfMiKgwk-ke0ScWgYEYvABhqIQltITGK3d9Px8";
 const SERVER = "Google Sheets";
 const R_APPLE = "'עסקאות'!A2:I"; // I: number of payments (empty = one)
 const R_BANK = "'_moneyman'!A2:L";
-const R_SETTINGS = "'הגדרות'!A2:S300";
+const R_SETTINGS = "'הגדרות'!A2:U300";
 const R_MANUAL = "'הוצאות יומיות'!D4:I";
 // Earlier monthly files (July 2025 – September 2026), read as they are. October 2026 onward lives in the main file.
 let HISTORY = []; // filled when the account is linked to Google Sheets
@@ -1338,6 +1371,8 @@ let PAY = ["כרטיס אשראי","חשבון בנק","מזומן"];
 let FIXED = new Set(["חשבונות הבית", "מנויים"]);
 let salaries = {};
 let goals = {}; // month → how much to save that month (settings R:S); a month without one keeps the last goal set
+let catAlias = {}; // renamed categories: old name → current name (settings T:U), so past rows follow the rename
+const catName = c => { const k = String(c || "").trim(); return catAlias[k] || k; };
 let payAlias = {}; // renamed payment methods: old name → current name (settings P:Q), so past rows follow the rename
 const accName = n => { const k = (n || "").trim(); return payAlias[k] || k; };
 let cardMap = {}; // card name as Apple Pay reports it → the viewer's payment method
@@ -1420,6 +1455,213 @@ const MERCHANTS = [
   ["booking", "Booking", "חופשות"], ["airbnb", "Airbnb", "חופשות"], ["el al", "אל על", "חופשות"], ["israir", "ישראייר", "חופשות"], ["arkia", "ארקיע", "חופשות"],
   ["wizz", "וויז אייר", "חופשות"], ["ryanair", "ריינאייר", "חופשות"], ["fattal", "פתאל", "חופשות"], ["isrotel", "ישרוטל", "חופשות"]
 ];
+
+// more Israeli chains and services. Names that contain a shorter known name come first ("fox home" before "fox").
+MERCHANTS.unshift(
+  ["fox home", "פוקס הום", "קניות לבית"], ["apple store", "Apple Store", "קניות"], ["zara home", "זארה הום", "קניות לבית"], ["h&m home", "H&M הום", "קניות לבית"], ["max brenner", "מקס ברנר", "אוכל ושתיה"],
+  ["be shufersal", "Be", "טיפוח ופארם"], ["shufersal online", "שופרסל אונליין", "סופר"], ["yellow paz", "פז", "הוצאות שוטפות"], ["paz yellow", "פז", "הוצאות שוטפות"],
+  ["cafe joe", "קפה ג'ו", "אוכל ושתיה"], ["cafe neto", "קפה נטו", "אוכל ושתיה"], ["james richardson", "דיוטי פרי", "קניות"], ["passportcard", "פספורטכארד", "חופשות"]
+);
+MERCHANTS.push(
+  // supermarkets, markets, liquor
+  ["shefa shuk", "שפע שוק", "סופר"], ["nitzat haduvdevan", "ניצת הדובדבן", "סופר"], ["maayan 2000", "מעיין 2000", "סופר"], ["bar kol", "בר כל", "סופר"],
+  ["shuk hair", "שוק העיר", "סופר"], ["politzer", "פוליצר", "סופר"], ["super sal", "שופרסל", "סופר"], ["shufersal deal", "שופרסל דיל", "סופר"],
+  ["mega ", "מגה", "סופר"], ["tiv-taam", "טיב טעם", "סופר"], ["hazi-hinam", "חצי חינם", "סופר"], ["yesh ", "יש", "סופר"], ["zol stock", "זול סטוק", "סופר"],
+  ["bana ", "בנא משקאות", "סופר"], ["haturki", "הטורקי", "סופר"], ["paneco", "פנקו", "בילויים"], ["derech hayayin", "דרך היין", "בילויים"], ["wine route", "דרך היין", "בילויים"],
+  // coffee, bakeries, desserts
+  ["benedict", "בנדיקט", "אוכל ושתיה"], ["biscotti", "ביסקוטי", "אוכל ושתיה"], ["mazzarine", "מזרין", "אוכל ושתיה"], ["dalal", "דלאל", "אוכל ושתיה"],
+  ["vaniglia", "וניליה", "אוכל ושתיה"], ["iceberg", "אייסברג", "אוכל ושתיה"], ["ben & jerry", "בן אנד ג'ריס", "אוכל ושתיה"], ["ben and jerry", "בן אנד ג'ריס", "אוכל ושתיה"],
+  ["re-bar", "ריבר", "אוכל ושתיה"], ["rebar", "ריבר", "אוכל ושתיה"], ["nespresso", "נספרסו", "קניות לבית"], ["elite cafe", "עלית קפה", "אוכל ושתיה"],
+  ["pastory", "פסטורי", "אוכל ושתיה"], ["english cake", "אנגליש קייק", "אוכל ושתיה"], ["lehem erez", "לחם ארז", "אוכל ושתיה"], ["lechem erez", "לחם ארז", "אוכל ושתיה"],
+  ["abulafia", "אבולעפיה", "אוכל ושתיה"], ["bagel cafe", "בייגל קפה", "אוכל ושתיה"], ["dunkin", "דאנקן דונטס", "אוכל ושתיה"], ["krispy", "קריספי קרים", "אוכל ושתיה"],
+  // restaurants & delivery
+  ["burger saloon", "בורגר סאלון", "אוכל ושתיה"], ["black bar", "BLACK", "אוכל ושתיה"], ["agadir", "אגדיר", "אוכל ושתיה"], ["giraffe", "ג'ירף", "אוכל ושתיה"],
+  ["papa john", "פאפא ג'ונס", "אוכל ושתיה"], ["pizza shemesh", "פיצה שמש", "אוכל ושתיה"], ["tony vespa", "טוני וספה", "אוכל ושתיה"], ["mishloha", "משלוחה", "אוכל ושתיה"],
+  ["shipudei hatikva", "שיפודי התקווה", "אוכל ושתיה"], ["hummus eliyahu", "חומוס אליהו", "אוכל ושתיה"], ["abu hassan", "אבו חסן", "אוכל ושתיה"], ["subway", "סאבוויי", "אוכל ושתיה"],
+  ["sushi samba", "סושי סמבה", "אוכל ושתיה"], ["nini hachi", "ניני האצ'י", "אוכל ושתיה"], ["hudson", "האדסון", "אוכל ושתיה"], ["meat bar", "מיט בר", "אוכל ושתיה"],
+  ["sombrero", "סומבררו", "אוכל ושתיה"], ["toastel", "טוסטל", "אוכל ושתיה"], ["basilica", "בזיליקה", "אוכל ושתיה"], ["rubens", "רובנס", "אוכל ושתיה"],
+  // fuel, cars, parking, roads, transit
+  ["alonit", "אלונית", "הוצאות שוטפות"], ["sonol so good", "סונול", "הוצאות שוטפות"], ["tapuz", "תפוז", "הוצאות שוטפות"], ["ahuzot hof", "אחוזות החוף", "הוצאות שוטפות"],
+  ["easypark", "איזיפארק", "הוצאות שוטפות"], ["derech eretz", "כביש 6", "הוצאות שוטפות"], ["kvish 6", "כביש 6", "הוצאות שוטפות"], ["highway 6", "כביש 6", "הוצאות שוטפות"],
+  ["netivei ayalon", "נתיב מהיר", "הוצאות שוטפות"], ["fast lane", "נתיב מהיר", "הוצאות שוטפות"], ["carmel tunnels", "מנהרות הכרמל", "הוצאות שוטפות"],
+  ["egged", "אגד", "הוצאות שוטפות"], ["dan bus", "דן", "הוצאות שוטפות"], ["kavim", "קווים", "הוצאות שוטפות"], ["metropoline", "מטרופולין", "הוצאות שוטפות"],
+  ["superbus", "סופרבוס", "הוצאות שוטפות"], ["afikim", "אפיקים", "הוצאות שוטפות"], ["uber", "אובר", "הוצאות שוטפות"], ["bird rides", "Bird", "הוצאות שוטפות"],
+  ["lime ", "Lime", "הוצאות שוטפות"], ["shlomo sixt", "שלמה סיקסט", "חופשות"], ["eldan", "אלדן", "חופשות"], ["hertz", "הרץ", "חופשות"], ["avis", "אוויס", "חופשות"], ["budget rent", "באדג'ט", "חופשות"],
+  ["tesla", "טסלה", "הוצאות שוטפות"], ["evedge", "טעינה לרכב", "הוצאות שוטפות"], ["afcon", "טעינה לרכב", "הוצאות שוטפות"], ["test center", "מכון רישוי", "הוצאות שוטפות"],
+  // phone, tv, utilities, government
+  ["hot net", "הוט", "הוצאות שוטפות"], ["hot telecom", "הוט", "הוצאות שוטפות"], ["yes tv", "yes", "מנוי חודשי"], ["sting", "סטינג", "מנוי חודשי"], ["we4g", "We4G", "הוצאות שוטפות"],
+  ["019 mobile", "019", "הוצאות שוטפות"], ["012 ", "012", "הוצאות שוטפות"], ["rami levy tikshoret", "רמי לוי תקשורת", "הוצאות שוטפות"], ["iec ", "חברת החשמל", "הוצאות שוטפות"],
+  ["supergas", "סופרגז", "הוצאות שוטפות"], ["amisragas", "אמישראגז", "הוצאות שוטפות"], ["pazgas", "פזגז", "הוצאות שוטפות"], ["dorgas", "דורגז", "הוצאות שוטפות"],
+  ["israel post", "דואר ישראל", "הוצאות שוטפות"], ["doar israel", "דואר ישראל", "הוצאות שוטפות"], ["misrad hapnim", "משרד הפנים", "הוצאות שוטפות"], ["gov.il", "שירותי ממשלה", "הוצאות שוטפות"],
+  ["municipality", "עירייה", "הוצאות שוטפות"], ["iriyat", "עירייה", "הוצאות שוטפות"], ["iriya", "עירייה", "הוצאות שוטפות"], ["arnona", "ארנונה", "הוצאות שוטפות"],
+  // insurance & health funds
+  ["harel", "הראל", "ביטוח"], ["migdal", "מגדל", "ביטוח"], ["phoenix", "הפניקס", "ביטוח"], ["hafenix", "הפניקס", "ביטוח"], ["menora", "מנורה", "ביטוח"], ["clal ", "כלל", "ביטוח"],
+  ["ayalon", "איילון", "ביטוח"], ["libra", "ליברה", "ביטוח"], ["aig ", "AIG", "ביטוח"], ["shirbit", "שירביט", "ביטוח"], ["9 million", "9 מיליון", "ביטוח"], ["wobi", "וובי", "ביטוח"],
+  ["maccabi", "מכבי", "הוצאות שוטפות"], ["clalit", "כללית", "הוצאות שוטפות"], ["meuhedet", "מאוחדת", "הוצאות שוטפות"], ["leumit", "לאומית", "הוצאות שוטפות"],
+  ["terem", "טרם", "הוצאות שוטפות"], ["halperin", "אופטיקה הלפרין", "הוצאות שוטפות"], ["erroca", "ערוקה", "הוצאות שוטפות"], ["optica", "אופטיקה", "הוצאות שוטפות"],
+  // beauty
+  ["sephora", "ספורה", "טיפוח ופארם"], ["mac cosmetics", "MAC", "טיפוח ופארם"], ["kiko", "קיקו", "טיפוח ופארם"], ["lush", "לאש", "טיפוח ופארם"], ["laline", "ללין", "טיפוח ופארם"],
+  ["sabon", "סבון של פעם", "טיפוח ופארם"], ["l'occitane", "ל'אוקסיטן", "טיפוח ופארם"], ["loccitane", "ל'אוקסיטן", "טיפוח ופארם"], ["bobbi brown", "בובי בראון", "טיפוח ופארם"],
+  // fashion & shoes
+  ["tamnoon", "תמנון", "שופינג"], ["honigman", "הוניגמן", "שופינג"], ["twentyfourseven", "TwentyFourSeven", "שופינג"], ["24seven", "TwentyFourSeven", "שופינג"], ["delta", "דלתא", "שופינג"],
+  ["yanga", "יאנגה", "שופינג"], ["aldo", "אלדו", "שופינג"], ["steve madden", "סטיב מאדן", "שופינג"], ["skechers", "סקצ'רס", "שופינג"], ["crocs", "קרוקס", "שופינג"],
+  ["foot locker", "פוט לוקר", "שופינג"], ["new balance", "ניו באלאנס", "שופינג"], ["under armour", "אנדר ארמור", "שופינג"], ["lululemon", "לולולמון", "שופינג"],
+  ["massimo dutti", "מאסימו דוטי", "שופינג"], ["stradivarius", "סטרדיווריוס", "שופינג"], ["gali ", "גלי", "שופינג"], ["carolina lemke", "קרולינה למקה", "שופינג"],
+  ["story", "סטורי", "שופינג"], ["urbanica", "אורבניקה", "שופינג"], ["intima", "אינטימה", "שופינג"], ["kenvelo", "קנבלו", "שופינג"], ["jack & jones", "ג'ק אנד ג'ונס", "שופינג"],
+  ["uniqlo", "יוניקלו", "שופינג"], ["asos", "ASOS", "שופינג"], ["next ", "Next", "שופינג"], ["timberland", "טימברלנד", "שופינג"], ["levi's", "ליוויס", "שופינג"], ["levis ", "ליוויס", "שופינג"], ["tommy hilfiger", "טומי הילפיגר", "שופינג"],
+  ["polo ralph", "ראלף לורן", "שופינג"], ["lacoste", "לקוסט", "שופינג"], ["decathlon", "דקתלון", "שופינג"], ["mega sport", "מגה ספורט", "שופינג"], ["shilav", "שילב", "קניות"],
+  ["pandora", "פנדורה", "מתנות"], ["swarovski", "סברובסקי", "מתנות"], ["michal negrin", "מיכל נגרין", "מתנות"], ["zer4u", "זר4U", "מתנות"],
+  // electronics, books, toys, offices
+  ["idigital", "iDigital", "קניות"], ["istore", "iStore", "קניות"], ["machsanei hashmal", "מחסני חשמל", "קניות"], ["shekem electric", "שקם אלקטריק", "קניות"],
+  ["electra", "אלקטרה", "קניות"], ["payngo", "Payngo", "קניות"], ["traklin", "טרקלין חשמל", "קניות"], ["office depot", "אופיס דיפו", "קניות"],
+  ["steimatzky", "סטימצקי", "קניות"], ["tzomet sfarim", "צומת ספרים", "קניות"], ["toys r us", "טויס אר אס", "מתנות"], ["kfar hashashuim", "כפר השעשועים", "מתנות"],
+  ["red pirate", "הפיראט האדום", "קניות"], ["lastprice", "לאסט פרייס", "קניות"], ["zap ", "זאפ", "קניות"],
+  // home
+  ["naaman", "נעמן", "קניות לבית"], ["jumbo", "ג'מבו", "קניות לבית"], ["kitan", "כיתן", "קניות לבית"], ["tollman", "טולמנ'ס", "קניות לבית"], ["tambour", "טמבור", "קניות לבית"],
+  ["vardinon", "ורדינון", "קניות לבית"], ["golf & co", "גולף אנד קו", "קניות לבית"], ["home style", "הום סטייל", "קניות לבית"], ["hamashbir lazarchan", "המשביר לצרכן", "קניות לבית"],
+  ["keter", "כתר", "קניות לבית"], ["stock ", "הסטוק", "קניות לבית"], ["boom ", "בום", "קניות לבית"],
+  // digital, games, subscriptions
+  ["microsoft", "מיקרוסופט", "מנוי חודשי"], ["xbox", "Xbox", "רכישות בדיגיטל"], ["nintendo", "נינטנדו", "רכישות בדיגיטל"], ["epic games", "Epic Games", "רכישות בדיגיטל"],
+  ["ea sports", "EA", "רכישות בדיגיטל"], ["ea.com", "EA", "רכישות בדיגיטל"], ["prime video", "אמזון פריים", "מנוי חודשי"], ["amazon prime", "אמזון פריים", "מנוי חודשי"],
+  ["audible", "Audible", "מנוי חודשי"], ["canva", "Canva", "מנוי חודשי"], ["adobe", "Adobe", "מנוי חודשי"], ["dropbox", "Dropbox", "מנוי חודשי"], ["notion", "Notion", "מנוי חודשי"],
+  ["notability", "Notability", "מנוי חודשי"], ["duolingo", "דואולינגו", "מנוי חודשי"], ["gemini", "Gemini", "מנוי חודשי"], ["google one", "Google One", "מנוי חודשי"],
+  ["tinder", "טינדר", "מנוי חודשי"], ["bumble", "באמבל", "מנוי חודשי"], ["patreon", "Patreon", "מנוי חודשי"], ["twitch", "Twitch", "רכישות בדיגיטל"], ["roblox", "Roblox", "רכישות בדיגיטל"],
+  ["clash of clans", "קלאש אוף קלאנס", "רכישות בדיגיטל"], ["fifa", "פיפא", "רכישות בדיגיטל"], ["fc points", "פיפא", "רכישות בדיגיטל"], ["wix", "Wix", "מנוי חודשי"], ["godaddy", "GoDaddy", "מנוי חודשי"],
+  // leisure, shows, attractions
+  ["zappa", "זאפה", "בילויים"], ["barby", "בארבי", "בילויים"], ["habima", "הבימה", "בילויים"], ["cameri", "הקאמרי", "בילויים"], ["gesher theater", "תיאטרון גשר", "בילויים"],
+  ["kupat tel aviv", "קופת תל אביב", "בילויים"], ["tmol shilshom", "תמול שלשום", "בילויים"], ["luna park", "לונה פארק", "בילויים"], ["superland", "סופרלנד", "בילויים"],
+  ["meymadion", "מימדיון", "בילויים"], ["safari", "ספארי", "בילויים"], ["aquarium", "אקווריום", "בילויים"], ["max kart", "קארטינג", "בילויים"], ["bowling", "באולינג", "בילויים"],
+  ["gamdom", "גמדום", "בילויים"],
+  // fitness
+  ["great shape", "גרייט שייפ", "כושר"], ["space gym", "ספייס", "כושר"], ["shape gym", "שייפ", "כושר"], ["country club", "קאנטרי קלאב", "כושר"],
+  // travel
+  ["easyjet", "איזיג'ט", "חופשות"], ["turkish airlines", "טורקיש איירליינס", "חופשות"], ["pegasus", "פגסוס", "חופשות"], ["aegean", "אגיאן", "חופשות"],
+  ["lufthansa", "לופטהנזה", "חופשות"], ["blue bird", "בלו בירד", "חופשות"], ["sundor", "סאנדור", "חופשות"], ["expedia", "Expedia", "חופשות"], ["agoda", "Agoda", "חופשות"],
+  ["hotels.com", "Hotels.com", "חופשות"], ["trip.com", "Trip.com", "חופשות"], ["issta", "איסתא", "חופשות"], ["dan hotel", "מלונות דן", "חופשות"], ["brown hotel", "בראון", "חופשות"],
+  ["herods", "הרודס", "חופשות"], ["leonardo", "לאונרדו", "חופשות"], ["astral", "אסטרל", "חופשות"], ["prima hotel", "פרימה", "חופשות"], ["laya", "Laya", "חופשות"],
+  ["klook", "Klook", "חופשות"], ["getyourguide", "GetYourGuide", "חופשות"], ["viator", "Viator", "חופשות"], ["grab ", "Grab", "חופשות"], ["bolt.eu", "Bolt", "חופשות"],
+  // lottery
+  ["winner", "ווינר", "הוצאות שוטפות"], ["mifal hapais", "מפעל הפיס", "הוצאות שוטפות"], ["lotto", "לוטו", "הוצאות שוטפות"]
+);
+
+/* when the exact business is unknown, the kind of business usually is: "Houry Quality Bakery" → מאפיה, אוכל ושתיה.
+   English words match at the start of a word, Hebrew words anywhere. Order matters: the more specific kinds come first. */
+const BUSINESS_TYPES = [
+  ["חיות", "קניות", ["pet ", "pets", "pet shop", "pet food", "חיות", "חנות חיות"]],
+  ["קוסמטיקה", "טיפוח ופארם", ["cosmetic", "beauty", "nails", "nail bar", "nail", "manicure", "spa ", "laser", "waxing", "kosmetika", "קוסמטיקה", "קוסמטיקאית", "ציפורניים", "מניקור", "ספא", "לייזר", "הסרת שיער"]],
+  ["חדר בריחה", "בילויים", ["escape room", "escape", "חדר בריחה"]],
+  // food & drink, most specific first
+  ["מאפיה", "אוכל ושתיה", ["bakery", "bakeries", "bakehouse", "bake shop", "boulangerie", "patisserie", "pastry", "konditor", "bagel", "croissant", "donut", "doughnut", "lehem", "maafia", "maafe", "מאפה", "מאפיית", "מאפיה", "קונדיטוריה", "בייקרי", "לחמים", "קרואסון"]],
+  ["גלידה", "אוכל ושתיה", ["ice cream", "icecream", "gelato", "gelateria", "frozen yogurt", "froyo", "glida", "גלידה", "גלידריה", "פרוזן"]],
+  ["שוקולד וממתקים", "אוכל ושתיה", ["chocolate", "chocolatier", "candy", "sweets", "confectionery", "שוקולד", "ממתקים", "פיצוחים"]],
+  ["מיצים", "אוכל ושתיה", ["juice", "smoothie", "מיצים", "מיץ", "שייק"]],
+  ["פיצה", "אוכל ושתיה", ["pizza", "pizzeria", "פיצה", "פיצריה"]],
+  ["המבורגר", "אוכל ושתיה", ["burger", "hamburger", "המבורגר", "בורגר"]],
+  ["סושי", "אוכל ושתיה", ["sushi", "ramen", "noodle", "wok", "dim sum", "japanese", "סושי", "ראמן", "נודלס", "ווק"]],
+  ["אוכל אסייתי", "אוכל ושתיה", ["thai", "chinese", "asian", "vietnam", "indian", "תאילנדי", "סיני", "אסייתי", "הודי"]],
+  ["שווארמה", "אוכל ושתיה", ["shawarma", "shwarma", "schwarma", "shawerma", "shuarma", "שווארמה", "שוורמה", "שווארמיה"]],
+  ["פלאפל", "אוכל ושתיה", ["falafel", "felafel", "פלאפל"]],
+  ["חומוסיה", "אוכל ושתיה", ["hummus", "humus", "chumus", "חומוס", "חומוסיה"]],
+  ["סביח", "אוכל ושתיה", ["sabich", "sabih", "סביח"]],
+  ["שיפודים", "אוכל ושתיה", ["shipudei", "shipudim", "skewer", "kebab", "שיפודי", "שיפודים", "קבב"]],
+  ["טוסטים", "אוכל ושתיה", ["toast", "sandwich", "baguette", "panini", "טוסט", "כריך", "כריכים", "באגט"]],
+  ["בית קפה", "אוכל ושתיה", ["cafe", "caffe", "caffè", "coffee", "espresso", "roastery", "קפה", "בית קפה", "קפיטריה"]],
+  ["מסעדה", "אוכל ושתיה", ["restaurant", "resto", "rest ", "rest.", "grill", "bistro", "brasserie", "trattoria", "osteria", "taverna", "steak", "steakhouse", "spaghetti", "pasta", "kitchen", "diner", "eatery", "food", "deli", "catering",
+    "מסעדה", "מסעדת", "פסטה", "גריל", "סטקיה", "מטבח", "ביסטרו", "מזנון", "קייטרינג", "אוכל"]],
+  ["משלוח אוכל", "אוכל ושתיה", ["delivery", "takeaway", "take away", "משלוחים", "טייק אוויי"]],
+  ["קיוסק", "אוכל ושתיה", ["kiosk", "pitzutsia", "pizutzia", "pitsutsia", "24/7", "convenience", "קיוסק", "פיצוציה"]],
+  // going out
+  ["בר", "בילויים", ["bar ", "pub", "brewery", "brew", "beer", "wine bar", "cocktail", "lounge", "tavern", "פאב", "בר ", "בירה", "מבשלת"]],
+  ["משקאות", "בילויים", ["liquor", "wine", "spirits", "alcohol", "drinks", "cava", "משקאות", "אלכוהול", "יינות", "קאווה"]],
+  ["נרגילה", "בילויים", ["hookah", "shisha", "nargila", "narghile", "נרגילה", "נרגילות"]],
+  ["קולנוע", "בילויים", ["cinema", "movie", "movies", "קולנוע", "סינמה"]],
+  ["הופעה", "בילויים", ["concert", "tickets", "ticket", "live show", "festival", "הופעה", "כרטיסים", "פסטיבל"]],
+  ["בילוי", "בילויים", ["theater", "theatre", "bowling", "escape", "karaoke", "luna park", "amusement", "attraction", "museum", "zoo", "paintball", "karting", "kart ", "trampoline", "club", "park",
+    "תיאטרון", "באולינג", "חדר בריחה", "קריוקי", "לונה פארק", "אטרקציה", "מוזיאון", "גן חיות", "פיינטבול", "קארטינג", "טרמפולינה", "מועדון", "פארק"]],
+  // groceries
+  ["קצביה", "סופר", ["butcher", "meat", "katzav", "itliz", "קצביה", "קצביית", "אטליז", "בשר "]],
+  ["דגים", "סופר", ["fish market", "fishmonger", "seafood", "דגים", "פירות ים"]],
+  ["ירקן", "סופר", ["greengrocer", "fruit", "vegetable", "produce", "yerakot", "ירקות", "פירות", "ירקן"]],
+  ["תבלינים", "סופר", ["spices", "spice", "תבלינים"]],
+  ["סופר", "סופר", ["supermarket", "super market", "minimarket", "mini market", "market", "grocery", "groceries", "makolet", "shuk", "hypermarket", "סופרמרקט", "מרקט", "מכולת", "מינימרקט", "סופר", "שוק "]],
+  // health & beauty
+  ["בית מרקחת", "טיפוח ופארם", ["pharmacy", "pharm", "drugstore", "apteka", "מרקחת", "פארם"]],
+  ["מספרה", "טיפוח ופארם", ["barber", "barbershop", "hair", "salon", "coiffure", "mispara", "מספרה", "ספרות", "תספורת"]],
+  ["בשמים", "טיפוח ופארם", ["perfume", "parfum", "parfumerie", "fragrance", "בושם", "בשמים", "פרפומרי"]],
+  ["עיסוי", "טיפוח ופארם", ["massage", "עיסוי", "מסאז"]],
+  ["קעקועים", "טיפוח ופארם", ["tattoo", "piercing", "קעקוע", "קעקועים", "פירסינג"]],
+  ["אופטיקה", "הוצאות שוטפות", ["optic", "optical", "eyewear", "glasses", "optika", "אופטיקה", "משקפיים", "עדשות"]],
+  ["רופא", "הוצאות שוטפות", ["dr ", "dr.", "dental", "dentist", "orthodont", "clinic", "medical", "medicine", "doctor", "hospital", "physio", "lab ", "שיניים", "מרפאה", "רופא", "רפואי", "בית חולים", "פיזיותרפיה", "קופת חולים", "מעבדה"]],
+  ["וטרינר", "קניות", ["vet ", "veterinar", "animal hospital", "וטרינר", "וטרינרית"]],
+  // car & getting around
+  ["דלק", "הוצאות שוטפות", ["fuel", "petrol", "gas station", "service station", "tahanat delek", "תחנת דלק", "תדלוק"]],
+  ["טעינה לרכב", "הוצאות שוטפות", ["ev charging", "charging station", "charger", "עמדת טעינה", "טעינה לרכב"]],
+  ["חניה", "הוצאות שוטפות", ["parking", "car park", "hanaya", "hanion", "חניון", "חניה", "חנייה"]],
+  ["כביש אגרה", "הוצאות שוטפות", ["toll", "כביש 6", "נתיב מהיר", "אגרה"]],
+  ["מונית", "הוצאות שוטפות", ["taxi", "cab ", "monit", "מונית", "מוניות"]],
+  ["תחבורה ציבורית", "הוצאות שוטפות", ["bus ", "train ", "railway", "metro", "light rail", "אוטובוס", "רכבת", "רכבת קלה"]],
+  ["אופניים וקורקינט", "הוצאות שוטפות", ["bike", "bicycle", "scooter", "e-bike", "אופניים", "קורקינט"]],
+  ["שטיפת רכב", "הוצאות שוטפות", ["car wash", "carwash", "שטיפת רכב", "שטיפה"]],
+  ["מוסך", "הוצאות שוטפות", ["garage", "auto service", "tire", "tyre", "car service", "mosach", "מוסך", "צמיגים", "פנצריה", "חלפים"]],
+  ["השכרת רכב", "חופשות", ["car rental", "rent a car", "rent-a-car", "השכרת רכב"]],
+  // household services & bills
+  ["מכבסה", "הוצאות שוטפות", ["laundry", "laundromat", "dry clean", "מכבסה", "ניקוי יבש", "כביסה"]],
+  ["תופרת", "הוצאות שוטפות", ["tailor", "alteration", "תופרת", "תיקוני תפירה"]],
+  ["בעל מקצוע", "הוצאות שוטפות", ["locksmith", "plumber", "electrician", "handyman", "מנעולן", "אינסטלטור", "חשמלאי", "שיפוצים"]],
+  ["דואר ומשלוחים", "הוצאות שוטפות", ["post office", "courier", "shipping", "dhl", "fedex", "ups ", "דואר", "שליחויות"]],
+  ["צילום והדפסה", "הוצאות שוטפות", ["photo", "print", "printing", "copy center", "צילום", "הדפסה", "דפוס", "פוטו"]],
+  ["לימודים", "הוצאות שוטפות", ["school", "academy", "university", "college", "course", "tuition", "לימודים", "מכללה", "אוניברסיטה", "קורס", "שכר לימוד"]],
+  ["מיסים ועירייה", "הוצאות שוטפות", ["tax", "municipality", "city of", "מס ", "מיסים", "ארנונה", "עירייה", "עיריית", "מועצה"]],
+  ["חשבונות הבית", "הוצאות שוטפות", ["electricity", "water corp", "gas company", "חשמל", "תאגיד מים", "גז "]],
+  ["תקשורת", "הוצאות שוטפות", ["telecom", "mobile", "cellular", "internet", "סלולר", "אינטרנט", "תקשורת"]],
+  ["תרומה", "הוצאות שוטפות", ["donation", "charity", "foundation", "תרומה", "עמותה", "קרן "]],
+  ["ווינר", "הוצאות שוטפות", ["winner", "lotto", "toto", "pais", "ווינר", "לוטו", "טוטו", "מפעל הפיס"]],
+  // fitness
+  ["כושר", "כושר", ["gym", "fitness", "pilates", "yoga", "crossfit", "studio", "training", "trainer", "boxing", "כושר", "פילאטיס", "יוגה", "סטודיו", "אימון", "מאמן", "אגרוף"]],
+  // travel
+  ["מלון", "חופשות", ["hotel", "hostel", "resort", "inn ", "suites", "lodge", "b&b", "מלון", "אכסניה", "צימר", "צימרים"]],
+  ["טיסה", "חופשות", ["airline", "airways", "air lines", "flight", "airport", "aviation", "טיסה", "טיסות", "תעופה", "נמל התעופה"]],
+  ["תיירות", "חופשות", ["travel", "tours", "tour ", "tourism", "excursion", "camping", "תיירות", "סיורים", "נופש", "קמפינג"]],
+  ["דיוטי פרי", "קניות", ["duty free", "dutyfree", "duty-free", "דיוטי פרי"]],
+  // gifts & occasions
+  ["פרחים", "מתנות", ["flower", "florist", "bouquet", "פרחים", "זרים", "משתלה"]],
+  ["צעצועים", "מתנות", ["toys", "toy ", "games store", "צעצועים"]],
+  ["תכשיטים", "מתנות", ["jewel", "jewelry", "jewellery", "gold", "diamond", "תכשיטים", "צורף", "יהלומים"]],
+  ["אירוע", "אירועים", ["wedding", "event hall", "events", "banquet", "אולם", "גן אירועים", "אירועים", "חתונה"]],
+  // shopping
+  ["בגדים", "שופינג", ["fashion", "clothing", "clothes", "apparel", "boutique", "shoes", "sneakers", "jeans", "lingerie", "bags", "accessories", "outlet",
+    "אופנה", "בגדים", "נעליים", "הלבשה", "תיקים", "אאוטלט"]],
+  ["שעונים", "שופינג", ["watch", "watches", "שעונים"]],
+  ["ספורט", "שופינג", ["sport", "sports", "outdoor", "ספורט", "טיולים"]],
+  ["כלי בית", "קניות לבית", ["furniture", "home", "hardware", "kitchenware", "decor", "design", "bedding", "carpet", "lighting", "garden", "cleaning",
+    "רהיטים", "כלי בית", "לבית", "כלי עבודה", "מצעים", "שטיחים", "תאורה", "גינון", "ניקיון", "עיצוב הבית"]],
+  ["אלקטרוניקה", "קניות", ["electronics", "electric", "computer", "computers", "mobile store", "phone", "gadget", "camera", "אלקטרוניקה", "מחשבים", "סלולר", "מוצרי חשמל"]],
+  ["ספרים", "קניות", ["books", "book ", "bookstore", "stationery", "office supply", "ספרים", "כלי כתיבה", "ציוד משרדי"]],
+  ["תינוקות", "קניות", ["baby", "kids", "children", "תינוקות", "ילדים"]],
+  ["טבק", "קניות", ["tobacco", "smoke", "vape", "cigar", "טבק", "סיגריות", "וייפ"]],
+  // digital
+  ["משחקים", "רכישות בדיגיטל", ["game", "games", "gaming", "steam", "playstation", "in-app", "app store", "משחקים", "משחק"]],
+  ["מנוי", "מנוי חודשי", ["subscription", "membership", "premium", "monthly", "מנוי"]],
+  ["קנייה באינטרנט", "רכישות בדיגיטל", [".com", "online", "shop", "store", "אונליין", "חנות"]]
+];
+const hasHebrew = s => /[֐-׿]/.test(String(s || ""));
+// a word counts at the start of a word (Hebrew may carry a one-letter prefix: ה, ב, ל, מ, ו, ש); a trailing space means "the whole word"
+const typeRe = new Map();
+function typeWord(w) {
+  if (!typeRe.has(w)) {
+    const body = w.trim().replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+    typeRe.set(w, new RegExp("(^|[\\s\\-–(])" + (hasHebrew(w) ? "[הבלמוש]?" : "") + body + (w.endsWith(" ") ? "(?=[\\s)\\-]|$)" : "")));
+  }
+  return typeRe.get(w);
+}
+function businessType(raw) {
+  const n = normMerchant(raw);
+  for (const [name, cat, words] of BUSINESS_TYPES) if (words.some(w => typeWord(w).test(n))) return { name, cat };
+  return null;
+}
+// the owner's own rules, kept so an account linked to his sheets sorts with his categories
+const OWNER_RULES = JSON.parse(JSON.stringify({ MERCHANTS, CATEGORY_RULES, ISSUER_CATS, BUSINESS_TYPES }));
+function useOwnerRules() { [["MERCHANTS", MERCHANTS], ["CATEGORY_RULES", CATEGORY_RULES], ["ISSUER_CATS", ISSUER_CATS], ["BUSINESS_TYPES", BUSINESS_TYPES]].forEach(([k, arr]) => arr.splice(0, arr.length, ...OWNER_RULES[k])); }
 const CAT_REMAP = { "טיפוח ופארם": "בריאות וטיפוח", "כושר": "בריאות וטיפוח", "מנוי חודשי": "מנויים", "ביטוח": "חשבונות הבית", "הוצאות שוטפות": "חשבונות הבית",
   "רכישות בדיגיטל": "קניות", "שופינג": "קניות", "קניות לבית": "קניות" };
 const TRANSPORT = ["sonol", "dor alon", "delek", "paz ", "yellow", "ten petrol", "gett", "yango", "rav kav", "ravkav", "moovit", "pango", "cellopark", "israel railways", "rakevet"];
@@ -1427,6 +1669,7 @@ MERCHANTS.forEach(m => { m[2] = TRANSPORT.includes(m[0]) ? "תחבורה ודל�
 CATEGORY_RULES.forEach(r => { r[0] = CAT_REMAP[r[0]] || r[0]; });
 CATEGORY_RULES.unshift(["תחבורה ודלק", ["פז ", "דלק", "סונול", "דור אלון", "yellow", "רב קו", "rav-kav", "gett", "פנגו", "pango", "סלופארק", "cellopark", "מוביט", "moovit", "רכבת", "מונית"]]);
 ISSUER_CATS.forEach(r => { r[1] = r[0] === "דלק" || r[0] === "תחבורה" ? "תחבורה ודלק" : (CAT_REMAP[r[1]] || r[1]); });
+BUSINESS_TYPES.forEach(r => { r[1] = ["דלק", "חניה", "מונית", "שטיפת רכב", "מוסך"].includes(r[0]) ? "תחבורה ודלק" : r[0] === "ווינר" ? "אחר" : r[1] === "מתנות" ? "קניות" : (CAT_REMAP[r[1]] || r[1]); });
 let merchantRules = {}; // learned from the viewer's edits: raw name → {name, cat}
 const normMerchant = raw => " " + String(raw || "").toLowerCase().replace(/[׳'`"]/g, "").replace(/\s+/g, " ").trim() + " ";
 function recognizeMerchant(raw) {
@@ -1436,6 +1679,9 @@ function recognizeMerchant(raw) {
   const n = normMerchant(key);
   // long names match anywhere; short ones only at the start of a word ("fox" must not match "firefox")
   for (const [word, name, cat] of MERCHANTS) if (word.trim().length >= 5 ? n.includes(word) : n.includes(" " + word)) return { name, cat };
+  // a business we don't know by name: say in Hebrew what kind of place it is (a Hebrew name is already readable, so it stays)
+  const t = businessType(key);
+  if (t) return { name: hasHebrew(key) ? tidyMerchant(key) : t.name, cat: t.cat, kind: true };
   return null;
 }
 // "M YOHANANOF SONS LTD" → "M Yohananof Sons" when nothing else is known
@@ -1450,6 +1696,7 @@ function guessCategory(text, issuerCat) {
   const low = (text || "").toLowerCase() + " ";
   for (const [cat, words] of CATEGORY_RULES) if (words.some(w => low.includes(w))) return cat;
   if (issuerCat) for (const [k, cat] of ISSUER_CATS) if (issuerCat.includes(k)) return cat;
+  const t = businessType(text); if (t) return t.cat;
   return "לא מסווג";
 }
 
@@ -1678,6 +1925,8 @@ function build() {
     const next = new Date(last.date.getFullYear(), last.date.getMonth() + 1, CHARGE_DAY);
     instPlans.push({ last, next, due: today >= next && !seen(last.amount, next) });
   });
+  // a renamed category: every row, old or new, shows under its current name
+  out.forEach(t => { t.category = catName(t.category); });
   tx = out;
 }
 
@@ -2566,7 +2815,7 @@ async function saveIncome(e) {
 /* ---------- settings (tab "הגדרות": A category, B fixed, D payment method, F month, G salary) ---------- */
 function applySettings(values) {
   data.settings = values;
-  const cats = [], pay = [], sal = {}, cm = {}, mrules = {}, alias = {}, gl = {};
+  const cats = [], pay = [], sal = {}, cm = {}, mrules = {}, alias = {}, gl = {}, calias = {};
   values.forEach(v => {
     const c = (v[0] || "").trim();
     if (c && c !== "הכנסה" && !cats.some(x => x.name === c)) {
@@ -2578,17 +2827,18 @@ function applySettings(values) {
     if (/^\d{4}-\d{2}$/.test(mk) && amt !== null) sal[mk] = amt;
     const raw = (v[8] || "").trim(), to = (v[9] || "").trim(); if (raw && to) cm[raw] = to;
     const ao = (v[15] || "").trim(), an = (v[16] || "").trim(); if (ao && an && ao !== an) alias[ao] = an;
+    const co = (v[19] || "").trim(), cn = (v[20] || "").trim(); if (co && cn && co !== cn) calias[co] = cn;
     const gm = String(v[17] || "").trim().match(/^(\d{4})-(\d{1,2})$/), ga = parseAmount(v[18]); if (gm && ga !== null) gl[gm[1] + "-" + gm[2].padStart(2, "0")] = ga;
     const mr = (v[11] || "").trim(); if (mr && ((v[12] || "").trim() || (v[13] || "").trim())) mrules[mr] = { name: (v[12] || "").trim(), cat: (v[13] || "").trim() };
   });
-  cardMap = cm; merchantRules = mrules; payAlias = alias;
+  cardMap = cm; merchantRules = mrules; payAlias = alias; catAlias = calias;
   if (cats.length) {
     CATS = cats.map(c => c.name); FIXED = new Set(cats.filter(c => c.fixed).map(c => c.name));
     catStyle = {}; cats.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue == null ? autoIcon(c.name)[1] : c.hue }; });
   }
   if (pay.length) PAY = pay;
   salaries = sal; goals = gl;
-  if (!adminDirty.cats) draftCats = cats.length ? cats.map(c => ({ ...c })) : CATS.map(n => ({ name: n, fixed: FIXED.has(n) }));
+  if (!adminDirty.cats) draftCats = cats.length ? cats.map(c => ({ ...c, orig: c.name })) : CATS.map(n => ({ name: n, fixed: FIXED.has(n), orig: n }));
   if (!adminDirty.pay) { draftPay = PAY.slice(); draftPayOrig = PAY.slice(); }
   if (!adminDirty.sal) renderSal();
   renderAdminLists();
@@ -2675,22 +2925,88 @@ $("catList").addEventListener("click", e => {
   if (pa) { const c = draftCats[+pa.dataset.pickAuto]; c.icon = ""; c.hue = null; adminDirty.cats = true; drawCatList(); return; }
   if (pc) { pickerOpen = -1; drawCatList(); return; }
   const d = e.target.closest("[data-del]"); if (!d) return;
+  const c = draftCats[+d.dataset.del];
+  if (c && c.orig) { askMove(+d.dataset.del); return; } // a saved category: ask where its transactions go
   draftCats.splice(+d.dataset.del, 1); adminDirty.cats = false; renderAdminLists(); adminDirty.cats = true;
 });
 $("addCatRow").onclick = () => {
   draftCats.push({ name: "", fixed: false }); adminDirty.cats = false; renderAdminLists(); adminDirty.cats = true;
   $("cat-" + (draftCats.length - 1)).focus();
 };
+/* deleting a saved category moves its transactions somewhere first (an existing category or a new one), then saves */
+let pendingMoves = {}, mvIndex = -1, mvTarget = null;
+function askMove(i) {
+  const c = draftCats[i], name = c.orig, rows = tx.filter(t => t.category === name);
+  const sum = rows.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+  mvIndex = i; mvTarget = null;
+  $("mvIc").innerHTML = catIcon(name);
+  $("mvTitle").textContent = "למחוק את \"" + name + "\"?";
+  $("mvText").textContent = rows.length ? `יש בה ${rows.length} ${rows.length === 1 ? "תנועה" : "תנועות"}, ${fmt(sum).replace(/[\u2066\u2069]/g, "")} בסך הכול. לאן להעביר אותן?` : "אין בה תנועות, אז אפשר פשוט למחוק.";
+  const others = draftCats.filter((x, j) => j !== i && x.name.trim()).map(x => x.name.trim());
+  $("mvList").hidden = !rows.length;
+  $("mvList").innerHTML = rows.length ? `<button type="button" class="mv-add" data-mv-new="1">+ קטגוריה חדשה</button>` + others.map(n => `<button type="button" role="radio" aria-checked="false" data-mv="${esc(n)}">${catIcon(n, true)}${esc(n)}</button>`).join("") : "";
+  $("mvNew").hidden = true; $("mvNew").value = ""; $("mvMsg").textContent = "";
+  $("mvGo").textContent = rows.length ? "בחרו לאן להעביר" : "למחוק";
+  $("mvGo").disabled = !!rows.length; $("mvGo").classList.toggle("danger", !rows.length);
+  $("mvBg").hidden = false;
+}
+const closeMove = () => { $("mvBg").hidden = true; mvIndex = -1; };
+$("mvClose").onclick = closeMove; $("mvCancel").onclick = closeMove;
+$("mvBg").addEventListener("click", e => { if (e.target.id === "mvBg") closeMove(); });
+$("mvList").addEventListener("click", e => {
+  const b = e.target.closest("[data-mv], [data-mv-new]"); if (!b) return;
+  $("mvList").querySelectorAll("[data-mv]").forEach(x => x.setAttribute("aria-checked", x === b));
+  if (b.dataset.mvNew) { mvTarget = null; $("mvNew").hidden = false; $("mvNew").focus(); $("mvGo").disabled = false; $("mvGo").textContent = "ליצור ולהעביר"; return; }
+  mvTarget = b.dataset.mv; $("mvNew").hidden = true; $("mvGo").disabled = false; $("mvGo").textContent = "להעביר ל" + mvTarget + " ולמחוק";
+});
+$("mvForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (mvIndex < 0) return;
+  const c = draftCats[mvIndex], name = c.orig, hasRows = !$("mvList").hidden;
+  let target = mvTarget;
+  if (hasRows && !$("mvNew").hidden) {
+    const n = $("mvNew").value.trim();
+    if (!n) { $("mvMsg").textContent = "כתבו שם לקטגוריה החדשה."; $("mvNew").focus(); return; }
+    if (n === "הכנסה") { $("mvMsg").textContent = "\"הכנסה\" שמורה למשכורת ולהכנסות."; return; }
+    if (!draftCats.some(x => x.name.trim() === n)) draftCats.push({ name: n, fixed: c.fixed, orig: "", icon: c.icon, hue: c.hue });
+    target = n;
+  }
+  if (hasRows && !target) { $("mvMsg").textContent = "בחרו לאן להעביר."; return; }
+  draftCats.splice(mvIndex, 1);
+  if (target) pendingMoves[name] = target;
+  closeMove();
+  adminDirty.cats = false; renderAdminLists(); adminDirty.cats = true;
+  $("saveCats").click(); // saved right away, so the move and the deletion happen together
+});
+
 $("saveCats").onclick = async () => {
   const seenN = new Set(); const list = [];
-  for (const c of draftCats) { const n = c.name.trim(); if (!n || seenN.has(n)) continue; if (n === "הכנסה") { flash("catMsg", false, "\"הכנסה\" שמורה למשכורת ולהכנסות."); return; } seenN.add(n); list.push({ name: n, fixed: c.fixed, icon: c.icon || "", hue: c.icon ? (c.hue == null ? autoIcon(n)[1] : c.hue) : null }); }
+  const ren = {};
+  for (const c of draftCats) {
+    const n = c.name.trim(); if (!n || seenN.has(n)) continue; if (n === "הכנסה") { flash("catMsg", false, "\"הכנסה\" שמורה למשכורת ולהכנסות."); return; }
+    seenN.add(n);
+    // a renamed category keeps the icon it had (its old name may be what picked the icon)
+    let icon = c.icon || "", hue = c.icon ? (c.hue == null ? autoIcon(n)[1] : c.hue) : null;
+    if (c.orig && c.orig !== n) { ren[c.orig] = n; if (!icon) { const a = autoIcon(c.orig); icon = a[0]; hue = a[1]; } }
+    list.push({ name: n, fixed: c.fixed, icon, hue });
+  }
   if (!list.length) { flash("catMsg", false, "צריך לפחות קטגוריה אחת."); return; }
   const btn = $("saveCats"); btn.disabled = true; flash("catMsg", true, "שומר…");
   try {
     await writeRange("'הגדרות'!A2:C121", pad(list.map(c => [c.name, c.fixed ? "כן" : "", c.icon ? c.icon + "|" + c.hue : ""]), 120, 3));
+    Object.entries(pendingMoves).forEach(([o, n]) => { if (seenN.has(n)) ren[o] = n; });
+    if (Object.keys(ren).length) {
+      const al = {};
+      Object.entries(catAlias).forEach(([o, n]) => { al[o] = ren[n] || n; });
+      Object.assign(al, ren);
+      Object.keys(al).forEach(o => { if (al[o] === o || seenN.has(o)) delete al[o]; }); // a name in use again is a category of its own
+      await writeRange("'הגדרות'!T2:U201", pad(Object.entries(al).map(([o, n]) => [o, n]), 200, 2));
+      catAlias = al;
+    }
+    pendingMoves = {};
     CATS = list.map(c => c.name); FIXED = new Set(list.filter(c => c.fixed).map(c => c.name));
     catStyle = {}; list.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue }; }); pickerOpen = -1;
-    draftCats = list.map(c => ({ ...c })); adminDirty.cats = false; renderAdminLists(); build(); render();
+    draftCats = list.map(c => ({ ...c, orig: c.name })); adminDirty.cats = false; renderAdminLists(); build(); render();
     flash("catMsg", true, "נשמר");
   } catch (err) { flash("catMsg", false, writeError(err)); }
   btn.disabled = false;
@@ -3054,7 +3370,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("catShe
 
 $("yearPick").addEventListener("click", e => { const b = e.target.closest("[data-y]"); if (!b) return; yearSel = +b.dataset.y; renderYear(); });
 $("tabAdmin").onclick = () => showView("admin");
-draftCats = CATS.map(n => ({ name: n, fixed: FIXED.has(n) })); draftPay = PAY.slice(); draftPayOrig = PAY.slice();
+draftCats = CATS.map(n => ({ name: n, fixed: FIXED.has(n), orig: n })); draftPay = PAY.slice(); draftPayOrig = PAY.slice();
 
 async function boot() {
   mcp = await startApp();
@@ -3283,7 +3599,7 @@ async function saveEdit(t, amount, desc, date, cat, card, kind) {
 $("fab").onclick = openAdd;
 $("closeAdd").onclick = closeAdd;
 $("sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") closeAdd(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheetBg").hidden) closeAdd(); if (e.key === "Escape" && !$("salBg").hidden) salLater(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheetBg").hidden) closeAdd(); if (e.key === "Escape" && !$("salBg").hidden) salLater(); if (e.key === "Escape" && !$("mvBg").hidden) closeMove(); });
 $("kExp").onclick = () => setKind("exp");
 $("kInc").onclick = () => setKind("inc");
 $("addDesc").addEventListener("input", () => {
