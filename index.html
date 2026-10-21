@@ -3799,5 +3799,26 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 document.getElementById("tourAgain").onclick = () => startTour();
 </script>
 
+<script>
+/* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
+const BUILD_ID = "20261021202248";
+let updToast = null;
+async function checkUpdate() {
+  try {
+    const r = await fetch(location.pathname + "?u=" + Date.now(), { cache: "no-store" }); if (!r.ok) return;
+    const m = (await r.text()).match(/BUILD_ID = "(\d+)"/); if (!m || m[1] === BUILD_ID) return;
+    const busy = [..."sheetBg salBg mvBg catSheetBg wrapped".split(" ")].some(id => { const el = document.getElementById(id); return el && !el.hidden; }) || (document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName));
+    if (!busy) { location.reload(); return; }
+    if (updToast) return;
+    updToast = document.createElement("button");
+    updToast.textContent = "יש גרסה חדשה של iSpend · לחצו לרענון";
+    updToast.style.cssText = "position:fixed;z-index:80;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 10px);border:0;border-radius:999px;padding:10px 16px;background:#1c1b22;color:#fff;font:600 .85rem var(--font-body);box-shadow:0 8px 24px rgba(0,0,0,.25)";
+    updToast.onclick = () => location.reload(); document.body.appendChild(updToast);
+  } catch (e) {}
+}
+setTimeout(checkUpdate, 4000); setInterval(checkUpdate, 5 * 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkUpdate(); });
+</script>
+
 </body>
 </html>
