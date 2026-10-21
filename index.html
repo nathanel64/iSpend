@@ -116,6 +116,8 @@ header.top {
 .seg { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 2px; }
 .seg button { border: 0; background: none; border-radius: 8px; padding: 5px 12px; font-size: .82rem; color: var(--muted); }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; }
+.seg-wrap { display: inline-flex; align-items: center; gap: 10px; }
+.seg-sum { font-size: .95rem; font-weight: 700; white-space: nowrap; }
 .cats { display: flex; flex-direction: column; }
 .cat { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 9px 4px; border: 0; border-top: 1px solid var(--line); background: none; text-align: start; width: 100%; }
 .cat:first-child { border-top: 0; }
@@ -126,6 +128,10 @@ header.top {
 .cat .bar i { display: block; height: 100%; background: var(--brand); border-radius: 3px; }
 .pay-io { grid-column: 1 / -1; display: flex; gap: 16px; font-size: .8rem; color: var(--muted); }
 .pay-io b { font-weight: 600; color: var(--ink); }
+.cat .bank-io { gap: 14px; }
+.bank-io > span { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.bank-io small { font-size: .7rem; font-weight: 400; color: var(--muted); }
+.bank-io b { font-weight: 700; color: var(--ink); }
 .cat .pct { color: var(--muted); font-weight: 400; font-size: .78rem; min-width: 2.6em; text-align: end; }
 
 /* list */
@@ -590,7 +596,7 @@ header.top { gap: 10px; }
 
 /* where the income goes: one card, one bar, three figures */
 .money { background: var(--surface); border-radius: 20px; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgba(28, 27, 34, .04); }
-.money-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.money-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .money-cols > div { min-width: 0; padding-inline: 10px; }
 .money-cols > div + div { border-inline-start: 1px solid var(--line); }
 .money-cols > div:first-child { padding-inline-start: 0; }
@@ -601,8 +607,12 @@ header.top { gap: 10px; }
 .money .md.in { background: var(--good-soft); color: var(--good); }
 .money .md.fx { background: var(--brand-soft); color: var(--brand); }
 .money .md.vr { background: color-mix(in srgb, #e0569a 14%, var(--surface)); color: #c13f7f; }
-.money .k { flex-direction: column; align-items: flex-start; gap: 6px; }
-.money { padding: 14px 16px; }
+.money { padding: 10px 14px; border-radius: 18px; }
+.money .mc { display: flex; align-items: center; gap: 10px; }
+.money .mc > div { min-width: 0; }
+.money .k { font-size: .72rem; line-height: 1.2; }
+.money .v { font-size: 1.02rem; margin: 0; line-height: 1.25; }
+.money .md { width: 34px; height: 34px; border-radius: 11px; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .money .md.vr { color: #f08ab8; } }
 :root[data-theme="dark"] .money .md.vr { color: #f08ab8; }
 
@@ -795,9 +805,8 @@ body { margin: 0; }
     <div class="today" id="todayBox" hidden></div>
     <div class="money" aria-label="לאן הולכת ההכנסה">
       <div class="money-cols">
-        <div><div class="k"><i class="md in"><svg viewBox="0 0 24 24"><path d="M12 4v13 M6 11l6 6 6-6 M5 20h14"/></svg></i>נכנס</div><div class="v num" id="fIncome">—</div></div>
-        <div><div class="k"><i class="md fx"><svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4 M3 11V9a3 3 0 013-3h15 M7 22l-4-4 4-4 M21 13v2a3 3 0 01-3 3H3"/></svg></i>קבועות</div><div class="v num" id="fFixed">—</div></div>
-        <div><div class="k"><i class="md vr"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h11l2-8H6.2 M9 20h.01 M18 20h.01"/></svg></i>משתנות</div><div class="v num" id="fVar">—</div></div>
+        <div class="mc"><i class="md in"><svg viewBox="0 0 24 24"><path d="M12 4v13 M6 11l6 6 6-6 M5 20h14"/></svg></i><div><div class="k">נכנס</div><div class="v num" id="fIncome">—</div></div></div>
+        <div class="mc"><i class="md vr"><svg viewBox="0 0 24 24"><path d="M12 17V4 M6 10l6-6 6 6 M5 20h14"/></svg></i><div><div class="k">יצא</div><div class="v num" id="fOut">—</div></div></div>
       </div>
     </div>
     <div id="incomeArea"></div>
@@ -818,10 +827,10 @@ body { margin: 0; }
   <section class="card">
     <h2>
       <span>לאן הלך הכסף <span class="side" style="font-weight:400;font-size:.75rem;color:var(--muted)">מול החודש הקודם</span></span>
-      <span class="seg" role="group" aria-label="סוג הוצאה">
+      <span class="seg-wrap"><span class="seg" role="group" aria-label="סוג הוצאה">
         <button id="segVar" aria-pressed="true">משתנות</button>
         <button id="segFixed" aria-pressed="false">קבועות</button>
-      </span>
+      </span><b class="seg-sum num" id="segSum" aria-live="polite"></b></span>
     </h2>
     <div class="bubbles" id="cats"></div>
   </section>
@@ -1980,8 +1989,7 @@ function render() {
 
   const st = $("status");
   countTo($("fIncome"), incomeExpected, fmt);
-  countTo($("fFixed"), f.fixed, fmt);
-  countTo($("fVar"), f.variable, fmt);
+  countTo($("fOut"), f.fixed + f.variable, fmt);
   const spent = f.fixed + f.variable;
   const ratio = incomeExpected ? spent / incomeExpected : 0;
   const daysLeft = isCurrent ? daysBetween(today, end) : 0;
@@ -2160,8 +2168,7 @@ function renderPayMethods(f) {
     let h = 0; for (const ch of r.name) h = (h * 31 + ch.charCodeAt(0)) % 360;
     const ic = r.bank ? glyph("bank", 148, 45, true) : glyph("card", h, 55, true);
     if (r.bank) return `<button class="cat" data-acc="${esc(bankName())}" aria-label="התנועות בחשבון הבנק"><span class="name">${ic}<span>${esc(bankName())}</span></span>
-      <span class="amt num"><span>${fmt(r.in - r.out)}</span></span>
-      <span class="pay-io"><span>נכנס <b class="num" style="color:var(--good)">${fmt(r.in)}</b></span><span>יצא <b class="num">${fmt(r.out)}</b></span></span></button>`;
+      <span class="amt bank-io"><span><small>נכנס</small><b class="num" style="color:var(--good)">${fmt(r.in)}</b></span><span><small>יצא</small><b class="num">${fmt(r.out)}</b></span></span></button>`;
     return `<button class="cat" data-acc="${esc(r.name)}" aria-label="החיובים ב${esc(r.name)}"><span class="name">${ic}<span style="overflow:hidden;text-overflow:ellipsis"><bdi>${esc(r.name)}</bdi></span></span>
       <span class="amt num"><span>${fmt(r.spent)}</span><span class="pct" aria-hidden="true">›</span></span>
       <span class="bar"><i style="width:${(Math.max(0, r.spent) / max * 100).toFixed(1)}%"></i></span></button>`;
@@ -2598,12 +2605,14 @@ function renderWrappedPill(isCurrent) {
 }
 
 function renderCats(f) {
+  $("segSum").textContent = fmt(catMode === "fixed" ? f.fixed : f.variable);
   const list = f.spend.filter(t => catMode === "fixed" ? FIXED.has(t.category) : !FIXED.has(t.category));
   const m = new Map();
   list.forEach(t => m.set(t.category, (m.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
-  const rows = [...m.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]);
-  const total = rows.reduce((s, r) => s + r[1], 0);
-  const max = rows.length ? rows[0][1] : 1;
+  // a category can be negative: more came back for it than was paid this month. It still shows, after the rest.
+  const rows = [...m.entries()].filter(e => Math.abs(e[1]) >= 0.005).sort((a, b) => (b[1] > 0) - (a[1] > 0) || Math.abs(b[1]) - Math.abs(a[1]));
+  const total = rows.reduce((s, r) => s + Math.abs(r[1]), 0) || 1;
+  const max = rows.length ? Math.max(...rows.map(r => Math.abs(r[1]))) : 1;
   const pv = monthFigures(...prevYM(view.y, view.m)), prevBy = new Map();
   pv.spend.forEach(t => prevBy.set(t.category, (prevBy.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
   const hasPrev = pv.spend.length > 0;
@@ -2621,11 +2630,11 @@ function renderCats(f) {
   };
   // one bubble per category, its size by how much went there
   $("cats").innerHTML = rows.length ? rows.map(([c, v], i) => {
-    const size = Math.round(66 + Math.sqrt(v / max) * 84);
+    const size = Math.round(66 + Math.sqrt(Math.abs(v) / max) * 84);
     const [icon, hue, sat] = iconFor(c);
-    return `<button class="bub ${size > 120 ? "lg" : ""}" data-cat="${esc(c)}" aria-pressed="${filterCat === c}" style="--h:${hue};--s:${sat}%;width:${size}px;height:${size}px" title="${esc(c)} · ${Math.round(v / total * 100)}%">
+    return `<button class="bub ${size > 120 ? "lg" : ""}" data-cat="${esc(c)}" aria-pressed="${filterCat === c}" style="--h:${hue};--s:${sat}%;width:${size}px;height:${size}px" title="${esc(c)}${v > 0 ? " · " + Math.round(v / total * 100) + "%" : " · קיבלת בחזרה יותר ממה ששילמת"}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[icon] || ICONS.tag}"/></svg>
-      ${size >= 80 ? `<span class="bn">${esc(c)}</span>` : ""}<span class="bv num">${fmt(v)}</span>${size >= 96 ? delta(c, v) : ""}</button>`;
+      ${size >= 80 ? `<span class="bn">${esc(c)}</span>` : ""}<span class="bv num">${fmt(v)}</span>${size >= 96 && v > 0 ? delta(c, v) : ""}</button>`;
   }).join("") : `<div class="empty">אין הוצאות ${catMode === "fixed" ? "קבועות" : "משתנות"} בחודש הזה.</div>`;
 }
 
@@ -3810,7 +3819,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261021205316";
+const BUILD_ID = "20261021214256";
 let updToast = null;
 async function checkUpdate() {
   try {
