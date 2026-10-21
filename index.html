@@ -219,6 +219,11 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .edit-list { display: flex; flex-direction: column; gap: 8px; }
 .edit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
 .edit-row.pay { grid-template-columns: minmax(0, 1fr) auto; }
+.bank-row input[type="text"] { border-color: color-mix(in srgb, var(--good) 40%, var(--line)); font-weight: 600; }
+.bank-lock { width: 32px; display: grid; place-items: center; }
+.bank-lock .ic { width: 30px; height: 30px; border-radius: 10px; }
+.pay-note { margin: -2px 2px 4px; font-size: .76rem; }
+.pay-sub { font-size: .8rem; font-weight: 700; color: var(--muted); margin: 6px 2px 0; }
 .edit-row input[type="text"] { border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 8px 10px; width: 100%; min-width: 0; }
 .edit-row label.fx { display: flex; align-items: center; gap: 4px; font-size: .8rem; color: var(--muted); white-space: nowrap; }
 .del { border: 0; background: var(--bg); width: 34px; height: 34px; border-radius: 50%; color: var(--muted); }
@@ -1084,7 +1089,7 @@ body { margin: 0; }
     <button type="button" class="ns-x" id="mvClose" aria-label="ביטול"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg></button>
     <div class="ns-top">
       <div class="mv-ic" id="mvIc"></div>
-      <div class="ns-kicker mv-k">מחיקת קטגוריה</div>
+      <div class="ns-kicker mv-k" id="mvKick">מחיקת קטגוריה</div>
       <h3 id="mvTitle"></h3>
       <p id="mvText"></p>
     </div>
@@ -2839,6 +2844,8 @@ function applySettings(values) {
     catStyle = {}; cats.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue == null ? autoIcon(c.name)[1] : c.hue }; });
   }
   if (pay.length) PAY = pay;
+  // the bank account always exists and comes first: salary and transfers land there
+  { const b = bankName(); PAY = [b, ...PAY.filter(x => x !== b)]; }
   salaries = sal; goals = gl;
   if (!adminDirty.cats) draftCats = cats.length ? cats.map(c => ({ ...c, orig: c.name })) : CATS.map(n => ({ name: n, fixed: FIXED.has(n), orig: n }));
   if (!adminDirty.pay) { draftPay = PAY.slice(); draftPayOrig = PAY.slice(); }
@@ -2890,7 +2897,11 @@ function drawCatList() {
 function renderAdminLists() {
   if (!adminDirty.cats) drawCatList();
   if (!adminDirty.pay) {
-    $("payList").innerHTML = draftPay.map((p, i) => `<div class="edit-row pay">
+    $("payList").innerHTML = draftPay.map((p, i) => i === 0 ? `<div class="edit-row pay bank-row">
+      <input type="text" id="pay-0" value="${esc(p)}" aria-label="שם חשבון הבנק" data-i="0">
+      <span class="bank-lock" title="חשבון הבנק נשאר תמיד">${glyph("bank", 150, 45, true)}</span></div>
+      <p class="note pay-note">חשבון הבנק: אליו נכנסות המשכורת וההעברות. אפשר לשנות לו שם, אבל לא למחוק.</p>
+      <div class="pay-sub">כרטיסים ואמצעי תשלום נוספים</div>` : `<div class="edit-row pay">
       <input type="text" id="pay-${i}" value="${esc(p)}" aria-label="אמצעי תשלום" data-i="${i}">
       <button class="del" data-del="${i}" aria-label="מחיקת ${esc(p)}">✕</button></div>`).join("");
   }
@@ -2936,8 +2947,41 @@ $("addCatRow").onclick = () => {
   $("cat-" + (draftCats.length - 1)).focus();
 };
 /* deleting a saved category moves its transactions somewhere first (an existing category or a new one), then saves */
-let pendingMoves = {}, mvIndex = -1, mvTarget = null;
+let pendingMoves = {}, mvIndex = -1, mvTarget = null, mvMode = "cat", pendingPayMoves = {};
+function askMovePay(i) {
+  const name = draftPayOrig[i], cur = accName(name), rows = tx.filter(t => t.account === cur);
+  const sum = rows.filter(t => !t.income && !t.refund).reduce((s, t) => s + t.amount, 0);
+  mvMode = "pay"; mvIndex = i; mvTarget = null;
+  $("mvIc").innerHTML = glyph("card", 250, 50);
+  $("mvKick").textContent = "מחיקת אמצעי תשלום";
+  $("mvTitle").textContent = "למחוק את \"" + name + "\"?";
+  $("mvText").textContent = rows.length ? `יש בו ${rows.length} ${rows.length === 1 ? "תנועה" : "תנועות"}, ${fmt(sum).replace(/[\u2066\u2069]/g, "")} בסך הכול. לאיזה אמצעי תשלום להעביר אותן?` : "אין בו תנועות, אז אפשר פשוט למחוק.";
+  const others = draftPay.filter((x, j) => j !== i && x.trim()).map(x => x.trim());
+  $("mvList").hidden = !rows.length;
+  $("mvList").innerHTML = rows.length ? `<button type="button" class="mv-add" data-mv-new="1">+ אמצעי תשלום חדש</button>` + others.map((n, k) => `<button type="button" role="radio" aria-checked="false" data-mv="${esc(n)}">${glyph(n === draftPay[0].trim() ? "bank" : "card", n === draftPay[0].trim() ? 150 : 250, 45, true)}${esc(n)}</button>`).join("") : "";
+  $("mvNew").hidden = true; $("mvNew").value = ""; $("mvNew").placeholder = "שם אמצעי התשלום החדש"; $("mvMsg").textContent = "";
+  $("mvGo").textContent = rows.length ? "בחרו לאן להעביר" : "למחוק";
+  $("mvGo").disabled = !!rows.length; $("mvGo").classList.toggle("danger", !rows.length);
+  $("mvBg").hidden = false;
+}
+function payMoveSubmit() {
+  const name = draftPayOrig[mvIndex], hasRows = !$("mvList").hidden;
+  let target = mvTarget;
+  if (hasRows && !$("mvNew").hidden) {
+    const n = $("mvNew").value.trim();
+    if (!n) { $("mvMsg").textContent = "כתבו שם לאמצעי התשלום החדש."; $("mvNew").focus(); return; }
+    if (!draftPay.some(x => x.trim() === n)) { draftPay.push(n); draftPayOrig.push(""); }
+    target = n;
+  }
+  if (hasRows && !target) { $("mvMsg").textContent = "בחרו לאן להעביר."; return; }
+  draftPay.splice(mvIndex, 1); draftPayOrig.splice(mvIndex, 1);
+  if (target) pendingPayMoves[name] = target;
+  closeMove();
+  adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
+  $("savePay").click();
+}
 function askMove(i) {
+  mvMode = "cat"; $("mvKick").textContent = "מחיקת קטגוריה"; $("mvNew").placeholder = "שם הקטגוריה החדשה";
   const c = draftCats[i], name = c.orig, rows = tx.filter(t => t.category === name);
   const sum = rows.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
   mvIndex = i; mvTarget = null;
@@ -2964,6 +3008,7 @@ $("mvList").addEventListener("click", e => {
 $("mvForm").addEventListener("submit", async e => {
   e.preventDefault();
   if (mvIndex < 0) return;
+  if (mvMode === "pay") { payMoveSubmit(); return; }
   const c = draftCats[mvIndex], name = c.orig, hasRows = !$("mvList").hidden;
   let target = mvTarget;
   if (hasRows && !$("mvNew").hidden) {
@@ -3020,7 +3065,9 @@ $("payList").addEventListener("input", e => {
 });
 $("payList").addEventListener("click", e => {
   const d = e.target.closest("[data-del]"); if (!d) return;
-  draftPay.splice(+d.dataset.del, 1); draftPayOrig.splice(+d.dataset.del, 1); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
+  const i = +d.dataset.del; if (i === 0) return; // the bank account stays
+  if (draftPayOrig[i]) { askMovePay(i); return; }
+  draftPay.splice(i, 1); draftPayOrig.splice(i, 1); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
 });
 $("addPayRow").onclick = () => {
   draftPay.push(""); draftPayOrig.push(""); adminDirty.pay = false; renderAdminLists(); adminDirty.pay = true;
@@ -3028,18 +3075,20 @@ $("addPayRow").onclick = () => {
 };
 $("savePay").onclick = async () => {
   const list = [...new Set(draftPay.map(p => p.trim()).filter(Boolean))];
-  if (!list.length) { flash("payMsg", false, "צריך לפחות אמצעי תשלום אחד."); return; }
+  if (!(draftPay[0] || "").trim()) { flash("payMsg", false, "צריך שם לחשבון הבנק."); return; }
   const btn = $("savePay"); btn.disabled = true; flash("payMsg", true, "שומר…");
   try {
     await writeRange("'הגדרות'!D2:D61", pad(list.map(p => [p]), 60, 1));
     // a renamed method: past transactions, older renames and wallet cards all move to the new name
     const ren = {};
     draftPay.forEach((p, i) => { const o = (draftPayOrig[i] || "").trim(), n = p.trim(); if (o && n && o !== n) ren[o] = n; });
+    Object.entries(pendingPayMoves).forEach(([o, n]) => { if (list.includes(n)) ren[o] = n; });
+    pendingPayMoves = {};
     if (Object.keys(ren).length) {
       const al = {};
       Object.entries(payAlias).forEach(([o, n]) => { al[o] = ren[n] || n; });
       Object.assign(al, ren);
-      Object.keys(al).forEach(o => { if (al[o] === o) delete al[o]; });
+      Object.keys(al).forEach(o => { if (al[o] === o || list.includes(o)) delete al[o]; });
       await writeRange("'הגדרות'!P2:Q201", pad(Object.entries(al).map(([o, n]) => [o, n]), 200, 2));
       payAlias = al;
       const cm = {}; let cmChanged = false;
