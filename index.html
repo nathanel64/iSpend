@@ -947,11 +947,12 @@ body { margin: 0; }
     </section>
 
     <section class="card">
-      <h2>מחזור החודש</h2>
+      <h2>מועד החיוב</h2>
       <div class="row">
-        <label for="startDay">החודש מתחיל ביום</label>
+        <label for="startDay">יום החיוב בכרטיסי האשראי</label>
         <input type="number" id="startDay" min="1" max="28" value="1" style="width:5em">
       </div>
+      <p class="note" style="margin:0">ביום הזה יורדים התשלומים מהכרטיס, וממנו גם מתחיל כל חודש באתר. עסקה בתשלומים: התשלום הראשון ביום הקנייה, וכל תשלום אחריו ביום החיוב של החודש הבא.</p>
       <p class="note" style="margin:0">העברה שקיבלתם בחזרה על הוצאה משותפת מקזזת את ההוצאה באותה קטגוריה.</p>
     </section>
 
@@ -1836,7 +1837,9 @@ function parseInst(text) {
   return { k, n, base: s.replace(m[0], " ").replace(/\s{2,}/g, " ").trim() };
 }
 const addMonths = (d, n) => { const last = new Date(d.getFullYear(), d.getMonth() + n + 1, 0).getDate(); return new Date(d.getFullYear(), d.getMonth() + n, Math.min(d.getDate(), last)); };
-const CHARGE_DAY = 2; // card charges go out on the 2nd of the month
+// card charges go out on the billing day (the setting "מועד החיוב"), which is also the day a new month starts.
+// The k-th charge after a purchase lands k billing months later, counted from the month the purchase belongs to.
+const chargeDate = (d, plus) => new Date(d.getFullYear(), d.getMonth() - (d.getDate() < startDay ? 1 : 0) + plus, startDay);
 let instPlans = [];
 const txKey = t => t.del ? t.del.key + ":" + t.del.index + (t.gen > 1 ? ":" + t.gen : "") : "";
 function shift(n) { view.m += n; while (view.m < 0) { view.m += 12; view.y--; } while (view.m > 11) { view.m -= 12; view.y++; } }
@@ -1914,7 +1917,7 @@ function build() {
     const total = Math.abs(amt), per = Math.round(total / payments * 100) / 100;
     for (let k = 1; k <= payments; k++) {
       const a = k < payments ? per : Math.round((total - per * (payments - 1)) * 100) / 100;
-      const d = k === 1 ? date : new Date(date.getFullYear(), date.getMonth() + k - 1, CHARGE_DAY);
+      const d = k === 1 ? date : chargeDate(date, k - 1);
       if (seen(a, d)) continue;
       out.push({ ...base, date: d, amount: a, total, inst: { k, n: payments }, gen: k, plan: "a:" + i, order: base.order + k / 100 });
     }
@@ -1929,7 +1932,7 @@ function build() {
   instPlans = [];
   plans.forEach(last => {
     if (last.inst.k >= last.inst.n || daysBetween(last.date, today) > 62) return;
-    const next = new Date(last.date.getFullYear(), last.date.getMonth() + 1, CHARGE_DAY);
+    const next = chargeDate(last.date, 1);
     instPlans.push({ last, next, due: today >= next && !seen(last.amount, next) });
   });
   // a renamed category: every row, old or new, shows under its current name
@@ -2185,7 +2188,7 @@ function renderInstallments() {
   });
   instPlans.forEach(({ last }) => {
     const left = last.inst.n - last.inst.k;
-    rows.push({ t: last, cur: last.inst.k, n: last.inst.n, per: last.amount, left: left * last.amount, end: new Date(last.date.getFullYear(), last.date.getMonth() + left, CHARGE_DAY) });
+    rows.push({ t: last, cur: last.inst.k, n: last.inst.n, per: last.amount, left: left * last.amount, end: chargeDate(last.date, left) });
   });
   rows.sort((a, b) => a.end - b.end);
   renderInstSuggest();
@@ -3726,7 +3729,7 @@ $("startDay").addEventListener("change", e => {
   try { localStorage.setItem("startDay", v); } catch (err) {}
   view = { y: now.getFullYear(), m: now.getMonth() };
   if (now.getDate() < startDay) shift(-1);
-  render();
+  afterData(); // payment dates follow the billing day
 });
 
 /* every card can be folded; the choice is remembered on this device */
@@ -3807,7 +3810,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261021203300";
+const BUILD_ID = "20261021205316";
 let updToast = null;
 async function checkUpdate() {
   try {
