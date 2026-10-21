@@ -535,6 +535,42 @@ header.top { gap: 10px; }
 .money { padding: 14px 16px; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .money .md.vr { color: #f08ab8; } }
 :root[data-theme="dark"] .money .md.vr { color: #f08ab8; }
+
+/* half gauge: fills from the right as money goes out; purple on plan, amber past the savings goal, red past the month's income */
+.ring-wrap.gauge { width: min(340px, 88vw); aspect-ratio: 240 / 136; margin: 4px auto 0; }
+.ring-wrap.gauge svg { transform: none; }
+.ring-wrap.gauge path { fill: none; stroke-width: 18; stroke-linecap: round; }
+.ring-wrap.gauge #ringFg { transition: stroke-dashoffset 1.1s cubic-bezier(.3, .8, .3, 1); }
+.ring-wrap.gauge #ringTip { transition: transform 1.1s cubic-bezier(.3, .8, .3, 1), opacity .3s; transform-box: view-box; transform-origin: 0 0; }
+.ring-wrap.gauge #goalTick { stroke: #f2b63c; stroke-width: 3.5; }
+.ring-wrap.gauge #goalTxt { font: 600 10px var(--font-body); fill: #b7791f; }
+.ring-wrap.gauge .ring-c { inset: auto 16% 0 16%; height: 62%; justify-content: flex-end; gap: 0; padding-bottom: 2px; }
+.ring-wrap.gauge .big { font-size: clamp(2rem, 9.5vw, 2.6rem); }
+.status.mid .big { color: var(--warn); } .status.neg .big { color: var(--bad); }
+.status.mid .rg0 { stop-color: #e88a1f; } .status.mid .rg1 { stop-color: #f6c04f; }
+.g-under { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; margin-top: -4px; }
+.g-under .sub { font-size: .8rem; color: var(--muted); max-width: 30em; }
+.g-plus { font-size: .92rem; font-weight: 700; color: var(--good); background: var(--good-soft); border-radius: 999px; padding: 4px 12px; }
+#ringPill { margin-top: 0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ring-wrap.gauge #goalTxt { fill: #f3c25c; } }
+:root[data-theme="dark"] .ring-wrap.gauge #goalTxt { fill: #f3c25c; }
+/* the savings goal, next to the salary */
+.goal-btn { color: var(--brand); font-weight: 600; background: none; border: 0; padding: 2px 0; }
+.goal-btn b { color: #b7791f; }
+.goal-form { display: flex; flex-direction: column; align-items: center; gap: 8px; background: var(--surface); border-radius: 18px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(28, 27, 34, .04); }
+.goal-form .row { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.goal-form label { font-size: .85rem; color: var(--muted); }
+.goal-form .money-in input { width: 9em; padding: 8px 10px 8px 26px; border-radius: 12px; border: 0; background: var(--bg); direction: ltr; text-align: left; font-weight: 700; }
+.goal-form .chips button { border: 0; border-radius: 999px; padding: 5px 11px; background: var(--brand-soft); color: var(--brand); font-size: .8rem; font-weight: 600; }
+.goal-form .act button { border: 0; border-radius: 12px; padding: 8px 16px; font-weight: 600; }
+.goal-form .act .save { background: var(--brand); color: var(--brand-ink); }
+.goal-form .act .ghost { background: var(--bg); color: var(--muted); }
+/* the plan chart */
+.burn { position: relative; height: 210px; }
+.burn svg { display: block; width: 100%; height: 100%; overflow: visible; direction: ltr; }
+.burn-tip { position: absolute; pointer-events: none; z-index: 2; background: var(--ink); color: var(--bg); border-radius: 10px; padding: 6px 9px; font-size: .74rem; line-height: 1.45; white-space: nowrap; transform: translate(-50%, -112%); opacity: 0; transition: opacity .15s; }
+.burn-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .74rem; color: var(--muted); }
+.burn-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-inline-end: 6px; }
 /* opening screen */
 .splash { position: fixed; inset: 0; z-index: 55; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; transition: opacity .4s ease, visibility .4s; }
 .splash.out { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -667,19 +703,23 @@ body { margin: 0; }
   <div class="banner" id="cardPrompt" hidden></div>
 
   <section class="status" id="status" aria-label="מצב החודש">
-    <div class="ring-wrap">
-      <svg viewBox="0 0 120 120" aria-hidden="true">
-        <defs><linearGradient id="ringGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" class="rg0"/><stop offset="1" class="rg1"/></linearGradient></defs>
-        <circle class="ring-bg" cx="60" cy="60" r="52"/>
-        <circle id="ringFg" cx="60" cy="60" r="52" stroke="url(#ringGrad)" stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
-        <g id="ringTip" style="opacity:0"><circle class="halo" cx="112" cy="60" r="8.5"/><circle class="coin" cx="112" cy="60" r="5"/></g>
+    <div class="ring-wrap gauge">
+      <svg viewBox="0 0 240 136" aria-hidden="true">
+        <defs><linearGradient id="ringGrad" x1="1" y1="0" x2="0" y2="0"><stop offset="0" class="rg0"/><stop offset="1" class="rg1"/></linearGradient></defs>
+        <path class="ring-bg" d="M220 124 A100 100 0 0 0 20 124"/>
+        <path id="ringFg" d="M220 124 A100 100 0 0 0 20 124" stroke="url(#ringGrad)" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+        <g id="goalMark" style="opacity:0"><line id="goalTick" stroke-linecap="round"/><text id="goalTxt" text-anchor="middle">יעד</text></g>
+        <g id="ringTip" style="opacity:0"><circle class="halo" r="10"/><circle class="coin" r="6"/></g>
       </svg>
       <div class="ring-c">
         <div class="lbl" id="statusLabel">יתרה החודש</div>
         <div class="big num" id="statusBig">—</div>
-        <div class="sub" id="statusSub">טוען…</div>
-        <div class="ring-pill" id="ringPill" hidden></div>
       </div>
+    </div>
+    <div class="g-under">
+      <div class="g-plus num" id="statusPlus" hidden></div>
+      <div class="sub" id="statusSub">טוען…</div>
+      <div class="ring-pill" id="ringPill" hidden></div>
     </div>
     <div class="today" id="todayBox" hidden></div>
     <div class="money" aria-label="לאן הולכת ההכנסה">
@@ -713,6 +753,12 @@ body { margin: 0; }
       </span>
     </h2>
     <div class="bubbles" id="cats"></div>
+  </section>
+
+  <section class="card" id="burnCard">
+    <h2>הוצאה מצטברת מול התוכנית <span class="side num" id="burnSide"></span></h2>
+    <div class="burn" id="burn"><div class="burn-tip" id="burnTip"></div></div>
+    <div class="burn-legend" id="burnLegend"></div>
   </section>
 
   <section class="card" id="instCard" hidden>
@@ -1213,7 +1259,7 @@ const SHEET_ID = "1CwS8tTfMiKgwk-ke0ScWgYEYvABhqIQltITGK3d9Px8";
 const SERVER = "Google Sheets";
 const R_APPLE = "'עסקאות'!A2:I"; // I: number of payments (empty = one)
 const R_BANK = "'_moneyman'!A2:L";
-const R_SETTINGS = "'הגדרות'!A2:Q300";
+const R_SETTINGS = "'הגדרות'!A2:S300";
 const R_MANUAL = "'הוצאות יומיות'!D4:I";
 // Earlier monthly files (July 2025 – September 2026), read as they are. October 2026 onward lives in the main file.
 let HISTORY = []; // filled when the account is linked to Google Sheets
@@ -1224,6 +1270,7 @@ let CATS = ["סופר","אוכל ושתיה","תחבורה ודלק","חשבונ
 let PAY = ["כרטיס אשראי","חשבון בנק","מזומן"];
 let FIXED = new Set(["חשבונות הבית", "מנויים"]);
 let salaries = {};
+let goals = {}; // month → how much to save that month (settings R:S); a month without one keeps the last goal set
 let payAlias = {}; // renamed payment methods: old name → current name (settings P:Q), so past rows follow the rename
 const accName = n => { const k = (n || "").trim(); return payAlias[k] || k; };
 let cardMap = {}; // card name as Apple Pay reports it → the viewer's payment method
@@ -1612,32 +1659,58 @@ function render() {
   const spent = f.fixed + f.variable;
   const ratio = incomeExpected ? spent / incomeExpected : 0;
   const daysLeft = isCurrent ? daysBetween(today, end) : 0;
-  const pill = $("ringPill");
-  st.classList.toggle("neg", !!incomeExpected && ratio >= 1);
-  st.classList.toggle("mid", !!incomeExpected && ratio >= .8 && ratio < 1);
-  if (!incomeExpected) {
+  const pill = $("ringPill"), plus = $("statusPlus");
+  const goal = incomeExpected ? Math.min(goalFor(view.y, view.m).amount, incomeExpected) : 0;
+  const allow = incomeExpected - goal; // what may go out and still meet the savings goal
+  const stage = !incomeExpected ? "none" : spent <= allow ? "ok" : spent <= incomeExpected ? "goal" : "over";
+  st.classList.toggle("neg", stage === "over");
+  st.classList.toggle("mid", stage === "goal");
+  plus.hidden = true;
+  if (stage === "none") {
     $("statusLabel").textContent = isCurrent ? "הוצאת עד היום" : "סך ההוצאות בחודש";
     countTo($("statusBig"), spent, fmt);
     $("statusSub").textContent = "הזינו את המשכורת של החודש כדי לראות כמה נשאר.";
     pill.hidden = true;
   } else {
-    $("statusLabel").textContent = "יתרה החודש";
-    countTo($("statusBig"), balance, v => v > 0 ? ltr("+" + fmt(v)) : fmt(v));
-    $("statusSub").textContent = "הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected);
+    const daysTxt = daysLeft === 0 ? "היום האחרון בחודש" : daysLeft === 1 ? "עוד יום אחד לסוף החודש" : "עוד " + daysLeft + " ימים לסוף החודש";
     pill.hidden = false;
-    pill.textContent = isCurrent
-      ? (daysLeft === 0 ? "היום האחרון בחודש" : daysLeft === 1 ? "עוד יום אחד לסוף החודש" : "עוד " + daysLeft + " ימים לסוף החודש")
-      : (balance >= 0 ? "סיימת את החודש בפלוס" : "סיימת את החודש במינוס");
+    if (stage === "ok") {
+      $("statusLabel").textContent = goal ? (isCurrent ? "נשאר להוציא, ועדיין לעמוד ביעד" : "נשאר מעבר ליעד") : (isCurrent ? "נשאר להוציא החודש" : "יתרה החודש");
+      countTo($("statusBig"), allow - spent, fmt);
+      $("statusSub").textContent = goal ? "יעד החיסכון: " + fmt(goal) + " · הוצאת " + fmt(spent) + " מתוך " + fmt(allow) : "הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected);
+      pill.textContent = isCurrent ? daysTxt : goal ? "עמדת ביעד וחסכת " + fmt(incomeExpected - spent) : "סיימת את החודש בפלוס";
+    } else if (stage === "goal") {
+      $("statusLabel").textContent = "חרגת מיעד החיסכון ב-";
+      countTo($("statusBig"), spent - allow, fmt);
+      plus.hidden = false;
+      plus.textContent = (isCurrent ? "נשאר לסיים את החודש בפלוס: " : "סיימת את החודש בפלוס: ") + fmt(incomeExpected - spent);
+      $("statusSub").textContent = "היעד היה לחסוך " + fmt(goal) + " · הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected);
+      pill.textContent = isCurrent ? daysTxt : "החודש לא עמד ביעד";
+    } else {
+      $("statusLabel").textContent = "חרגת מההכנסה החודשית ב-";
+      countTo($("statusBig"), spent - incomeExpected, fmt);
+      $("statusSub").textContent = "הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected) + (goal ? " · היעד היה לחסוך " + fmt(goal) : "");
+      pill.textContent = isCurrent ? daysTxt : "סיימת את החודש במינוס";
+    }
   }
-  // the ring fills with what was spent out of what came in: green, then orange near the edge, red past it
-  const C = 326.73, fill = incomeExpected ? Math.min(ratio, 1) : (spent > 0 ? 1 : 0);
-  const ring = $("ringFg");
-  ring.style.strokeDashoffset = String(C * (1 - fill));
-  const tip = $("ringTip");
-  tip.style.transform = "rotate(" + (fill * 360).toFixed(1) + "deg)"; tip.style.opacity = fill > 0.02 ? "1" : "0";
-  try { renderToday(f, incomeExpected, fixedExpected, isCurrent, daysLeft); } catch (e) { console.error(e); }
+  // the half gauge: full = the month's income; the gold tick is where the savings goal starts
+  const fill = incomeExpected ? Math.min(spent / incomeExpected, 1) : (spent > 0 ? 1 : 0);
+  const P = (fr, r = 100) => [120 + r * Math.cos(Math.PI * fr), 124 - r * Math.sin(Math.PI * fr)];
+  $("ringFg").style.strokeDashoffset = String(100 - fill * 100);
+  const [tx, ty] = P(fill), tip = $("ringTip");
+  tip.style.transform = `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px)`; tip.style.opacity = fill > 0.01 ? "1" : "0";
+  const gm = $("goalMark");
+  if (goal > 0 && incomeExpected) {
+    const g = allow / incomeExpected, [a, b] = P(g, 86), [c, d] = P(g, 114), [lx, ly] = P(g, 128);
+    const t = $("goalTick"); t.setAttribute("x1", a); t.setAttribute("y1", b); t.setAttribute("x2", c); t.setAttribute("y2", d);
+    const gt = $("goalTxt"); gt.setAttribute("x", lx); gt.setAttribute("y", ly + 3);
+    gm.style.opacity = "1";
+  } else gm.style.opacity = "0";
+  try { renderBurn(f, incomeExpected, goal, isCurrent, days, elapsed, prev); } catch (e) { console.error(e); }
+  // the savings goal comes off the top: the week's budget and today's allowance are what is left after it
+  try { renderToday(f, incomeExpected - goal, fixedExpected, isCurrent, daysLeft); } catch (e) { console.error(e); }
   renderIncome(sal);
-  renderWeeks(f, incomeExpected, fixedExpected, isCurrent, isFuture);
+  renderWeeks(f, incomeExpected && Math.max(0.01, incomeExpected - goal), fixedExpected, isCurrent, isFuture);
   renderCats(f);
   try { renderInsights(f, isCurrent, { incomeExpected, fixedExpected, varProjected, days, elapsed, prev }); } catch (e) { console.error(e); }
   try { renderWrappedPill(isCurrent); } catch (e) { console.error(e); }
@@ -1789,8 +1862,89 @@ function renderIncome(sal) {
       : `משכורת ${name}: ${fmt(sal.amount)} · עריכה`;
     a.innerHTML = `<button class="edit-income" id="editIncome">${label}</button>`;
     $("editIncome").onclick = () => { editingIncome = true; renderIncome(sal); };
+    if (!sal.missing) renderGoal(a, sal);
   }
 }
+
+function renderGoal(a, sal) {
+  const g = goalFor(view.y, view.m), name = MONTHS[view.m], inc = sal.amount;
+  const box = document.createElement("div"); box.style.marginTop = "6px"; a.appendChild(box);
+  if (!editingGoal) {
+    box.innerHTML = `<button class="goal-btn" id="editGoal">${g.missing ? "+ להגדיר כמה לחסוך ב" + name : `יעד חיסכון ל${name}: <b class="num">${fmt(g.amount)}</b>${g.est ? " (כמו בחודש הקודם)" : ""} · עריכה`}</button>`;
+    $("editGoal").onclick = () => { editingGoal = true; render(); };
+    return;
+  }
+  const pct = p => Math.round(inc * p / 50) * 50;
+  box.innerHTML = `<form class="goal-form" id="goalForm">
+    <label for="goalInput">כמה לחסוך ב${name}?</label>
+    <div class="row"><label class="money-in"><span aria-hidden="true">₪</span><input id="goalInput" type="text" inputmode="decimal" autocomplete="off" value="${g.missing ? "" : withCommas(String(g.amount))}" placeholder="0"></label></div>
+    <div class="row chips">${[.1, .15, .2, .3].map(p => `<button type="button" data-g="${pct(p)}">${Math.round(p * 100)}% · ${fmt(pct(p))}</button>`).join("")}</div>
+    <div class="row act"><button class="save" type="submit">שמירה</button>${g.missing ? "" : '<button class="ghost" type="button" id="goalClear">בלי יעד</button>'}<button class="ghost" type="button" id="goalCancel">ביטול</button></div>
+    <span id="goalMsg" class="note"></span></form>`;
+  const inp = $("goalInput");
+  inp.oninput = () => { inp.value = withCommas(inp.value); };
+  $("goalForm").querySelector(".chips").onclick = e => { const b = e.target.closest("[data-g]"); if (b) inp.value = withCommas(b.dataset.g); };
+  $("goalCancel").onclick = () => { editingGoal = false; render(); };
+  const save = async v => { $("goalMsg").textContent = "שומר…"; try { await saveGoal(v); } catch (err) { $("goalMsg").textContent = writeError(err); } };
+  if ($("goalClear")) $("goalClear").onclick = () => save(0);
+  $("goalForm").onsubmit = e => { e.preventDefault(); const v = parseFloat(inp.value.replace(/[^\d.]/g, "")); save(isNaN(v) ? 0 : v); };
+  inp.focus();
+}
+
+/* cumulative spending day by day, against the pace that ends the month at the savings goal */
+let burnArgs = null;
+function renderBurn(f, income, goal, isCurrent, days, elapsed, prev) {
+  burnArgs = [f, income, goal, isCurrent, days, elapsed, prev];
+  const box = $("burn"), card = $("burnCard");
+  if (!income) { card.hidden = true; return; }
+  card.hidden = false;
+  const W = box.clientWidth; if (!W) return;
+  const H = box.clientHeight || 210, val = t => t.refund ? -t.amount : t.amount;
+  const cum = (list, start, n) => { const d = new Array(n + 1).fill(0); list.forEach(t => { const i = daysBetween(start, t.date) + 1; if (i >= 1 && i <= n) d[i] += val(t); }); for (let i = 1; i <= n; i++) d[i] += d[i - 1]; return d; };
+  const now = cum(f.spend, f.start, days), last = daysBetween(prev.start, prev.end) + 1, before = cum(prev.spend, prev.start, last);
+  const shown = isCurrent ? elapsed : days, spent = now[shown], allow = income - goal;
+  const big = f.spend.filter(t => !t.refund && t.amount > 1500 && t.date <= today).reduce((s, t) => s + t.amount, 0);
+  const pace = isCurrent ? Math.max(0, (spent - big) / Math.max(elapsed, 1)) : 0, proj = isCurrent ? spent + pace * (days - elapsed) : spent;
+  const ymax = Math.max(proj, income, ...now.slice(0, shown + 1), ...before) * 1.08 || 1;
+  const L = 6, R = 44, T = 10, B = 22;
+  const X = d => L + (d - 1) / Math.max(days - 1, 1) * (W - L - R), Y = v => T + (1 - Math.max(0, v) / ymax) * (H - T - B);
+  const path = (arr, n) => { let p = ""; for (let d = 1; d <= n; d++) p += (p ? "L" : "M") + X(d).toFixed(1) + " " + Y(arr[d]).toFixed(1); return p; };
+  const css = getComputedStyle(document.documentElement), brand = css.getPropertyValue("--brand").trim(), muted = css.getPropertyValue("--muted").trim(), line = css.getPropertyValue("--line").trim();
+  const ticks = [0, .25, .5, .75, 1].map(t => t * ymax);
+  const dayTicks = [1, 8, 15, 22, 29].filter(d => d <= days);
+  const lab = d => { const x = addDays(f.start, d - 1); return x.getDate() + "." + (x.getMonth() + 1); };
+  box.querySelector("svg")?.remove();
+  box.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="הוצאה מצטברת מול הקצב שמגיע ליעד">
+    <defs><linearGradient id="burnA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${brand}" stop-opacity=".28"/><stop offset="1" stop-color="${brand}" stop-opacity="0"/></linearGradient></defs>
+    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${line}"/><text x="${W - R + 6}" y="${Y(v) + 3}" fill="${muted}" font-size="10">${v ? (v / 1000).toFixed(1) + "K" : "0"}</text>`).join("")}
+    ${dayTicks.map(d => `<text x="${X(d)}" y="${H - 5}" fill="${muted}" font-size="10" text-anchor="middle">${lab(d)}</text>`).join("")}
+    ${goal ? `<line x1="${L}" x2="${W - R}" y1="${Y(income)}" y2="${Y(income)}" stroke="${muted}" stroke-dasharray="2 4"/><text x="${L + 2}" y="${Y(income) - 5}" fill="${muted}" font-size="10">הכנסה ${fmt(income)}</text>` : ""}
+    <line x1="${X(1)}" y1="${Y(0)}" x2="${X(days)}" y2="${Y(allow)}" stroke="#f2b63c" stroke-width="2" stroke-dasharray="6 5"/>
+    <path d="${path(before, Math.min(last, days))}" fill="none" stroke="${muted}" stroke-opacity=".55" stroke-width="1.6"/>
+    <path d="${path(now, shown)}L${X(shown)} ${Y(0)}L${X(1)} ${Y(0)}Z" fill="url(#burnA)"/>
+    <path d="${path(now, shown)}" fill="none" stroke="${brand}" stroke-width="2.6" stroke-linejoin="round"/>
+    ${isCurrent && shown < days ? `<path d="M${X(shown)} ${Y(spent)}L${X(days)} ${Y(proj)}" fill="none" stroke="${brand}" stroke-width="1.8" stroke-dasharray="2 5" stroke-linecap="round"/><circle cx="${X(days)}" cy="${Y(proj)}" r="3.5" fill="${brand}"/>` : ""}
+    <circle cx="${X(shown)}" cy="${Y(spent)}" r="5" fill="var(--surface)" stroke="${brand}" stroke-width="2.5"/>
+    <g id="burnHover" opacity="0"><line id="burnHl" y1="${T}" y2="${H - B}" stroke="${muted}" stroke-opacity=".4"/><circle id="burnHc" r="4" fill="${brand}"/></g>
+  </svg>`);
+  const end = isCurrent ? proj : spent, endLeft = income - end;
+  const side = $("burnSide");
+  side.textContent = isCurrent ? (endLeft - goal >= 0 ? "בקצב הזה: עומדים ביעד" : endLeft >= 0 ? "בקצב הזה: פלוס של " + fmt(endLeft) : "בקצב הזה: מינוס של " + fmt(-endLeft)) : "";
+  side.style.color = endLeft - goal >= 0 ? "var(--good)" : endLeft >= 0 ? "var(--warn)" : "var(--bad)";
+  $("burnLegend").innerHTML = `<span><i style="background:${brand}"></i>${MONTHS[f.start.getMonth()]}</span><span><i style="background:${muted};opacity:.6"></i>${MONTHS[prev.start.getMonth()]}</span><span><i style="background:#f2b63c"></i>${goal ? "הקצב שמגיע ליעד" : "הקצב שמתאים להכנסה"}</span>${isCurrent ? `<span>נקודות = צפי, בלי הוצאות חד-פעמיות מעל ₪1,500</span>` : ""}`;
+  const svg = box.querySelector("svg"), tip = $("burnTip");
+  svg.onpointermove = e => {
+    const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W;
+    const d = Math.max(1, Math.min(days, Math.round((x - L) / (W - L - R) * (days - 1) + 1)));
+    const has = d <= shown, v = has ? now[d] : null, pv = before[Math.min(d, last)];
+    $("burnHover").setAttribute("opacity", 1); $("burnHl").setAttribute("x1", X(d)); $("burnHl").setAttribute("x2", X(d));
+    $("burnHc").setAttribute("cx", X(d)); $("burnHc").setAttribute("cy", Y(has ? v : allow * d / days));
+    tip.style.opacity = 1; tip.style.left = (X(d) / W * 100) + "%"; tip.style.top = (Y(has ? v : allow * d / days) / H * 100) + "%";
+    tip.innerHTML = `<b>${lab(d)}</b><br>${has ? "החודש: " + fmt(v) + "<br>" : ""}חודש קודם: ${fmt(pv)}<br>לפי התוכנית: ${fmt(allow * d / days)}`;
+  };
+  svg.onpointerleave = () => { tip.style.opacity = 0; $("burnHover").setAttribute("opacity", 0); };
+}
+if (window.ResizeObserver) new ResizeObserver(() => { if (burnArgs) renderBurn(...burnArgs); }).observe($("burn"));
 
 function renderWeeks(f, income, fixed, isCurrent, isFuture) {
   // Sunday–Saturday weeks clipped to the month
@@ -2276,6 +2430,20 @@ async function refresh() {
   afterData();
 }
 
+function goalFor(y, m) {
+  const k = mkey(y, m);
+  if (goals[k] != null) return { amount: goals[k], est: false };
+  const prevK = Object.keys(goals).filter(x => x < k).sort().pop();
+  return prevK ? { amount: goals[prevK], est: true } : { amount: 0, est: false, missing: true };
+}
+let editingGoal = false;
+async function saveGoal(amount) {
+  const next = { ...goals }, k = mkey(view.y, view.m);
+  if (amount == null) delete next[k]; else next[k] = Math.max(0, Math.round(amount));
+  const rows = Object.entries(next).sort((a, b) => b[0].localeCompare(a[0])).map(([a, b]) => [a, b]);
+  await writeRange("'הגדרות'!R2:S201", pad(rows, 200, 2));
+  goals = next; editingGoal = false; render();
+}
 async function saveIncome(e) {
   e.preventDefault();
   const raw = $("incomeInput").value.trim();
@@ -2292,7 +2460,7 @@ async function saveIncome(e) {
 /* ---------- settings (tab "הגדרות": A category, B fixed, D payment method, F month, G salary) ---------- */
 function applySettings(values) {
   data.settings = values;
-  const cats = [], pay = [], sal = {}, cm = {}, mrules = {}, alias = {};
+  const cats = [], pay = [], sal = {}, cm = {}, mrules = {}, alias = {}, gl = {};
   values.forEach(v => {
     const c = (v[0] || "").trim();
     if (c && c !== "הכנסה" && !cats.some(x => x.name === c)) {
@@ -2304,6 +2472,7 @@ function applySettings(values) {
     if (/^\d{4}-\d{2}$/.test(mk) && amt !== null) sal[mk] = amt;
     const raw = (v[8] || "").trim(), to = (v[9] || "").trim(); if (raw && to) cm[raw] = to;
     const ao = (v[15] || "").trim(), an = (v[16] || "").trim(); if (ao && an && ao !== an) alias[ao] = an;
+    const gk = (v[17] || "").trim(), ga = parseAmount(v[18]); if (/^\d{4}-\d{2}$/.test(gk) && ga !== null) gl[gk] = ga;
     const mr = (v[11] || "").trim(); if (mr && ((v[12] || "").trim() || (v[13] || "").trim())) mrules[mr] = { name: (v[12] || "").trim(), cat: (v[13] || "").trim() };
   });
   cardMap = cm; merchantRules = mrules; payAlias = alias;
@@ -2312,7 +2481,7 @@ function applySettings(values) {
     catStyle = {}; cats.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue == null ? autoIcon(c.name)[1] : c.hue }; });
   }
   if (pay.length) PAY = pay;
-  salaries = sal;
+  salaries = sal; goals = gl;
   if (!adminDirty.cats) draftCats = cats.length ? cats.map(c => ({ ...c })) : CATS.map(n => ({ name: n, fixed: FIXED.has(n) }));
   if (!adminDirty.pay) { draftPay = PAY.slice(); draftPayOrig = PAY.slice(); }
   if (!adminDirty.sal) renderSal();
@@ -3104,7 +3273,7 @@ boot();
 /* first-visit guided tour: one highlight at a time, then straight to entering this month's salary */
 const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולהתחיל לחסוך. בואו נעשה סיור קצר, פחות מדקה." },
-  { t: "#status .ring-wrap", h: "כמה נשאר לך החודש", b: "הטבעת מתמלאת לפי מה שהוצאת מתוך מה שנכנס. ירוק: אתם בקצב. כתום: מתקרבים לגבול. אדום: עברתם אותו." },
+  { t: "#status .ring-wrap", h: "כמה נשאר לך החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. אפשר גם לקבוע כמה לחסוך החודש: סגול אומר שאתם בדרך ליעד, כתום שחרגתם מהיעד אבל עדיין בפלוס, ואדום שחרגתם מההכנסה החודשית." },
   { t: "#fab", h: "הוספת הוצאה", b: "בכפתור הזה מוסיפים כל הוצאה, או כסף שקיבלתם. בוחרים קטגוריה, כרטיס, ואם צריך גם מספר תשלומים." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. ככל שהוצאתם בה יותר, הוא גדול יותר. לחיצה עליו מציגה את כל ההוצאות שלה." },
   { t: "#navTx", h: "כל התנועות", b: "כאן כל ההוצאות וההכנסות, עם חיפוש וסינון. מחליקים תנועה ימינה כדי לערוך או למחוק אותה." },
