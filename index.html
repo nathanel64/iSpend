@@ -393,11 +393,62 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .sal-chip { align-self: center; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 14px; font-size: .82rem; }
 .sal-chip b { font-weight: 700; }
 .sal-save { padding: 14px; font-size: 1rem; border-radius: 14px; }
+.sal-goal { background: linear-gradient(135deg, #fff8e6, #fdf1d6); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.sg-h { display: flex; gap: 10px; align-items: center; }
+.sg-h b { display: block; font-size: .95rem; color: #5a3d00; }
+.sg-h small { display: block; font-size: .74rem; color: #8a6a2a; }
+.sg-coin { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 800; font-size: .85rem; color: #7a4d00;
+  background: radial-gradient(circle at 35% 30%, #ffe7a3, #f2b63c 60%, #c98b12); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .4), 0 3px 8px rgba(201, 139, 18, .3); }
+.sg-amt { display: flex; align-items: baseline; justify-content: center; gap: 6px; background: rgba(255, 255, 255, .75); border-radius: 14px; padding: 8px 12px; direction: ltr; border: 2px solid transparent; }
+.sg-amt:focus-within { border-color: #f2b63c; }
+.sg-amt span { font-size: 1.1rem; color: #8a6a2a; }
+.sg-amt input { border: 0; background: none; outline: none; font-size: 1.5rem; font-weight: 700; width: 6em; text-align: center; color: #3d2a00; direction: ltr; padding: 0; }
+.sg-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.sg-chips button { border: 0; border-radius: 999px; padding: 5px 10px; font-size: .78rem; font-weight: 600; background: rgba(255, 255, 255, .8); color: #7a4d00; }
+.sg-chips button.last { background: #f2b63c; color: #3d2a00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sal-goal { background: linear-gradient(135deg, #3a2f17, #2e2512); } :root:not([data-theme="light"]) .sg-h b { color: #f6d58a; } :root:not([data-theme="light"]) .sg-h small { color: #c9a964; } :root:not([data-theme="light"]) .sg-amt { background: rgba(0, 0, 0, .25); } :root:not([data-theme="light"]) .sg-amt input { color: #fbe7b8; } :root:not([data-theme="light"]) .sg-chips button { background: rgba(0, 0, 0, .25); color: #f6d58a; } }
+:root[data-theme="dark"] .sal-goal { background: linear-gradient(135deg, #3a2f17, #2e2512); } :root[data-theme="dark"] .sg-h b { color: #f6d58a; } :root[data-theme="dark"] .sg-amt input { color: #fbe7b8; }
+/* new-month window: calm, light, one small gauge that previews spending vs. saving */
+.sal-sheet.ns { position: relative; max-width: 400px; border-radius: 32px; background: var(--surface); box-shadow: 0 30px 80px rgba(20, 16, 60, .28), 0 0 0 1px color-mix(in srgb, var(--ink) 5%, transparent); }
+.sal-bg { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); background: rgba(24, 20, 50, .32); }
+.ns-x { position: absolute; top: 14px; left: 14px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--bg); display: grid; place-items: center; }
+.ns-x svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; }
+.ns-top { text-align: center; padding: 18px 24px 2px; background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--brand) 10%, transparent), transparent 70%); }
+.ns-gauge { width: 118px; display: block; margin: 0 auto 6px; overflow: visible; }
+.ns-gauge path { transition: stroke-dashoffset .6s cubic-bezier(.3, .8, .3, 1); }
+.ns-kicker { display: inline-block; font-size: .74rem; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 999px; padding: 3px 10px; }
+.ns-top h3 { margin: 6px 0 2px; font-family: var(--font-display); font-size: 1.55rem; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+.ns-top p { margin: 0; font-size: .92rem; color: var(--muted); }
+.ns-body { padding: 12px 20px 14px; display: flex; flex-direction: column; gap: 11px; }
+.sal-sheet.ns { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.ns-field { display: flex; flex-direction: column; gap: 6px; }
+.ns-lbl { display: flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 600; color: var(--ink); }
+.ns-dot { width: 9px; height: 9px; border-radius: 50%; }
+.ns-dot.in { background: var(--brand); } .ns-dot.gold { background: #f2b63c; }
+.ns-pct { margin-inline-start: auto; font-size: .78rem; font-weight: 700; color: #b7791f; background: color-mix(in srgb, #f2b63c 16%, transparent); border-radius: 999px; padding: 2px 9px; }
+.ns-pct:empty { display: none; }
+.ns .sal-amount { border-radius: 18px; padding: 6px 16px; }
+.ns .sal-amount input { font-size: 1.9rem; }
+.ns .sal-amount.small input { font-size: 1.45rem; width: 6.5em; max-width: 70%; }
+.ns .sal-amount.small:focus-within { border-color: #f2b63c; }
+.ns-chip, .ns-chips button { align-self: center; border: 0; border-radius: 999px; padding: 6px 13px; font-size: .8rem; font-weight: 600; background: var(--bg); color: var(--ink); }
+.ns-chips { display: flex; justify-content: center; }
+.ns-range { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 4px; margin: 4px 0;
+  background: linear-gradient(to left, #f2b63c 0 var(--p, 0%), var(--line) var(--p, 0%) 100%); }
+.ns-range::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; border: 4px solid var(--surface);
+  background: radial-gradient(circle at 35% 30%, #ffe7a3, #f2b63c 60%, #c98b12); box-shadow: 0 2px 8px rgba(150, 100, 0, .35); cursor: pointer; }
+.ns-range::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; border: 4px solid var(--surface); background: #f2b63c; cursor: pointer; }
+.ns-preview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ns-preview div { background: var(--bg); border-radius: 14px; padding: 7px 10px; text-align: center; }
+.ns-preview .k { font-size: .72rem; color: var(--muted); }
+.ns-preview .v { font-size: 1.08rem; font-weight: 700; letter-spacing: -.01em; }
+.ns-save { border: 0; border-radius: 18px; padding: 13px; font-size: 1rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #5b4cf0, #9a52d6); box-shadow: 0 10px 24px rgba(91, 76, 240, .35); }
+.ns-save:disabled { opacity: .7; }
 .sal-later { border: 0; background: none; color: var(--muted); font-size: .85rem; padding: 4px; }
 
 /* ===== redesign: calm & clear ===== */
 [hidden] { display: none !important; }
-body { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); -webkit-tap-highlight-color: transparent; }
+body { overflow-x: clip; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); -webkit-tap-highlight-color: transparent; }
 .wrap { gap: 16px; padding-top: 6px; }
 .card { border-radius: 24px; padding: 18px; box-shadow: 0 1px 2px rgba(28, 27, 34, .04); }
 .card h2 { font-size: 1.05rem; }
@@ -979,19 +1030,35 @@ body { margin: 0; }
 </div>
 
 <div class="sheet-bg sal-bg" id="salBg" hidden dir="rtl" lang="he" style="z-index:31">
-  <form class="sal-sheet" id="salForm" role="dialog" aria-modal="true" aria-labelledby="salTitle" novalidate>
-    <div class="sal-hero">
-      <button type="button" class="sal-x" id="salClose" aria-label="סגירה">✕</button>
-      <span class="sal-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3z M12 15a3 3 0 100-6 3 3 0 000 6z M6 10v.01 M18 14v.01"/></svg></span>
-      <div class="sal-kicker" id="salKicker">חודש חדש התחיל</div>
-      <h3 id="salTitle">המשכורת של נובמבר</h3>
-      <p id="salText">כמה נכנס לך החודש?</p>
+  <form class="sal-sheet ns" id="salForm" role="dialog" aria-modal="true" aria-labelledby="salTitle" novalidate>
+    <button type="button" class="ns-x" id="salClose" aria-label="סגירה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg></button>
+    <div class="ns-top">
+      <svg class="ns-gauge" viewBox="0 0 200 112" aria-hidden="true">
+        <defs><linearGradient id="nsG" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#5b4cf0"/><stop offset="1" stop-color="#a35bdc"/></linearGradient>
+          <linearGradient id="nsGold" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#f6c04f"/><stop offset="1" stop-color="#e8a52a"/></linearGradient></defs>
+        <path d="M184 100 A84 84 0 0 0 16 100" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round"/>
+        <path id="nsSpend" d="M184 100 A84 84 0 0 0 16 100" fill="none" stroke="url(#nsG)" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+        <path id="nsSave" d="M16 100 A84 84 0 0 1 184 100" fill="none" stroke="url(#nsGold)" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+      </svg>
+      <div class="ns-kicker" id="salKicker">חודש חדש</div>
+      <h3 id="salTitle">נובמבר מתחיל</h3>
+      <p id="salText">שני מספרים, ומתחילים.</p>
     </div>
-    <div class="sal-body">
-      <label class="sal-amount"><span>₪</span><input id="salAmount" type="text" inputmode="decimal" placeholder="0" aria-label="סכום המשכורת" autocomplete="off"></label>
-      <button type="button" class="sal-chip" id="salSame" hidden></button>
+    <div class="ns-body">
+      <div class="ns-field">
+        <div class="ns-lbl"><span class="ns-dot in"></span>כמה נכנס החודש</div>
+        <label class="sal-amount"><span>₪</span><input id="salAmount" type="text" inputmode="decimal" placeholder="0" aria-label="סכום המשכורת" autocomplete="off"></label>
+        <button type="button" class="ns-chip" id="salSame" hidden></button>
+      </div>
+      <div class="ns-field">
+        <div class="ns-lbl"><span class="ns-dot gold"></span>כמה לחסוך<span class="ns-pct num" id="nsPct"></span></div>
+        <label class="sal-amount small"><span>₪</span><input id="salGoal" type="text" inputmode="decimal" placeholder="0" aria-label="יעד חיסכון לחודש" autocomplete="off"></label>
+        <input type="range" class="ns-range" id="salGoalRange" min="0" max="50" step="1" value="0" aria-label="אחוז מההכנסה לחיסכון">
+        <div class="ns-chips" id="salGoalChips"></div>
+      </div>
+      <div class="ns-preview" id="nsPreview" hidden></div>
       <p class="form-msg" id="salPopMsg"></p>
-      <button type="submit" class="btn sal-save" id="salPopSave">שמירה</button>
+      <button type="submit" class="ns-save" id="salPopSave">שומרים ומתחילים</button>
       <button type="button" class="sal-later" id="salLater">אזכיר לך מחר</button>
     </div>
   </form>
@@ -1675,9 +1742,10 @@ function render() {
     const daysTxt = daysLeft === 0 ? "היום האחרון בחודש" : daysLeft === 1 ? "עוד יום אחד לסוף החודש" : "עוד " + daysLeft + " ימים לסוף החודש";
     pill.hidden = false;
     if (stage === "ok") {
-      $("statusLabel").textContent = goal ? (isCurrent ? "נשאר להוציא, ועדיין לעמוד ביעד" : "נשאר מעבר ליעד") : (isCurrent ? "נשאר להוציא החודש" : "יתרה החודש");
-      countTo($("statusBig"), allow - spent, fmt);
-      $("statusSub").textContent = goal ? "יעד החיסכון: " + fmt(goal) + " · הוצאת " + fmt(spent) + " מתוך " + fmt(allow) : "הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected);
+      $("statusLabel").textContent = "יתרה מההכנסה החודשית";
+      countTo($("statusBig"), incomeExpected - spent, fmt);
+      $("statusSub").textContent = "הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected) + (goal ? " · יעד החיסכון: " + fmt(goal) : "");
+      if (goal && isCurrent) { plus.hidden = false; plus.textContent = "אפשר להוציא עוד " + fmt(allow - spent) + " ולעמוד ביעד"; }
       pill.textContent = isCurrent ? daysTxt : goal ? "עמדת ביעד וחסכת " + fmt(incomeExpected - spent) : "סיימת את החודש בפלוס";
     } else if (stage === "goal") {
       $("statusLabel").textContent = "חרגת מיעד החיסכון ב-";
@@ -1729,30 +1797,68 @@ function askSalary() {
   if (salaries[salKey] != null) return;
   try { if (localStorage.getItem("salLater") === iso(today) + "|" + salKey) return; } catch (e) {}
   const [py, pm] = prevYM(y, m), last = salaries[mkey(py, pm)];
-  $("salKicker").textContent = MONTHS[m] + " " + y + " התחיל";
-  $("salTitle").textContent = "המשכורת של " + MONTHS[m];
-  $("salText").textContent = "כמה נכנס לך החודש? אחרי השמירה היתרה תתעדכן.";
+  $("salKicker").textContent = "חודש חדש · " + MONTHS[m] + " " + y;
+  $("salTitle").textContent = MONTHS[m] + " מתחיל";
+  $("salText").textContent = "כמה נכנס, וכמה שמים בצד. זה הכול.";
+  // the savings goal: suggested from last month's, or as a share of the salary typed above
+  const g = goalFor(y, m);
+  $("salGoal").value = g.missing ? "" : withCommas(String(g.amount));
+  salGoalChips(g.missing ? null : g.amount, pm);
   $("salSame").hidden = last == null;
-  if (last != null) { $("salSame").innerHTML = `כמו ב${MONTHS[pm]} · <b>${fmt(last)}</b>`; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); $("salAmount").focus(); }; }
+  if (last != null) { $("salSame").innerHTML = `כמו ב${MONTHS[pm]} · ${fmt(last)}`; $("salSame").dataset.v = last; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); $("salAmount").focus(); }; }
   $("salAmount").value = ""; fitSal(); $("salPopMsg").textContent = "";
-  $("salPopSave").disabled = false; $("salPopSave").textContent = "שמירה";
+  $("salPopSave").disabled = false; $("salPopSave").textContent = "שומרים ומתחילים"; nsUpdate(true);
   $("salBg").hidden = false;
   setTimeout(() => $("salAmount").focus(), 50);
 }
+function salGoalChips(last, pm) {
+  $("salGoalChips").innerHTML = last != null ? `<button type="button" data-g="${last}">כמו ב${MONTHS[pm]} · ${fmt(last)}</button>` : "";
+  $("salGoalChips").dataset.last = last == null ? "" : last; $("salGoalChips").dataset.pm = pm;
+  nsUpdate(true);
+}
+const nsNum = id => parseFloat(($(id).value || "").replace(/[^\d.]/g, "")) || 0;
+// keeps the slider, the little gauge and the preview in step with the two amounts
+function nsUpdate(fromGoal) {
+  const sal = nsNum("salAmount"), goal = Math.min(nsNum("salGoal"), sal || Infinity), r = $("salGoalRange");
+  if (fromGoal && sal) r.value = Math.min(50, Math.round(goal / sal * 100));
+  r.style.setProperty("--p", (r.value / 50 * 100) + "%");
+  const pct = sal ? Math.round(goal / sal * 100) : 0;
+  // a "same as last month" chip disappears once its amount is already in the box
+  const sc = $("salGoalChips").querySelector("[data-g]"); if (sc) sc.hidden = +sc.dataset.g === nsNum("salGoal");
+  const ss = $("salSame"); if (ss.dataset.v) ss.style.display = +ss.dataset.v === sal ? "none" : "";
+  $("nsPct").textContent = sal && goal ? pct + "% מההכנסה" : "";
+  const g = sal ? goal / sal : 0;
+  $("nsSpend").style.strokeDashoffset = String(sal ? 100 - (1 - g) * 100 : 100);
+  $("nsSave").style.strokeDashoffset = String(sal ? 100 - g * 100 : 100);
+  const pv = $("nsPreview");
+  if (!sal || !salKey) { pv.hidden = true; return; }
+  const [y, m] = salKey.split("-").map(Number), days = new Date(y, m, 0).getDate();
+  const fixed = Math.max(0, monthFigures(...prevYM(y, m - 1)).fixed);
+  pv.hidden = false;
+  pv.innerHTML = `<div><div class="k">נשאר להוציא</div><div class="v num">${fmt(sal - goal)}</div></div><div><div class="k">לשבוע, אחרי קבועות</div><div class="v num">${fmt(Math.max(0, sal - goal - fixed) * 7 / days)}</div></div>`;
+}
+$("salGoalRange").addEventListener("input", e => { const sal = nsNum("salAmount"); if (!sal) return; $("salGoal").value = withCommas(String(Math.round(sal * e.target.value / 100 / 50) * 50)); nsUpdate(false); });
+$("salGoalChips").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (b) { $("salGoal").value = withCommas(b.dataset.g); nsUpdate(true); } });
+$("salGoal").addEventListener("input", e => { e.target.value = withCommas(e.target.value); nsUpdate(true); });
 const closeSal = () => { $("salBg").hidden = true; };
 function salLater() { try { localStorage.setItem("salLater", iso(today) + "|" + salKey); } catch (e) {} closeSal(); }
 $("salLater").onclick = salLater;
 $("salClose").onclick = salLater;
 $("salBg").addEventListener("click", e => { if (e.target.id === "salBg") salLater(); });
 const fitSal = () => { const el = $("salAmount"); el.style.width = Math.max(1, (el.value || el.placeholder).length) * 0.62 + 0.4 + "em"; };
-$("salAmount").addEventListener("input", e => { const el = e.target; const fromEnd = el.value.length - (el.selectionEnd ?? el.value.length); el.value = withCommas(el.value); const p = Math.max(0, el.value.length - fromEnd); try { el.setSelectionRange(p, p); } catch (err) {} fitSal(); });
+$("salAmount").addEventListener("input", e => { const el = e.target; const fromEnd = el.value.length - (el.selectionEnd ?? el.value.length); el.value = withCommas(el.value); const p = Math.max(0, el.value.length - fromEnd); try { el.setSelectionRange(p, p); } catch (err) {} fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); });
 $("salForm").addEventListener("submit", async e => {
   e.preventDefault();
   const v = Math.round(parseFloat($("salAmount").value.replace(/,/g, "")) * 100) / 100;
   if (!(v > 0)) { $("salPopMsg").textContent = "הזינו סכום גדול מאפס."; $("salAmount").focus(); return; }
   const btn = $("salPopSave"); btn.disabled = true; btn.textContent = "שומר…";
-  try { await writeSalaries({ ...salaries, [salKey]: v }); closeSal(); try { renderSal(); } catch (err) {} }
-  catch (err) { $("salPopMsg").textContent = writeError(err); btn.disabled = false; btn.textContent = "שמירה"; }
+  const gRaw = $("salGoal").value.replace(/[^\d.]/g, ""), gv = gRaw === "" ? null : Math.round(parseFloat(gRaw));
+  try {
+    await writeSalaries({ ...salaries, [salKey]: v });
+    if (gv != null && gv !== goals[salKey]) { const ym = salKey.split("-"); const keep = view; view = { y: +ym[0], m: +ym[1] - 1 }; try { await saveGoal(gv); } finally { view = keep; render(); } }
+    closeSal(); try { renderSal(); } catch (err) {}
+  }
+  catch (err) { $("salPopMsg").textContent = writeError(err); btn.disabled = false; btn.textContent = "שומרים ומתחילים"; }
 });
 
 /* the next payment of a purchase typed month by month: suggested from the charge day, added with one tap */
@@ -1939,7 +2045,7 @@ function renderBurn(f, income, goal, isCurrent, days, elapsed, prev) {
     const has = d <= shown, v = has ? now[d] : null, pv = before[Math.min(d, last)];
     $("burnHover").setAttribute("opacity", 1); $("burnHl").setAttribute("x1", X(d)); $("burnHl").setAttribute("x2", X(d));
     $("burnHc").setAttribute("cx", X(d)); $("burnHc").setAttribute("cy", Y(has ? v : allow * d / days));
-    tip.style.opacity = 1; tip.style.left = (X(d) / W * 100) + "%"; tip.style.top = (Y(has ? v : allow * d / days) / H * 100) + "%";
+    tip.style.opacity = 1; tip.style.left = Math.min(82, Math.max(18, X(d) / W * 100)) + "%"; tip.style.top = (Y(has ? v : allow * d / days) / H * 100) + "%";
     tip.innerHTML = `<b>${lab(d)}</b><br>${has ? "החודש: " + fmt(v) + "<br>" : ""}חודש קודם: ${fmt(pv)}<br>לפי התוכנית: ${fmt(allow * d / days)}`;
   };
   svg.onpointerleave = () => { tip.style.opacity = 0; $("burnHover").setAttribute("opacity", 0); };
@@ -2472,7 +2578,7 @@ function applySettings(values) {
     if (/^\d{4}-\d{2}$/.test(mk) && amt !== null) sal[mk] = amt;
     const raw = (v[8] || "").trim(), to = (v[9] || "").trim(); if (raw && to) cm[raw] = to;
     const ao = (v[15] || "").trim(), an = (v[16] || "").trim(); if (ao && an && ao !== an) alias[ao] = an;
-    const gk = (v[17] || "").trim(), ga = parseAmount(v[18]); if (/^\d{4}-\d{2}$/.test(gk) && ga !== null) gl[gk] = ga;
+    const gm = String(v[17] || "").trim().match(/^(\d{4})-(\d{1,2})$/), ga = parseAmount(v[18]); if (gm && ga !== null) gl[gm[1] + "-" + gm[2].padStart(2, "0")] = ga;
     const mr = (v[11] || "").trim(); if (mr && ((v[12] || "").trim() || (v[13] || "").trim())) mrules[mr] = { name: (v[12] || "").trim(), cat: (v[13] || "").trim() };
   });
   cardMap = cm; merchantRules = mrules; payAlias = alias;
