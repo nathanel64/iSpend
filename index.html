@@ -765,7 +765,41 @@ header.top { gap: 10px; }
 .rc-spark .hi i { background: linear-gradient(180deg, var(--brand2), var(--brand)); }
 .rc-spark .zero i { background: color-mix(in srgb, var(--good) 40%, transparent); }
 .rc-spark span { font-size: .58rem; color: var(--muted); white-space: nowrap; height: .8rem; }
+.rc-spark[style*="--n:7"] span { font-size: .7rem; }
 .rc-end { grid-column: span 2; text-align: center; font-size: .8rem; color: var(--muted); margin: 6px 0 0; }
+/* the summaries have a look of their own: a light pastel morning sky, soft drifting colour, frosted tiles, deep-violet numbers */
+.rc-sheet { position: relative; background: linear-gradient(165deg, #f3eeff 0%, #fdf3ee 55%, #edf7f2 100%); color: #221f33; isolation: isolate; }
+.rc-sheet::before, .rc-sheet::after { content: ""; position: absolute; z-index: -1; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(70px); pointer-events: none; }
+.rc-sheet::before { top: -30vmax; right: -26vmax; background: radial-gradient(circle, #c9bdff, transparent 65%); opacity: .55; animation: rcBlob 16s ease-in-out infinite alternate; }
+.rc-sheet::after { bottom: -36vmax; left: -30vmax; background: radial-gradient(circle, #ffd1c2, transparent 65%); opacity: .55; animation: rcBlob 20s ease-in-out infinite alternate-reverse; }
+@keyframes rcBlob { to { transform: translate(-6vmax, 8vmax) scale(1.1); } }
+.rc-head::before { background: rgba(34, 31, 51, .15); }
+.rc-kick { color: #6a4fd8; letter-spacing: .12em; font-size: .72rem; }
+.rc-head h2 { font-size: 2rem; color: #221f33; }
+.rc-x { background: rgba(255, 255, 255, .7); color: #221f33; box-shadow: 0 2px 8px rgba(80, 60, 160, .08); border: 1px solid rgba(255, 255, 255, .9); }
+.rc-t { background: rgba(255, 255, 255, .62); border: 1px solid rgba(255, 255, 255, .85); box-shadow: 0 6px 20px rgba(90, 70, 170, .07); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-radius: 24px; }
+.rc-t .k { color: #7a7590; letter-spacing: .02em; }
+.rc-t .v { color: #221f33; } .rc-t .v small, .rc-t .s { color: #7a7590; } .rc-t .s b { color: #221f33; }
+.rc-t.good .v { color: #1f9a6b; } .rc-t.bad .v { color: #d4574a; }
+.rc-t.hero { background: rgba(255, 255, 255, .78); border-color: #fff; }
+.rc-t.hero .v { font-size: 3.3rem; background: linear-gradient(100deg, #3f2fc4, #8a4fd0 55%, #c9569a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.rc-t.hero.good .s b { color: #1f9a6b; } .rc-t.hero.bad .s b { color: #d4574a; }
+.rc-meter { background: rgba(80, 60, 160, .1); }
+.rc-meter i { background: linear-gradient(270deg, #6a4fd8, #c9569a); box-shadow: none; }
+.rc-t.hero.bad .rc-meter i { background: linear-gradient(270deg, #ef8a5e, #d4574a); box-shadow: none; }
+.rc-meter u { background: #221f33; }
+.rc-ml { color: #9a95ae; }
+.rc-ic { background: hsl(var(--h, 250) 70% 60% / .14); color: hsl(var(--h, 250) 55% 45%); }
+.rc-ic.e { background: rgba(255, 255, 255, .8); }
+.rc-br .b { background: rgba(80, 60, 160, .08); }
+.rc-br .b i { background: hsl(var(--h) 60% 62%); box-shadow: none; }
+.rc-br .n, .rc-br .a { color: #221f33; }
+.rc-spark i { background: rgba(106, 79, 216, .22); }
+.rc-spark .hi i { background: linear-gradient(180deg, #8a4fd0, #3f2fc4); box-shadow: none; }
+.rc-spark .zero i { background: rgba(31, 154, 107, .35); }
+.rc-spark span { color: #8a85a0; }
+.rc-end { color: #8a85a0; }
+@media (prefers-reduced-motion: reduce) { .rc-sheet::before, .rc-sheet::after { animation: none; } }
 @keyframes rcUp { from { transform: translateY(60px); opacity: .3; } }
 @keyframes rcFade { from { opacity: 0; } }
 @keyframes rcIn { from { opacity: 0; transform: translateY(14px) scale(.98); } }
@@ -833,6 +867,18 @@ header.top { gap: 10px; }
 .cal-leg .cal-free { margin-inline-start: auto; color: var(--good); font-weight: 600; }
 .cal-day { border-top: 1px solid var(--line); padding-top: 6px; animation: vibeIn .3s ease; }
 .cal-day .day-head { display: flex; justify-content: space-between; font-size: .86rem; padding: 4px 2px; }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none; will-change: transform; backface-visibility: hidden; -webkit-font-smoothing: antialiased; }
+.drag-ghost > .tx { margin: 0; transform: none !important; background: var(--surface); border-radius: 16px; box-shadow: 0 2px 6px rgba(20, 16, 40, .08); transition: transform .2s cubic-bezier(.2, .8, .2, 1), box-shadow .2s; }
+.drag-ghost.lift > .tx { transform: scale(1.035) !important; box-shadow: 0 18px 40px rgba(20, 16, 40, .26); }
+.drag-to { position: absolute; top: -30px; inset-inline-start: 10px; background: var(--brand); color: var(--brand-ink); font-size: .78rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; white-space: nowrap; box-shadow: 0 4px 12px rgba(91, 76, 240, .35); }
+.drag-to[hidden] { display: none; }
+.tx-sw.drag-src { opacity: 0; overflow: hidden; margin: 0 !important; transition: height .22s cubic-bezier(.2, .8, .2, 1), opacity .15s; }
+body.dragging #days .tx-sw:not(.drag-src) { transition: transform .22s cubic-bezier(.2, .8, .2, 1); }
+body.dragging #days .day-grp { transition: padding-bottom .22s cubic-bezier(.2, .8, .2, 1), background .2s; }
+body.dragging { -webkit-user-select: none; user-select: none; }
+body.dragging .day-grp { transition: background .2s, box-shadow .2s; border-radius: 16px; }
+
+#days .tx-sw { -webkit-touch-callout: none; }
 .inst-empty { margin: 0; font-size: .86rem; color: var(--muted); text-align: center; padding: 6px 0; }
 /* the area under the gauge, tidied: one line, then the chips side by side; salary and goal live in the money card */
 .g-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
@@ -871,9 +917,9 @@ body { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 170px); }
 .ins-wrap:not(:has(.insight)) { display: none; }
 .arr-open { align-self: center; border: 0; background: none; color: var(--muted); font-size: .8rem; padding: 6px 12px; text-decoration: underline; text-underline-offset: 3px; }
 /* 1: arranging the screens: cards wiggle, each gets a small toolbar; hidden ones wait in a tray */
-body.arrange [data-k] { position: relative; animation: arrWiggle 2.6s ease-in-out infinite; min-height: 56px; }
-body.arrange [data-k]:nth-of-type(2n) { animation-delay: -1.3s; }
-body.arrange [data-k]::after { content: ""; position: absolute; inset: 0; z-index: 4; border-radius: inherit; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand) 45%, transparent); background: color-mix(in srgb, var(--surface) 35%, transparent); }
+body.arrange [data-k]:not(.tx-sw) { position: relative; animation: arrWiggle 2.6s ease-in-out infinite; min-height: 56px; }
+body.arrange [data-k]:not(.tx-sw):nth-of-type(2n) { animation-delay: -1.3s; }
+body.arrange [data-k]:not(.tx-sw)::after { content: ""; position: absolute; inset: 0; z-index: 4; border-radius: inherit; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand) 45%, transparent); background: color-mix(in srgb, var(--surface) 35%, transparent); }
 body.arrange .ins-wrap { display: flex !important; background: var(--surface); border-radius: 20px; padding: 8px; }
 body.arrange .arr-open { display: none !important; }
 @keyframes arrWiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-.6deg); } 75% { transform: rotate(.6deg); } }
@@ -887,7 +933,7 @@ body.arrange .arr-open { display: none !important; }
 .arr-tray { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 12px; border-radius: 20px; border: 1.5px dashed color-mix(in srgb, var(--ink) 20%, transparent); }
 .arr-tray b { width: 100%; text-align: center; font-size: .8rem; color: var(--muted); font-weight: 600; }
 .arr-tray button { border: 0; border-radius: 999px; padding: 6px 12px; font-size: .84rem; font-weight: 600; background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
-@media (prefers-reduced-motion: reduce) { body.arrange [data-k] { animation: none; } }
+@media (prefers-reduced-motion: reduce) { body.arrange [data-k]:not(.tx-sw) { animation: none; } }
 /* 3: a category's own page */
 .ci { display: flex; flex-direction: column; gap: 14px; margin-bottom: 6px; }
 .ci-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
@@ -3199,7 +3245,7 @@ function recapWeek() {
   const by = new Map(); wk.forEach(t => by.set(t.category, (by.get(t.category) || 0) + val(t)));
   const cats = [...by.entries()].filter(e => e[1] > 0).sort((x, y) => y[1] - x[1]);
   const days = new Map(); wk.forEach(t => { if (!t.refund && !t.gen && !FIXED.has(t.category)) days.set(iso(t.date), (days.get(iso(t.date)) || 0) + t.amount); });
-  const vals = []; for (let x = new Date(a); x <= b; x.setDate(x.getDate() + 1)) vals.push({ label: WEEKDAYS[x.getDay()].slice(0, 3), v: days.get(iso(x)) || 0, tick: true });
+  const vals = []; for (let x = new Date(a); x <= b; x.setDate(x.getDate() + 1)) vals.push({ label: WEEKDAYS[x.getDay()], v: days.get(iso(x)) || 0, tick: true });
   const mx = Math.max(...vals.map(v => v.v)); vals.forEach(v => { if (v.v === mx && mx > 0) v.hi = true; });
   const tiles = [
     { type: "hero", k: "יצא בשבוע שעבר", v: Math.round(total), sub: `${buys.length} רכישות · ${dd(a)}–${dd(b)}` },
@@ -3766,7 +3812,7 @@ function renderList(inP) {
   const pool = q ? tx.filter(t => matchQuery(t, sq)) : inP;
   const qc = $("qChips"); if (qc) { const ch = sq ? sq.chips : []; qc.hidden = !ch.length; qc.innerHTML = ch.map(c => `<span>${esc(c)}</span>`).join(""); }
   const kindOk = t => txKind === "all" ? true : txKind === "exp" ? !t.income && !t.refund : txKind === "inc" ? (t.income || t.refund) : !!t.inst;
-  const list = (filterCat ? pool.filter(t => t.category === filterCat) : pool).filter(t => !filterAcc || accOf(t) === filterAcc).filter(kindOk).slice().sort((a, b) => b.date - a.date || b.order - a.order);
+  const list = (filterCat ? pool.filter(t => t.category === filterCat) : pool).filter(t => !filterAcc || accOf(t) === filterAcc).filter(kindOk).slice().sort((a, b) => b.date - a.date || dayCmp(a, b));
   document.querySelectorAll("#txChips button").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === txKind));
   $("listTitle").textContent = q ? `תוצאות חיפוש (${list.length})` : filterAcc ? (filterAcc === bankName() ? bankName() : "החיובים ב" + filterAcc) + (filterCat ? " · " + filterCat : "") : (filterCat || "כל התנועות");
   $("clearFilter").hidden = !filterCat && !filterAcc;
@@ -3785,7 +3831,7 @@ function renderList(inP) {
     const d = g[0].date, sum = g.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
     const ago = daysBetween(d, today), full = `יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}${q ? " " + d.getFullYear() : ""}`;
     const label = ago === 0 ? `<b>היום</b> <small>· ${full}</small>` : ago === 1 ? `<b>אתמול</b> <small>· ${full}</small>` : full;
-    return `<div><div class="day-head"><span class="dl">${label}</span><span class="num">${fmtX(sum)}</span></div>` +
+    return `<div class="day-grp" data-day="${iso(d)}"><div class="day-head"><span class="dl">${label}</span><span class="num">${fmtX(sum)}</span></div>` +
       g.map(t => txRowHtml(t, false)).join("") + `</div>`;
   }).join("") + (shown.length < list.length ? `<button class="more" id="showMore">הצג את כל ${list.length} התנועות</button>` : "");
   const more = $("showMore"); if (more) more.onclick = () => { showAll = true; render(); };
@@ -4029,6 +4075,7 @@ function applySettings(values) {
   cardMap = cm; merchantRules = mrules; payAlias = alias; catAlias = calias;
   { const cb = {}; values.forEach(v => { const w = (v[22] || "").trim(), a = parseAmount(v[23]); if (!w || a === null) return; const i = w.indexOf("|"), k = i > 0 && /^\d{4}-\d{2}$/.test(w.slice(0, i)) ? w.slice(0, i) : "", c = catName(k ? w.slice(i + 1) : w); (cb[k] = cb[k] || {})[c] = a; }); capsBy = cb; }
   { const wk = String((values[2] || [])[21] || "").trim(); if (wk) weekSeen = wk; }
+  { const rj = String((values[4] || [])[21] || "").trim(); if (rj && !txDrag && Date.now() - rankSavedAt > 15000) { /* a fresh local change wins over an older copy from the sheet */ try { const o = JSON.parse(rj); if (o && typeof o === "object") { txRank = o; try { localStorage.setItem("txRank", rj); } catch (e) {} } } catch (e) {} } }
   { const lj = String((values[3] || [])[21] || "").trim(); if (lj && !arranging) { try { const l = normLayout(JSON.parse(lj)); if (JSON.stringify(l) !== JSON.stringify(layout)) { layout = l; try { localStorage.setItem("layout4", lj); } catch (e) {} applyLayout(); } } catch (e) {} } }
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
@@ -4708,13 +4755,157 @@ async function onTxListClick(e) {
 $("days").addEventListener("click", onTxListClick);
 /* swipe a row to the right to show edit / delete, to the left to close it */
 let swipe = null, swipeJustHappened = false;
+/* a long press on a transaction picks it up. Drop it anywhere: between rows of the same day to reorder,
+   or on another day to move it there (its date changes). The order inside a day is kept in the settings (V6). */
+let txDrag = null, txRank = {}, rankSavedAt = 0;
+const rkey = (t, day) => t.del && t.del.key === "apple" && t.del.raw && t.del.raw[7] ? t.del.raw[7] : "d:" + (day || iso(t.date)) + "|" + t.amount + "|" + t.merchant;
+const rankOf = t => { const r = txRank[rkey(t)]; return r && r.d === iso(t.date) ? r.r : null; };
+// inside a day: rows placed by hand keep their place; anything newer than that arrangement stays on top
+function dayCmp(a, b) { const ra = rankOf(a), rb = rankOf(b); if (ra == null && rb == null) return b.order - a.order; if (ra == null) return -1; if (rb == null) return 1; return ra - rb; }
+async function saveRanks(day, keys) {
+  const next = {}, cut = iso(addDays(today, -150));
+  Object.entries(txRank).forEach(([k, v]) => { if (v.d >= cut && v.d !== day) next[k] = v; });
+  keys.forEach((k, i) => { next[k] = { d: day, r: i + 1 }; });
+  txRank = next;
+  try { localStorage.setItem("txRank", JSON.stringify(next)); } catch (e) {}
+  rankSavedAt = Date.now();
+  writeRange("'הגדרות'!V6", [[JSON.stringify(next)]]).catch(() => {}).then(() => { rankSavedAt = Date.now(); });
+}
+try { txRank = JSON.parse(localStorage.getItem("txRank") || "{}") || {}; } catch (e) { txRank = {}; }
+function dragDayLabel(k) { const d = parseDate(k), ago = daysBetween(d, today); return ago === 0 ? "היום" : ago === 1 ? "אתמול" : `יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}`; }
+const reduceMo = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function dragStart(sw, x, y) {
+  const t = txByKey(sw.dataset.k); if (!t) return;
+  if (t.gen) { toast("תשלום מתוך עסקה בתשלומים זז רק דרך עריכה של העסקה כולה"); return; }
+  if (isPendingTx(t)) { toast("אפשר להזיז אחרי שההוצאה תישלח"); return; }
+  swipe = null; openTx = null;
+  const row = sw.querySelector(".tx"), r = row.getBoundingClientRect(), H = sw.offsetHeight + 2;
+  const g = document.createElement("div"); g.className = "drag-ghost"; g.style.width = r.width + "px"; g.innerHTML = row.outerHTML + `<span class="drag-to" hidden></span>`;
+  g.style.transform = `translate(${r.left}px, ${r.top}px)`;
+  document.body.appendChild(g);
+  txDrag = { sw, t, g, H, dx: x - r.left, dy: y - r.top, x, y, gx: r.left, gy: r.top, from: iso(t.date), to: iso(t.date), idx: -1, grp: null, raf: 0 };
+  document.body.classList.add("dragging");
+  // lift: the card pops up, the row it left closes smoothly
+  g.classList.add("lift");
+  sw.style.height = sw.offsetHeight + "px"; void sw.offsetHeight; sw.classList.add("drag-src"); sw.style.height = "0px";
+  try { navigator.vibrate && navigator.vibrate(15); } catch (e) {}
+  // one frame loop: the card glides after the finger (no jumps), the page scrolls near the edges, the slot follows
+  const loop = () => {
+    const d = txDrag; if (!d) return;
+    const tx = d.x - d.dx, ty = d.y - d.dy, k = reduceMo() ? 1 : .45;
+    d.gx += (tx - d.gx) * k; d.gy += (ty - d.gy) * k;
+    d.g.style.transform = `translate3d(${d.gx.toFixed(1)}px, ${d.gy.toFixed(1)}px, 0)`;
+    const e = 120, b = innerHeight - 150; if (d.y < e) window.scrollBy(0, -Math.ceil((e - d.y) / 10)); else if (d.y > b) window.scrollBy(0, Math.ceil((d.y - b) / 10));
+    dragTarget(); d.raf = requestAnimationFrame(loop);
+  };
+  txDrag.raf = requestAnimationFrame(loop);
+}
+function dragMove(x, y) { txDrag.x = x; txDrag.y = y; }
+// where a row sits without the slide it is doing right now (layout offsets ignore transforms, mid-animation too)
+const naturalTop = el => { const g = el.parentElement; return g.getBoundingClientRect().top + (el.offsetTop - g.offsetTop) - (g.offsetParent === el.offsetParent ? 0 : g.offsetTop); };
+function dragTarget() {
+  const d = txDrag;
+  // the day under the finger (ignoring the ghost and the slot that opened)
+  // day bounds without the slot that opened in them, and a little stickiness so the target does not flicker at a border
+  const grps = [...document.querySelectorAll("#days .day-grp")];
+  let grp = null;
+  if (d.grp) { const r = d.grp.getBoundingClientRect(); if (d.y >= r.top - 14 && d.y <= r.bottom + 14) grp = d.grp; }
+  if (!grp) for (const gEl of grps) { const r = gEl.getBoundingClientRect(), pad = gEl === d.grp ? d.H : 0; if (d.y >= r.top && d.y <= r.bottom - pad) { grp = gEl; break; } }
+  if (!grp) { if (d.grp) { clearSlots(); d.grp = null; d.idx = -1; d.g.querySelector(".drag-to").hidden = true; } return; }
+  const rows = [...grp.querySelectorAll(":scope > .tx-sw")].filter(r => r !== d.sw);
+  let idx = rows.length; for (let i = 0; i < rows.length; i++) { const top = naturalTop(rows[i]); if (d.y < top + rows[i].offsetHeight / 2) { idx = i; break; } }
+  if (grp === d.grp && idx !== d.idx && d.idx >= 0) { // only switch once the finger is clearly past the middle of a row
+    const edge = rows[Math.min(idx, d.idx)]; if (edge) { const mid = naturalTop(edge) + edge.offsetHeight / 2; if (Math.abs(d.y - mid) < 10) return; }
+  }
+  if (grp === d.grp && idx === d.idx) return;
+  if (grp !== d.grp) clearSlots(grp);
+  d.grp = grp; d.idx = idx; d.to = grp.dataset.day;
+  rows.forEach((r, i) => { const sh = i >= idx ? d.H : 0; r.dataset.shift = sh; r.style.transform = sh ? `translateY(${sh}px)` : ""; });
+  grp.style.paddingBottom = d.H + "px";
+  const tag = d.g.querySelector(".drag-to");
+  if (d.to !== d.from) { tag.hidden = false; tag.textContent = "← יעבור ל" + dragDayLabel(d.to); } else tag.hidden = true;
+  try { navigator.vibrate && navigator.vibrate(5); } catch (e) {}
+}
+function clearSlots(except) {
+  document.querySelectorAll("#days .day-grp").forEach(gEl => { if (gEl === except) return; gEl.style.paddingBottom = ""; gEl.querySelectorAll(":scope > .tx-sw").forEach(r => { r.style.transform = ""; r.dataset.shift = 0; }); });
+}
+async function dragEnd(cancel) {
+  const d = txDrag; if (!d) return; txDrag = null; cancelAnimationFrame(d.raf);
+  document.body.classList.remove("dragging"); swipeJustHappened = true; setTimeout(() => { swipeJustHappened = false; }, 400);
+  const ok = !cancel && d.grp;
+  // where it lands: the open slot
+  let tx = 0, ty = 0;
+  if (ok) {
+    const rows = [...d.grp.querySelectorAll(":scope > .tx-sw")].filter(r => r !== d.sw);
+    const ref = rows[d.idx], head = d.grp.querySelector(".day-head");
+    const r0 = d.sw.querySelector(".tx").getBoundingClientRect();
+    tx = r0.left; ty = ref ? naturalTop(ref) : (rows.length ? naturalTop(rows[rows.length - 1]) + rows[rows.length - 1].offsetHeight + 2 : head.getBoundingClientRect().bottom);
+  } else { const r = d.sw.getBoundingClientRect(); tx = r.left; ty = r.top; }
+  d.g.classList.remove("lift");
+  if (!reduceMo()) await d.g.animate([{ transform: d.g.style.transform }, { transform: `translate3d(${tx}px, ${ty}px, 0)` }], { duration: 260, easing: "cubic-bezier(.2,.9,.25,1)", fill: "forwards" }).finished.catch(() => {});
+  if (!ok) { clearSlots(); d.sw.classList.remove("drag-src"); d.sw.style.height = ""; d.g.remove(); return; }
+  // the new order of that day
+  const keys = [...d.grp.querySelectorAll(":scope > .tx-sw")].filter(r => r !== d.sw).map(r => txByKey(r.dataset.k)).filter(Boolean).map(t => rkey(t));
+  const movedDay = d.to !== d.from;
+  keys.splice(d.idx, 0, rkey(d.t, d.to));
+  const landKey = rkey(d.t, d.to);
+  saveRanks(d.to, keys); // saved in the background; the list follows right away
+  let undo = null;
+  if (movedDay) { // show it on the new day at once; the sheet catches up behind
+    const arr = arrOf(d.t.del.key), i = d.t.del.index, old = (arr[i] || []).slice(), nd = parseDate(d.to);
+    const dm = String(nd.getDate()).padStart(2, "0") + "/" + String(nd.getMonth() + 1).padStart(2, "0") + "/" + nd.getFullYear();
+    if (arr[i]) { arr[i] = arr[i].slice(); arr[i][0] = d.t.del.key === "apple" ? d.to : dm; undo = () => { arr[i] = old; }; }
+    afterData();
+  } else redrawLists();
+  clearSlots(); d.g.remove();
+  if (movedDay) moveTxDate(d.t, d.to).then(ok => { if (!ok && undo) { undo(); afterData(); } });
+  // a short glow on the row where it landed
+  const landed = [...document.querySelectorAll("#days .tx-sw[data-k]")].find(r => { const t = txByKey(r.dataset.k); return t && rkey(t) === landKey; });
+  if (landed && !reduceMo()) landed.animate([{ boxShadow: "0 0 0 2px var(--brand)", transform: "scale(1.02)" }, { boxShadow: "0 0 0 0 transparent", transform: "scale(1)" }], { duration: 700, easing: "ease-out" });
+}
+// only the date cell changes, after checking the row still holds this transaction
+async function moveTxDate(t, to) {
+  if (!mcp) return false;
+  const nd = parseDate(to);
+  let range, values;
+  if (t.del.key === "apple") { range = "'עסקאות'!A" + t.del.row; values = [[to]]; }
+  else if (t.del.key === "bank") { range = "'_moneyman'!A" + (t.del.index + 2); values = [[String(nd.getDate()).padStart(2, "0") + "/" + String(nd.getMonth() + 1).padStart(2, "0") + "/" + nd.getFullYear()]]; }
+  else { range = "'הוצאות יומיות'!D" + t.del.row; values = [["=DATE(" + nd.getFullYear() + "," + (nd.getMonth() + 1) + "," + nd.getDate() + ")"]]; }
+  try {
+    const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
+    const now = trimRow(((res.payload && res.payload.values) || [[]])[0]);
+    if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) { toast("הגיליון השתנה. רעננו ונסו שוב."); return false; }
+    await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range, values });
+    const back = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
+    arrOf(t.del.key)[t.del.index] = ((back.payload && back.payload.values) || [[]])[0] || [];
+    afterData(); toast("הועבר ל" + dragDayLabel(to) + " ✓", 2200);
+    try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+    return true;
+  } catch (err) { toast(writeError(err)); return false; }
+}
+{
+  let lp = null, sx = 0, sy = 0;
+  const host = $("days");
+  host.addEventListener("touchstart", e => {
+    const sw = e.target.closest(".tx-sw[data-k]"); if (!sw || e.touches.length !== 1 || e.target.closest(".tx-acts") || sw.classList.contains("open")) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    lp = setTimeout(() => { lp = null; dragStart(sw, sx, sy); }, 450);
+  }, { passive: true });
+  document.addEventListener("touchmove", e => {
+    if (lp && Math.hypot(e.touches[0].clientX - sx, e.touches[0].clientY - sy) > 8) { clearTimeout(lp); lp = null; }
+    if (txDrag) { e.preventDefault(); dragMove(e.touches[0].clientX, e.touches[0].clientY); }
+  }, { passive: false });
+  document.addEventListener("touchend", () => { if (lp) { clearTimeout(lp); lp = null; } if (txDrag) dragEnd(false); });
+  document.addEventListener("touchcancel", () => { if (lp) { clearTimeout(lp); lp = null; } if (txDrag) dragEnd(true); });
+  host.addEventListener("contextmenu", e => { if (e.target.closest(".tx-sw")) e.preventDefault(); });
+}
 function swipeStart(e) {
   const sw = e.target.closest(".tx-sw[data-k]"); if (!sw || e.target.closest(".tx-acts")) return;
   const p = e.touches ? e.touches[0] : e;
   swipe = { sw, x: p.clientX, y: p.clientY, dx: 0, lock: null, base: sw.classList.contains("open") ? 152 : 0 };
 }
 function swipeMove(e) {
-  if (!swipe) return;
+  if (!swipe || txDrag) return;
   const p = e.touches ? e.touches[0] : e;
   const dx = p.clientX - swipe.x, dy = p.clientY - swipe.y;
   if (!swipe.lock) { if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; swipe.lock = Math.abs(dx) > Math.abs(dy) ? "x" : "y"; }
@@ -5086,7 +5277,7 @@ function monthAnim(dir) {
 {
   let y0 = null, pulled = 0, busy = false;
   const ptr = $("ptr"), coin = ptr.querySelector("svg");
-  const ok = () => !busy && window.scrollY <= 0 && $("sheetBg").hidden && $("salBg").hidden && $("mvBg").hidden && $("capBg").hidden && document.body.style.overflow !== "hidden";
+  const ok = () => !busy && !txDrag && window.scrollY <= 0 && $("sheetBg").hidden && $("salBg").hidden && $("mvBg").hidden && $("capBg").hidden && document.body.style.overflow !== "hidden";
   document.addEventListener("touchstart", e => { y0 = ok() && e.touches.length === 1 ? e.touches[0].clientY : null; pulled = 0; }, { passive: true });
   document.addEventListener("touchmove", e => {
     if (y0 == null) return;
@@ -5241,7 +5432,7 @@ document.addEventListener("click", e => {
 {
   let lp = null, lx = 0, ly = 0;
   document.addEventListener("touchstart", e => {
-    const c = e.target.closest && e.target.closest("[data-k]"); if (!c || arranging || e.touches.length !== 1 || e.target.closest("button, a, input, .bub, .insight")) return;
+    const c = e.target.closest && e.target.closest("[data-k]"); if (!c || !ARR_NAMES[c.dataset.k] || arranging || e.touches.length !== 1 || e.target.closest("button, a, input, .bub, .insight")) return;
     lx = e.touches[0].clientX; ly = e.touches[0].clientY; lp = setTimeout(() => { lp = null; startArrange(); }, 600);
   }, { passive: true });
   const stop = () => { if (lp) { clearTimeout(lp); lp = null; } };
@@ -5308,7 +5499,7 @@ const TOUR = [
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. בכפתור ״תקרות״ קובעים כמה מותר להוציא על כל קטגוריה, וטבעת סביב העיגול מתמלאת." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: תקציב שבועי, לוח של ימים, השוואה לחודש הקודם לפי קטגוריות, תחזית לסוף החודש, החיובים הקבועים ומה שצפוי לרדת בחודש הבא." },
-  { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות. חיפוש חכם כמו ״סופר מעל 200״ או ״מקס ספטמבר״. מחליקים תנועה ימינה כדי לערוך או למחוק, ומחיקה בטעות מבטלים בלחיצה." },
+  { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות. חיפוש חכם כמו ״סופר מעל 200״ או ״מקס ספטמבר״. מחליקים תנועה ימינה כדי לערוך או למחוק, ולחיצה ארוכה מאפשרת לגרור אותה לכל מקום, באותו יום או ליום אחר." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה, השוואה בין חודשים, וסיכום שנתי. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
   { t: "#tabAdmin", h: "הגדרות", b: "משכורת לכל חודש, קטגוריות ואמצעי תשלום משלכם, יום החיוב בכרטיס, מצב כהה, קישור להוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
   { t: null, e: "👆", h: "עוד שני טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן." },
@@ -5364,7 +5555,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025000804";
+const BUILD_ID = "20261025010330";
 let updToast = null;
 async function checkUpdate() {
   try {
