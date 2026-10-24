@@ -891,6 +891,23 @@ body.dragging .day-grp { transition: background .2s, box-shadow .2s; border-radi
 .date-reset { border: 0; background: none; padding: 4px 2px 0; font-size: .74rem; color: var(--muted); text-align: start; }
 .date-reset u { color: var(--brand); text-underline-offset: 2px; }
 .date-reset[hidden] { display: none; }
+/* months: hide or delete a whole month */
+.m-list { display: flex; flex-direction: column; max-height: 360px; overflow-y: auto; }
+.m-row { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-top: 1px solid var(--line); }
+.m-row:first-child { border-top: 0; }
+.m-row .m-n { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.m-row .m-n b { font-weight: 600; font-size: .92rem; }
+.m-row .m-n small { color: var(--muted); font-size: .76rem; }
+.m-row.hid .m-n b { color: var(--muted); }
+.m-tag { flex-shrink: 0; font-size: .7rem; font-weight: 700; color: var(--warn); background: var(--warn-soft); border-radius: 999px; padding: 2px 8px; }
+.m-act { flex-shrink: 0; white-space: nowrap; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 6px 12px; font-size: .8rem; font-weight: 600; cursor: pointer; }
+.m-act.mrm { color: var(--bad); }
+.m-act.back { color: var(--brand); }
+.ask-btns { gap: 8px; padding-bottom: 18px; }
+.ask-btns .btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 16px; font-size: .95rem; }
+.ask-btns .btn small { font-weight: 500; font-size: .76rem; opacity: .85; }
+.ask-btns .btn.danger { background: var(--bad); color: #fff; }
+.ask-btns .btn.plain { background: none; color: var(--muted); padding: 8px; }
 /* desktop date picker (the browser's own one moves months the other way in Hebrew) */
 .dp-wrap { position: relative; }
 @media (hover: hover) and (pointer: fine) { .field input[type=date] { cursor: pointer; } .field input[type=date]::-webkit-calendar-picker-indicator { display: none; } }
@@ -1460,6 +1477,13 @@ body { margin: 0; }
       <div class="row"><code id="quickAddUrl" style="direction:ltr;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0"></code><button class="btn ghost" id="quickAddCopy" type="button" style="padding:5px 12px;font-size:.8rem;flex:none">העתקה</button></div>
     </section>
 
+    <section class="card" id="monthsCard">
+      <h2>חודשים</h2>
+      <p class="note" style="margin:0 0 6px">מסתירים חודש כדי שלא יופיע באתר ובסיכומים, או מוחקים את כל מה שבו. חודש מוסתר נשאר ברשימה הזאת, ומכאן מחזירים אותו.</p>
+      <div class="m-list" id="monthsList"></div>
+      <p class="note" id="monthsMsg" role="status" style="margin:6px 0 0"></p>
+    </section>
+
     <section class="card">
       <h2>מועד החיוב</h2>
       <div class="row">
@@ -1639,6 +1663,12 @@ body { margin: 0; }
   </form>
 </div>
 
+<div class="sheet-bg sal-bg" id="askBg" hidden dir="rtl" lang="he" style="z-index:45">
+  <div class="sal-sheet ns" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askText">
+    <div class="ns-top"><div class="ns-kicker" id="askKick"></div><h3 id="askTitle"></h3><p id="askText"></p></div>
+    <div class="ns-body ask-btns" id="askBtns"></div>
+  </div>
+</div>
 <div class="sheet-bg sal-bg" id="capBg" hidden dir="rtl" lang="he" style="z-index:32">
   <form class="sal-sheet ns cap-sheet" id="capForm" role="dialog" aria-modal="true" aria-labelledby="capTitle" novalidate>
     <button type="button" class="ns-x" id="capClose" aria-label="סגירה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg></button>
@@ -1832,7 +1862,7 @@ function makeSheetAdapter(url, key) {
     if (tool === "get_values") return getBatched(input.spreadsheetId, input.range).then(p => ({ payload: p }));
     if (tool === "update_values") return sheetCall(url, key, "updateValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
     if (tool === "append_values") return sheetCall(url, key, "appendValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
-    if (tool === "update_spreadsheet") { const r = input.requests[0].deleteDimension.range; return sheetCall(url, key, "deleteRow", input.spreadsheetId, r.sheetId, r.startIndex).then(p => ({ payload: p })); }
+    if (tool === "update_spreadsheet") return input.requests.reduce((pr, q) => pr.then(() => sheetCall(url, key, "deleteRow", input.spreadsheetId, q.deleteDimension.range.sheetId, q.deleteDimension.range.startIndex)), Promise.resolve()).then(p => ({ payload: p }));
     return Promise.reject({ code: "bad_request" });
   };
   return {
@@ -1871,10 +1901,14 @@ function makeSupaAdapter(uid) {
   let setQ = Promise.resolve();
   const run = async (tool, input) => {
     if (tool === "update_spreadsheet") {
-      const r = input.requests[0].deleteDimension.range;
-      const row = txRows[r.startIndex - 1]; if (!row) fail({ message: "row" });
-      const { error } = await sb.from("tx").delete().eq("id", row.id); if (error) fail(error);
-      txRows.splice(r.startIndex - 1, 1); return { payload: { ok: true } };
+      // several rows: bottom first, so the indexes above stay right
+      for (const q of input.requests) {
+        const r = q.deleteDimension.range;
+        const row = txRows[r.startIndex - 1]; if (!row) fail({ message: "row" });
+        const { error } = await sb.from("tx").delete().eq("id", row.id); if (error) fail(error);
+        txRows.splice(r.startIndex - 1, 1);
+      }
+      return { payload: { ok: true } };
     }
     const p = parse(input.range);
     if (tool === "get_values") {
@@ -2363,7 +2397,12 @@ function catIcon(cat, small) { const [icon, hue, sat] = iconFor(cat); return gly
 
 /* ---------- state ---------- */
 const data = { manual: null, apple: null, bank: null, settings: null, hist: {} };
-let tx = [];
+let tx = [], txAll = [];
+/* months the viewer hid: out of every screen and total, kept in the settings (V8) so every device agrees */
+let hiddenMonths = new Set();
+try { JSON.parse(localStorage.getItem("hiddenMonths") || "[]").forEach(k => hiddenMonths.add(+k)); } catch (e) {}
+const mIdxOf = d => d.getFullYear() * 12 + d.getMonth() - (d.getDate() < startDay ? 1 : 0);
+const viewIdx = () => view.y * 12 + view.m;
 let filterCat = null, catMode = "var", showAll = false, editingIncome = false;
 let startDay = 1;
 const now = new Date();
@@ -2510,7 +2549,8 @@ function build() {
   });
   // a renamed category: every row, old or new, shows under its current name
   out.forEach(t => { t.category = catName(t.category); });
-  tx = out;
+  txAll = out;
+  tx = hiddenMonths.size ? out.filter(t => !hiddenMonths.has(mIdxOf(t.date))) : out;
 }
 
 /* ---------- render ---------- */
@@ -2533,7 +2573,7 @@ function render() {
   $("hello").textContent = (hr < 5 ? "לילה טוב" : hr < 12 ? "בוקר טוב" : hr < 17 ? "צהריים טובים" : hr < 21 ? "ערב טוב" : "לילה טוב") + (USER_NAME ? ", " + USER_NAME : "");
   $("rangeLabel").textContent = startDay === 1 ? "" : dd(start) + " – " + dd(end);
   $("next").disabled = today <= end;
-  $("prev").disabled = view.y * 12 + view.m <= FIRST_MONTH;
+  { let k = viewIdx() - 1; while (k >= FIRST_MONTH && hiddenMonths.has(k)) k--; $("prev").disabled = k < FIRST_MONTH; }
 
   const loaded = data.manual !== null || data.apple !== null || data.bank !== null;
   if (!loaded) return;
@@ -4023,6 +4063,7 @@ function afterData() {
   render(); renderBankStatus(); renderCardMap();
   try { maybeWeekRecap(); } catch (e) { console.error(e); }
   try { renderYear(); renderCatSheet(); } catch (e) { console.error(e); }
+  try { if (currentView === "admin") renderMonths(); } catch (e) { console.error(e); }
 }
 
 /* 5: expenses added without a connection wait on the phone (by their id in column H) and go out when it is back */
@@ -4142,6 +4183,7 @@ function applySettings(values) {
   { const rj = String((values[4] || [])[21] || "").trim(); if (rj && !txDrag && Date.now() - rankSavedAt > 15000) { /* a fresh local change wins over an older copy from the sheet */ try { const o = JSON.parse(rj); if (o && typeof o === "object") { txRank = o; try { localStorage.setItem("txRank", rj); } catch (e) {} } } catch (e) {} } }
   { const lj = String((values[3] || [])[21] || "").trim(); if (lj && !arranging) { try { const l = normLayout(JSON.parse(lj)); if (JSON.stringify(l) !== JSON.stringify(layout)) { layout = l; try { localStorage.setItem("layout4", lj); } catch (e) {} applyLayout(); } } catch (e) {} } }
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
+  { const hj = String((values[6] || [])[21] || "").trim(); if (hj && !monthBusy) { try { const a = JSON.parse(hj); if (Array.isArray(a)) { const n = new Set(a.map(x => { const m = String(x).match(/^(\d{4})-(\d{2})$/); return m ? +m[1] * 12 + +m[2] - 1 : NaN; }).filter(k => !isNaN(k))); if ([...n].sort().join() !== [...hiddenMonths].sort().join()) { hiddenMonths = n; saveHiddenLocal(); setTimeout(() => { try { if (txAll.length) afterData(); renderMonths(); } catch (e) {} }, 0); } } } catch (e) {} } }
   { const sm = String((values[5] || [])[21] || "").trim().match(/^(\d{4})-(\d{1,2})$/); if (sm) { startMonthPref = +sm[1] * 12 + +sm[2] - 1; applyStartMonth(); } }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -4222,6 +4264,7 @@ function renderSal() {
   for (let i = 0; i < Math.max(months, 1); i++) {
     let y = today.getFullYear(), m = today.getMonth() - i;
     while (m < 0) { m += 12; y--; }
+    if (hiddenMonths.has(y * 12 + m)) continue;
     const k = mkey(y, m);
     rows.push(`<div class="sal-row ${i === 0 ? "cur" : ""}"><span>${MONTHS[m]} ${y}</span>
       <label class="money-in"><span aria-hidden="true">₪</span><input type="text" inputmode="decimal" autocomplete="off" id="sal-${k}" data-k="${k}" value="${salaries[k] != null ? withCommas(String(salaries[k])) : ""}" placeholder="0" aria-label="משכורת ${MONTHS[m]} ${y}"></label></div>`);
@@ -4455,7 +4498,7 @@ function showView(v) {
   $("navHome").setAttribute("aria-pressed", v === "flow"); $("navTx").setAttribute("aria-pressed", v === "tx"); $("tabAna").setAttribute("aria-pressed", v === "ana"); $("anaView").hidden = v !== "ana"; $("tabYear").setAttribute("aria-pressed", v === "year"); $("tabAdmin").setAttribute("aria-pressed", v === "admin");
   $("flowView").hidden = v !== "flow"; $("txView").hidden = v !== "tx"; $("yearView").hidden = v !== "year"; $("adminView").hidden = v !== "admin";
   $("monthBar").hidden = v === "year" || v === "admin";
-  if (v === "admin") { if (!adminDirty.sal) renderSal(); renderAdminLists(); }
+  if (v === "admin") { if (!adminDirty.sal) renderSal(); renderAdminLists(); try { renderMonths(); } catch (e) {} }
   if (v === "year") renderYear();
   window.scrollTo(0, 0);
   if (v === "ana") { try { render(); } catch (e) {} }
@@ -4477,7 +4520,7 @@ function yearMonths(y) {
   const out = [];
   for (let m = 0; m < 12; m++) {
     const idx = y * 12 + m;
-    if (idx < FIRST_MONTH || idx > today.getFullYear() * 12 + today.getMonth()) continue;
+    if (idx < FIRST_MONTH || idx > today.getFullYear() * 12 + today.getMonth() || hiddenMonths.has(idx)) continue;
     const f = monthFigures(y, m);
     const sal = salaryFor(y, m, false);
     out.push({ y, m, f, income: sal.amount + f.income, expense: f.fixed + f.variable, fixed: f.fixed, variable: f.variable });
@@ -4597,7 +4640,7 @@ function renderDonut(months) {
 
 /* ---------- month vs month ---------- */
 let cmpA = null, cmpB = null;
-function monthIdxList() { const out = []; for (let k = today.getFullYear() * 12 + today.getMonth(); k >= FIRST_MONTH; k--) out.push(k); return out; }
+function monthIdxList() { const out = []; for (let k = today.getFullYear() * 12 + today.getMonth(); k >= FIRST_MONTH; k--) if (!hiddenMonths.has(k)) out.push(k); return out; }
 function catTotals(y, m) {
   const map = new Map();
   monthFigures(y, m).spend.forEach(t => map.set(t.category, (map.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
@@ -5493,8 +5536,15 @@ function monthAnim(dir) {
     ptr.classList.remove("spin"); ptr.style.opacity = "0"; ptr.style.transform = "translateY(-50px)"; busy = false;
   });
 }
-$("prev").onclick = () => { shift(-1); showAll = false; monthAnim(1); render(); };
-$("next").onclick = () => { shift(1); showAll = false; monthAnim(-1); render(); };
+function stepMonth(d) {
+  // hidden months are skipped
+  const back = { ...view }, [cy, cm] = curYM(), last = cy * 12 + cm;
+  do shift(d); while (hiddenMonths.has(viewIdx()) && viewIdx() > FIRST_MONTH && viewIdx() < last);
+  if (hiddenMonths.has(viewIdx())) { view = back; return false; }
+  return true;
+}
+$("prev").onclick = () => { if (!stepMonth(-1)) return; showAll = false; monthAnim(1); render(); };
+$("next").onclick = () => { if (!stepMonth(1)) return; showAll = false; monthAnim(-1); render(); };
 $("cats").addEventListener("click", e => {
   const b = e.target.closest(".bub"); if (!b || b.dataset.going) return;
   if (capEdit) { openCap(b.dataset.cat); return; }
@@ -5519,6 +5569,116 @@ async function setStartMonth(k) {
   startMonthPref = k; FIRST_MONTH = Math.min(FIRST_MONTH, k); applyStartMonth();
   try { await writeRange("'הגדרות'!V7", [[Math.floor(k / 12) + "-" + String(k % 12 + 1).padStart(2, "0")]]); } catch (e) {}
   render();
+}
+
+/* ---------- months: hide one (it can come back) or delete everything in it for good ---------- */
+let monthBusy = false;
+const saveHiddenLocal = () => { try { localStorage.setItem("hiddenMonths", JSON.stringify([...hiddenMonths])); } catch (e) {} };
+const ymOfIdx = k => [Math.floor(k / 12), k % 12];
+const keyOfIdx = k => mkey(...ymOfIdx(k));
+// a small window with a few choices; resolves with the chosen value (null when closed)
+function askDialog({ kick, title, text, buttons }) {
+  return new Promise(res => {
+    const bg = $("askBg");
+    $("askKick").textContent = kick || ""; $("askKick").hidden = !kick;
+    $("askTitle").textContent = title; $("askText").innerHTML = text || "";
+    $("askBtns").innerHTML = buttons.map((b, i) => `<button type="button" class="btn ${b.cls || ""}" data-i="${i}">${b.label}${b.sub ? `<small>${b.sub}</small>` : ""}</button>`).join("");
+    const done = v => { bg.hidden = true; bg.onclick = null; document.removeEventListener("keydown", esc_); res(v); };
+    const esc_ = e => { if (e.key === "Escape") { e.stopPropagation(); done(null); } };
+    bg.onclick = e => { if (e.target === bg) return done(null); const b = e.target.closest("[data-i]"); if (b) done(buttons[+b.dataset.i].value); };
+    document.addEventListener("keydown", esc_);
+    bg.hidden = false;
+    setTimeout(() => { const f = $("askBtns").querySelector(".plain, .ghost") || $("askBtns").querySelector("button"); if (f) f.focus(); }, 60);
+  });
+}
+function monthInfo(k) {
+  const list = txAll.filter(t => mIdxOf(t.date) === k);
+  // rows to delete: everything stored in this month; a purchase in payments goes by its first payment (later ones belong to it)
+  const seenDel = new Set(), own = list.filter(t => t.del && (!t.gen || t.gen === 1) && !seenDel.has(t.del) && seenDel.add(t.del));
+  const spent = list.reduce((a, t) => a + (t.income ? 0 : t.refund ? -t.amount : t.amount), 0);
+  return { list, own, spent, n: own.length };
+}
+function renderMonths() {
+  const box = $("monthsList"); if (!box) return;
+  const [cy, cm] = curYM(), last = cy * 12 + cm, rows = [];
+  for (let k = last; k >= FIRST_MONTH; k--) {
+    const [y, m] = ymOfIdx(k), hid = hiddenMonths.has(k), inf = monthInfo(k);
+    const sub = inf.n ? `${inf.n === 1 ? "תנועה אחת" : inf.n + " תנועות"} · ${fmt(Math.max(0, inf.spent))} הוצאות` : "אין תנועות";
+    rows.push(`<div class="m-row ${hid ? "hid" : ""}"><span class="m-n"><b>${MONTHS[m]} ${y}${k === last ? " · החודש" : ""}</b><small>${sub}</small></span>` +
+      (hid ? `<span class="m-tag">מוסתר</span><button type="button" class="m-act back" data-unhide="${k}">החזרה</button>`
+           : `<button type="button" class="m-act mrm" data-mdel="${k}" ${monthBusy ? "disabled" : ""}>מחיקה</button>`) + `</div>`);
+  }
+  box.innerHTML = rows.join("");
+}
+async function saveHidden(next) {
+  const prev = hiddenMonths; hiddenMonths = next; saveHiddenLocal();
+  if (hiddenMonths.has(viewIdx())) { const [y, m] = curYM(); view = { y, m }; }
+  afterData(); renderMonths();
+  try { await writeRange("'הגדרות'!V8", [[JSON.stringify([...next].sort().map(keyOfIdx))]]); }
+  catch (err) { hiddenMonths = prev; saveHiddenLocal(); afterData(); renderMonths(); $("monthsMsg").textContent = writeError(err); }
+}
+$("monthsList").addEventListener("click", async e => {
+  const un = e.target.closest("[data-unhide]");
+  if (un) { const k = +un.dataset.unhide, n = new Set(hiddenMonths); n.delete(k); $("monthsMsg").textContent = ""; await saveHidden(n); toast(MONTHS[k % 12] + " " + Math.floor(k / 12) + " חזר לאתר"); return; }
+  const b = e.target.closest("[data-mdel]"); if (!b || monthBusy) return;
+  const k = +b.dataset.mdel, [y, m] = ymOfIdx(k), name = MONTHS[m] + " " + y, inf = monthInfo(k);
+  const [cy, cm] = curYM(), isCur = k === cy * 12 + cm;
+  $("monthsMsg").textContent = "";
+  const what = await askDialog({
+    kick: name, title: "מה לעשות עם החודש?",
+    text: inf.n ? `${inf.n === 1 ? "תנועה אחת" : inf.n + " תנועות"} · ${fmt(Math.max(0, inf.spent))} הוצאות` : "אין בחודש הזה תנועות.",
+    buttons: [
+      ...(isCur ? [] : [{ label: "להסתיר את החודש", sub: "נעלם מהאתר ומהסיכומים. אפשר להחזיר בכל רגע מההגדרות", value: "hide", cls: "ghost" }]),
+      { label: "למחוק לצמיתות", sub: inf.n ? "כל התנועות של החודש נמחקות" : "גם המשכורת של החודש נמחקת", value: "del", cls: "danger" },
+      { label: "ביטול", value: null, cls: "plain" }
+    ]
+  });
+  if (what === "hide") { const n = new Set(hiddenMonths); n.add(k); await saveHidden(n); toast(name + " הוסתר. אפשר להחזיר אותו מכאן"); return; }
+  if (what !== "del") return;
+  const instN = inf.own.filter(t => t.gen === 1).length;
+  const sure = await askDialog({
+    kick: "מחיקה לצמיתות", title: `למחוק את ${name}?`,
+    text: (inf.n ? (inf.n === 1 ? "<b>תנועה אחת</b> תימחק" : `<b>${inf.n} תנועות</b> יימחקו`) : "החודש יימחק") + (salaries[keyOfIdx(k)] != null ? " יחד עם המשכורת של החודש" : "") + "." +
+      (instN ? `<br>${instN === 1 ? "עסקה אחת בתשלומים נקנתה" : instN + " עסקאות בתשלומים נקנו"} בחודש הזה, ${instN === 1 ? "והתשלומים שלה" : "והתשלומים שלהן"} בחודשים הבאים יימחקו גם הם.` : "") +
+      `<br><b>אי אפשר לבטל את זה.</b>`,
+    buttons: [{ label: "כן, למחוק לצמיתות", value: "yes", cls: "danger" }, { label: "לא, ביטול", value: null, cls: "ghost" }]
+  });
+  if (sure !== "yes") return;
+  await deleteMonth(k, name);
+});
+async function deleteMonth(k, name) {
+  if (!mcp) return;
+  monthBusy = true; renderMonths(); const msg = $("monthsMsg"); msg.textContent = "מוחק את " + name + "…";
+  try {
+    const own = monthInfo(k).own;
+    // every row must still hold what is shown here (rows move when the sheet changes)
+    const srcRange = key => key === "bank" ? R_BANK : key === "apple" ? R_APPLE : R_MANUAL;
+    const groups = new Map();
+    own.forEach(t => { const g = t.del.file + "|" + t.del.key; if (!groups.has(g)) groups.set(g, { file: t.del.file, key: t.del.key, list: [] }); groups.get(g).list.push(t); });
+    for (const g of groups.values()) {
+      const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: g.file, range: srcRange(g.key) }, { cache: false });
+      const rows = (res.payload && res.payload.values) || [];
+      if (g.list.some(t => JSON.stringify(trimRow(rows[t.del.index])) !== JSON.stringify(trimRow(t.del.raw)))) throw { soft: "הגיליון השתנה בינתיים. רעננו ונסו שוב." };
+    }
+    for (const g of groups.values()) {
+      const marks = g.list.filter(t => t.del.mode === "mark"), rows = g.list.filter(t => t.del.mode !== "mark");
+      for (const t of marks) await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: t.del.mark, values: [["מחוק"]] });
+      if (rows.length) {
+        // bottom row first, so the rows above keep their place
+        const reqs = rows.sort((a, b) => b.del.row - a.del.row).map(t => ({ deleteDimension: { range: { sheetId: t.del.sheetId, dimension: "ROWS", startIndex: t.del.row - 1, endIndex: t.del.row } } }));
+        await mcp.callTool(SERVER, "update_spreadsheet", { spreadsheetId: g.file, requests: reqs });
+      }
+    }
+    const sk = keyOfIdx(k);
+    if (salaries[sk] != null) { const n = { ...salaries }; delete n[sk]; await writeSalaries(n); }
+    if (hiddenMonths.has(k)) { const n = new Set(hiddenMonths); n.delete(k); await saveHidden(n); }
+    try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+    msg.textContent = "";
+    monthBusy = false;
+    await refresh();
+    toast(name + " נמחק");
+  } catch (err) { msg.textContent = err && err.soft ? err.soft : writeError(err); try { await refresh(); } catch (e) {} }
+  monthBusy = false; renderMonths();
 }
 $("startMonth").addEventListener("change", e => { const m = e.target.value.match(/^(\d{4})-(\d{2})$/); if (m) { const k = +m[1] * 12 + +m[2] - 1; if (k <= now.getFullYear() * 12 + now.getMonth()) setStartMonth(k); } });
 function useStartDay(v) {
@@ -5731,7 +5891,7 @@ const TOUR = [
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות, מסודרות לפי ימים. אפשר לסנן להוצאות, הכנסות או תשלומים, ולחפש חכם: ״סופר מעל 200״, ״מקס ספטמבר״, ״קפה פחות מ-30״." },
   { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה או <b>החלקה ימינה</b>: עריכה או מחיקה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה, השוואה בין חודשים, וסיכום שנתי. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
-  { t: "#tabAdmin", h: "הגדרות", b: "משכורת לכל חודש, קטגוריות ואמצעי תשלום משלכם, מאיזה חודש להתחיל, יום החיוב בכרטיס, מצב כהה, קישור להוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
+  { t: "#tabAdmin", h: "הגדרות", b: "משכורת לכל חודש, קטגוריות ואמצעי תשלום משלכם, מאיזה חודש להתחיל, הסתרה או מחיקה של חודש שלם, יום החיוב בכרטיס, מצב כהה, קישור להוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
   { t: null, e: "👆", h: "עוד שני טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
 ];
@@ -5787,13 +5947,13 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025015124";
+const BUILD_ID = "20261025010726";
 let updToast = null;
 async function checkUpdate() {
   try {
     const r = await fetch(location.pathname + "?u=" + Date.now(), { cache: "no-store" }); if (!r.ok) return;
     const m = (await r.text()).match(/BUILD_ID = "(\d+)"/); if (!m || m[1] === BUILD_ID) return;
-    const busy = [..."sheetBg salBg mvBg capBg catSheetBg wrapped recap".split(" ")].some(id => { const el = document.getElementById(id); return el && !el.hidden; }) || (document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName));
+    const busy = [..."sheetBg salBg mvBg capBg catSheetBg wrapped recap askBg".split(" ")].some(id => { const el = document.getElementById(id); return el && !el.hidden; }) || (document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName));
     if (!busy) { location.reload(); return; }
     if (updToast) return;
     updToast = document.createElement("button");
