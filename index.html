@@ -144,7 +144,18 @@ header.top {
 .ic.sm { width: 28px; height: 28px; } .ic.sm svg { width: 15px; height: 15px; }
 .tx .ic { grid-row: span 2; }
 .cat .name { display: flex; align-items: center; gap: 10px; }
-.edit-row.cat-edit { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+.edit-row.cat-edit { grid-template-columns: auto minmax(0, 1fr) auto auto auto; }
+.cap-in { display: flex; align-items: center; gap: 2px; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 0 8px; width: 84px; box-sizing: border-box; }
+.cap-in span { color: var(--muted); font-size: .8rem; }
+.cap-in input { border: 0; background: none; width: 100%; min-width: 0; padding: 8px 0; font: inherit; font-size: .88rem; color: var(--ink); text-align: start; outline: none; font-variant-numeric: tabular-nums; }
+.cap-in:focus-within { border-color: var(--brand); }
+.edit-row .cap-in input[type="text"] { border: 0; background: none; border-radius: 0; padding: 8px 0; }
+@media (max-width: 460px) {
+  .edit-row.cat-edit { gap: 6px; }
+  .cap-in { width: 70px; padding: 0 6px; }
+  .edit-row.cat-edit label.fx { flex-direction: column; gap: 1px; font-size: .64rem; }
+  .edit-row.cat-edit .del { width: 30px; height: 30px; }
+}
 .ic-btn { border: 0; background: none; padding: 0; border-radius: 50%; }
 .picker { display: flex; flex-direction: column; gap: 10px; background: var(--bg); border-radius: 14px; padding: 10px; }
 .picker-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; }
@@ -1432,6 +1443,22 @@ body { margin: 0; }
     <h1 class="admin-title">הגדרות</h1>
 
     <section class="card">
+      <h2>מועד החיוב</h2>
+      <div class="row">
+        <label for="startMonth">החודש הראשון באתר</label>
+        <input type="month" id="startMonth" style="width:auto">
+      </div>
+      <p class="note" style="margin:0">אפשר לחזור אחורה עד החודש הזה, גם אם עוד אין בו תנועות, ולהזין לו משכורת והוצאות.</p>
+      <div class="row">
+        <label for="startDay">יום החיוב בכרטיסי האשראי</label>
+        <input type="number" id="startDay" min="1" max="28" value="1" style="width:5em">
+        <span class="note" id="startDayMsg" role="status" style="margin:0"></span>
+      </div>
+      <p class="note" style="margin:0">ביום הזה יורדים התשלומים מהכרטיס, וממנו גם מתחיל כל חודש באתר. עסקה בתשלומים: התשלום הראשון ביום הקנייה, וכל תשלום אחריו ביום החיוב של החודש הבא.</p>
+      <p class="note" style="margin:0">העברה שקיבלתם בחזרה על הוצאה משותפת מקזזת את ההוצאה באותה קטגוריה.</p>
+    </section>
+
+    <section class="card">
       <h2>משכורת לפי חודש</h2>
       <p class="note" style="margin:0">הזינו את המשכורת שנכנסה בכל חודש. בחודש שעוד לא הוזנה, האתר מעריך לפי החודש האחרון שהוזן.</p>
       <div class="edit-list" id="salList"></div>
@@ -1440,7 +1467,7 @@ body { margin: 0; }
 
     <section class="card">
       <h2>קטגוריות</h2>
-      <p class="note" style="margin:0">סמנו "קבועה" להוצאות שחוזרות כל חודש באותו סכום, כמו מנויים וביטוח. שינוי שם מעדכן גם את כל התנועות שכבר נרשמו בקטגוריה.</p>
+      <p class="note" style="margin:0">סמנו "קבועה" להוצאות שחוזרות כל חודש באותו סכום, כמו מנויים וביטוח. <b>תקרה</b>: כמה מותר להוציא בחודש על הקטגוריה, לכל חודש. רוצים תקרה אחרת רק לחודש מסוים? במסך הבית, בכפתור ״תקרות״, וזה לא משנה את התקרה כאן. שינוי שם מעדכן גם את כל התנועות שכבר נרשמו בקטגוריה.</p>
       <div class="edit-list" id="catList"></div>
       <button class="add-row" id="addCatRow">+ קטגוריה חדשה</button>
       <div class="save-row"><button class="btn" id="saveCats">שמירת קטגוריות</button><span id="catMsg"></span></div>
@@ -1460,12 +1487,6 @@ body { margin: 0; }
     </section>
 
     <section class="card">
-      <h2>תקרה לקטגוריה</h2>
-      <p class="note" style="margin:0">כמה מותר להוציא בחודש על כל קטגוריה. מגדירים את זה במסך הבית, ב״לאן הלך הכסף״, בכפתור ״תקרות״. כל חודש יכול לקבל תקרה משלו, וחודש בלי שינוי ממשיך עם התקרה הקודמת.</p>
-      <div class="save-row"><button class="btn ghost" type="button" id="goCaps">לעריכת התקרות</button></div>
-    </section>
-
-    <section class="card">
       <h2>מראה</h2>
       <div class="row"><span>ערכת צבעים</span><span class="theme-seg" role="group" aria-label="ערכת צבעים"><button data-theme-set="auto">אוטומטי</button><button data-theme-set="light">בהיר</button><button data-theme-set="dark">כהה</button></span></div>
       <p class="note" style="margin:0">אוטומטי עובר לכהה לפי הגדרות הטלפון.</p>
@@ -1482,22 +1503,6 @@ body { margin: 0; }
       <p class="note" style="margin:0 0 6px">מסתירים חודש כדי שלא יופיע באתר ובסיכומים, או מוחקים את כל מה שבו. חודש מוסתר נשאר ברשימה הזאת, ומכאן מחזירים אותו.</p>
       <div class="m-list" id="monthsList"></div>
       <p class="note" id="monthsMsg" role="status" style="margin:6px 0 0"></p>
-    </section>
-
-    <section class="card">
-      <h2>מועד החיוב</h2>
-      <div class="row">
-        <label for="startMonth">החודש הראשון באתר</label>
-        <input type="month" id="startMonth" style="width:auto">
-      </div>
-      <p class="note" style="margin:0">אפשר לחזור אחורה עד החודש הזה, גם אם עוד אין בו תנועות, ולהזין לו משכורת והוצאות.</p>
-      <div class="row">
-        <label for="startDay">יום החיוב בכרטיסי האשראי</label>
-        <input type="number" id="startDay" min="1" max="28" value="1" style="width:5em">
-        <span class="note" id="startDayMsg" role="status" style="margin:0"></span>
-      </div>
-      <p class="note" style="margin:0">ביום הזה יורדים התשלומים מהכרטיס, וממנו גם מתחיל כל חודש באתר. עסקה בתשלומים: התשלום הראשון ביום הקנייה, וכל תשלום אחריו ביום החיוב של החודש הבא.</p>
-      <p class="note" style="margin:0">העברה שקיבלתם בחזרה על הוצאה משותפת מקזזת את ההוצאה באותה קטגוריה.</p>
     </section>
 
     <details id="bankBox" hidden>
@@ -3658,7 +3663,7 @@ function vibeCands() {
     else if (c.goal && c.stage === "ok" && proj <= c.allow) out.push({ lvl: "good", e: "🎯", t: `בקצב הזה תעמוד ביעד ותחסוך <b>${fmt(c.incomeExpected - proj)}</b>`, go: () => showView("ana") });
   }
   // caps
-  Object.keys(Object.assign({}, ...Object.values(capsBy))).forEach(cat => {
+  Object.keys(Object.assign({}, ...Object.values(capsBy))).filter(c => c !== CAP_MARK).forEach(cat => {
     const cap = capFor(cat); if (!cap) return;
     const v = catSpent(cat, view.y, view.m), pct = v / cap * 100;
     if (pct >= 100) out.push({ lvl: "bad", e: "🚫", t: `<b>${esc(cat)}</b> עברה את התקרה ב-<b>${fmt(v - cap)}</b>`, go: () => openCatInfo(cat) });
@@ -3699,12 +3704,22 @@ function renderVibe() {
 /* 4: a monthly cap per category. Each month may set its own; a month without one carries the last one set before it.
    Settings W:X hold "2026-10|סופר" → 1500 (0 = no cap from that month on). */
 let capsBy = {}, capEdit = false;
-function capFor(cat, y = view.y, m = view.m) {
-  const k = mkey(y, m);
-  for (const key of Object.keys(capsBy).filter(x => x <= k).sort().reverse()) { const v = capsBy[key][cat]; if (v != null) return v > 0 ? v : null; }
-  return null;
+// the default cap of each category (set in the settings); a month can have its own, for that month only
+function capsDef() {
+  if (capsBy[""] && capsBy[""][CAP_MARK]) return capsBy[""];
+  // saved before defaults existed: the latest month's cap stands as the default
+  const d = {}; Object.keys(capsBy).sort().forEach(k => Object.entries(capsBy[k]).forEach(([c, v]) => { d[c] = v; }));
+  Object.keys(d).forEach(c => { if (!(d[c] > 0)) delete d[c]; }); return d;
 }
+const capDefault = cat => { if (cat === CAP_MARK) return null; const v = capsDef()[cat]; return v > 0 ? v : null; };
+function capFor(cat, y = view.y, m = view.m) {
+  const o = (capsBy[mkey(y, m)] || {})[cat];
+  if (o != null) return o > 0 ? o : null;
+  return capDefault(cat);
+}
+const CAP_MARK = "__defaults"; // a row that says the defaults are kept on their own (so months stop carrying over)
 async function saveCapsBy(next) {
+  next[""] = { ...(next[""] || {}), [CAP_MARK]: 1 };
   const rows = []; Object.keys(next).sort().forEach(k => Object.entries(next[k]).forEach(([c, a]) => rows.push([k ? k + "|" + c : c, a])));
   await writeRange("'הגדרות'!W2:X201", pad(rows, 200, 2)); capsBy = next;
 }
@@ -3726,9 +3741,11 @@ function openCap(cat) {
   const chips = [];
   if (prevSpent > 0) chips.push([Math.round(prevSpent / 50) * 50, "כמו ב" + MONTHS[pm] + " · " + fmt(prevSpent)]);
   if (n >= 2 && avg > 0) chips.push([Math.round(avg / 50) * 50, "ממוצע " + n + " חודשים · " + fmt(avg)]);
+  const def = capDefault(cat);
+  if (def && def !== cur) chips.unshift([def, "ברירת המחדל · " + fmt(def)]);
   chips.push([0, "בלי תקרה"]);
   $("capChips").innerHTML = chips.map(([v, t]) => `<button type="button" data-capv="${v}">${esc(t)}</button>`).join("");
-  $("capNote").textContent = "חל על " + MONTHS[m] + " ועל החודשים שאחריו, עד שתשנו. חודשים קודמים לא משתנים.";
+  $("capNote").textContent = "חל רק על " + MONTHS[m] + ". " + (def ? "ברירת המחדל לשאר החודשים (" + fmt(def) + ") נשארת כמו שהיא." : "תקרה לכל החודשים קובעים בהגדרות, ליד הקטגוריה.");
   $("capMsg2").textContent = "";
   $("capBg").dataset.spent = spent;
   setCapVal(cur || 0, true);
@@ -3755,9 +3772,10 @@ $("capForm").addEventListener("submit", async e => {
   e.preventDefault(); if (!capCat) return;
   const v = Math.round(+$("capRange").value || 0), k = mkey(view.y, view.m), cat = capCat;
   const next = JSON.parse(JSON.stringify(capsBy)); next[k] = next[k] || {};
-  if (v > 0) next[k][cat] = v;
-  else if (capFor(cat, ...prevYM(view.y, view.m))) next[k][cat] = 0; // stop a cap carried from an earlier month
-  else delete next[k][cat];
+  const def = capDefault(cat);
+  if (!(capsBy[""] && capsBy[""][CAP_MARK])) next[""] = { ...capsDef() }; // keep today's defaults fixed from now on
+  if (v === (def || 0)) delete next[k][cat]; // same as the default: nothing special for this month
+  else next[k][cat] = v; // 0 = no cap this month only
   if (!Object.keys(next[k]).length) delete next[k];
   const btn = $("capSave"); btn.disabled = true; btn.textContent = "שומר…";
   try { await saveCapsBy(next); closeCap(); bubKey = ""; render(); }
@@ -3769,7 +3787,7 @@ function setCapEdit(on) {
   $("capHint").hidden = !on; bubKey = ""; render();
 }
 $("capEditBtn").onclick = () => setCapEdit(!capEdit);
-$("goCaps").onclick = () => { showView("flow"); if (!capEdit) setCapEdit(true); setTimeout(() => $("cats").closest(".card").scrollIntoView({ behavior: "smooth", block: "start" }), 120); };
+
 // 7: days in a row with no variable spending (fixed bills and installments do not break it)
 function streakInfo() {
   const spendDays = new Set(); let first = null;
@@ -4242,6 +4260,7 @@ function drawCatList() {
     return `<div class="edit-row cat-edit">
       <button type="button" class="ic-btn" data-pick-open="${i}" aria-label="בחירת אייקון">${glyph(icon, hue, sat)}</button>
       <input type="text" id="cat-${i}" value="${esc(c.name)}" aria-label="שם קטגוריה" data-i="${i}" data-f="name">
+      <label class="cap-in" title="תקרה חודשית"><span aria-hidden="true">₪</span><input type="text" inputmode="numeric" autocomplete="off" id="catcap-${i}" value="${(() => { const v = c.cap != null ? c.cap : capsDef()[c.orig || c.name]; return v > 0 ? withCommas(String(v)) : ""; })()}" placeholder="תקרה" aria-label="תקרה חודשית ל${esc(c.name)}" data-i="${i}" data-f="cap"></label>
       <label class="fx"><input type="checkbox" id="catfx-${i}" ${c.fixed ? "checked" : ""} data-i="${i}" data-f="fixed">קבועה</label>
       <button class="del" data-del="${i}" aria-label="מחיקת ${esc(c.name)}">✕</button>${picker}</div>`;
   }).join("");
@@ -4276,7 +4295,9 @@ function flash(id, ok, text) { $(id).className = ok ? "ok" : "err"; $(id).textCo
 $("catList").addEventListener("input", e => {
   const i = +e.target.dataset.i; if (isNaN(i)) return;
   adminDirty.cats = true;
-  if (e.target.dataset.f === "fixed") draftCats[i].fixed = e.target.checked; else draftCats[i].name = e.target.value;
+  if (e.target.dataset.f === "fixed") draftCats[i].fixed = e.target.checked;
+  else if (e.target.dataset.f === "cap") { const d = e.target.value.replace(/[^\d]/g, ""); draftCats[i].cap = d ? +d : 0; e.target.value = d ? withCommas(d) : ""; }
+  else draftCats[i].name = e.target.value;
   $("catMsg").textContent = "";
 });
 $("catList").addEventListener("click", e => {
@@ -4388,7 +4409,7 @@ $("saveCats").onclick = async () => {
     // a renamed category keeps the icon it had (its old name may be what picked the icon)
     let icon = c.icon || "", hue = c.icon ? (c.hue == null ? autoIcon(n)[1] : c.hue) : null;
     if (c.orig && c.orig !== n) { ren[c.orig] = n; if (!icon) { const a = autoIcon(c.orig); icon = a[0]; hue = a[1]; } }
-    list.push({ name: n, fixed: c.fixed, icon, hue });
+    list.push({ name: n, fixed: c.fixed, icon, hue, cap: c.cap != null ? c.cap : (capsDef()[c.orig || n] || 0), orig: c.orig });
   }
   if (!list.length) { flash("catMsg", false, "צריך לפחות קטגוריה אחת."); return; }
   const btn = $("saveCats"); btn.disabled = true; flash("catMsg", true, "שומר…");
@@ -4404,9 +4425,16 @@ $("saveCats").onclick = async () => {
       catAlias = al;
     }
     pendingMoves = {};
+    { // default caps sit with the categories; a month's own cap follows a renamed category
+      const next = JSON.parse(JSON.stringify(capsBy)), def = {};
+      list.forEach(c => { if (c.cap > 0) def[c.name] = c.cap; });
+      Object.keys(next).forEach(k => { if (!k) return; Object.keys(next[k]).forEach(o => { if (ren[o] && next[k][ren[o]] == null) { next[k][ren[o]] = next[k][o]; } if (ren[o] || !seenN.has(o)) delete next[k][o]; }); if (!Object.keys(next[k]).length) delete next[k]; });
+      next[""] = { ...def, [CAP_MARK]: 1 };
+      if (JSON.stringify(next) !== JSON.stringify(capsBy)) await saveCapsBy(next);
+    }
     CATS = list.map(c => c.name); FIXED = new Set(list.filter(c => c.fixed).map(c => c.name));
     catStyle = {}; list.forEach(c => { if (c.icon) catStyle[c.name] = { icon: c.icon, hue: c.hue }; }); pickerOpen = -1;
-    draftCats = list.map(c => ({ ...c, orig: c.name })); adminDirty.cats = false; renderAdminLists(); build(); render();
+    draftCats = list.map(c => ({ ...c, orig: c.name, cap: undefined })); adminDirty.cats = false; renderAdminLists(); build(); render();
     flash("catMsg", true, "נשמר");
   } catch (err) { flash("catMsg", false, writeError(err)); }
   btn.disabled = false;
@@ -5884,7 +5912,7 @@ const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. מעליו מופיע בכל כניסה הדבר הכי חשוב עכשיו, ומתחת שעון חול של כמה אפשר להוציא היום." },
   { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או כסף שקיבלתם, גם בתשלומים. כותבים תיאור והקטגוריה נבחרת לבד לפי כל המשפט. לחיצה ארוכה מקשיבה: אומרים ״45 שקל שווארמה במקס״ והטופס מתמלא לבד. בלי קליטה? ההוצאה נשמרת ונשלחת כשהחיבור חוזר." },
-  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. בכפתור ״תקרות״ קובעים כמה מותר להוציא על כל קטגוריה, וטבעת סביב העיגול מתמלאת." },
+  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. תקרה לכל קטגוריה (כמה מותר להוציא בחודש) קובעים בהגדרות, ליד הקטגוריה, וטבעת סביב העיגול מתמלאת. בכפתור ״תקרות״ משנים אותה רק לחודש מסוים." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "לפי אמצעי תשלום", b: "כמה יצא מכל כרטיס ומהבנק. לחיצה על כרטיס מציגה רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: תקציב שבועי, לוח של ימים, השוואה לחודש הקודם לפי קטגוריות, תחזית לסוף החודש, החיובים הקבועים ומה שצפוי לרדת בחודש הבא." },
@@ -5947,7 +5975,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025010726";
+const BUILD_ID = "20261025011739";
 let updToast = null;
 async function checkUpdate() {
   try {
