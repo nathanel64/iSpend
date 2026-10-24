@@ -960,6 +960,7 @@ body { margin: 0; }
       <div class="row">
         <label for="startDay">יום החיוב בכרטיסי האשראי</label>
         <input type="number" id="startDay" min="1" max="28" value="1" style="width:5em">
+        <span class="note" id="startDayMsg" role="status" style="margin:0"></span>
       </div>
       <p class="note" style="margin:0">ביום הזה יורדים התשלומים מהכרטיס, וממנו גם מתחיל כל חודש באתר. עסקה בתשלומים: התשלום הראשון ביום הקנייה, וכל תשלום אחריו ביום החיוב של החודש הבא.</p>
       <p class="note" style="margin:0">העברה שקיבלתם בחזרה על הוצאה משותפת מקזזת את ההוצאה באותה קטגוריה.</p>
@@ -1375,7 +1376,7 @@ const SHEET_ID = "1CwS8tTfMiKgwk-ke0ScWgYEYvABhqIQltITGK3d9Px8";
 const SERVER = "Google Sheets";
 const R_APPLE = "'עסקאות'!A2:I"; // I: number of payments (empty = one)
 const R_BANK = "'_moneyman'!A2:L";
-const R_SETTINGS = "'הגדרות'!A2:U300";
+const R_SETTINGS = "'הגדרות'!A2:V300";
 const R_MANUAL = "'הוצאות יומיות'!D4:I";
 // Earlier monthly files (July 2025 – September 2026), read as they are. October 2026 onward lives in the main file.
 let HISTORY = []; // filled when the account is linked to Google Sheets
@@ -2853,6 +2854,7 @@ function applySettings(values) {
     const mr = (v[11] || "").trim(); if (mr && ((v[12] || "").trim() || (v[13] || "").trim())) mrules[mr] = { name: (v[12] || "").trim(), cat: (v[13] || "").trim() };
   });
   cardMap = cm; merchantRules = mrules; payAlias = alias; catAlias = calias;
+  { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
   // Older copies of the page let that alias win, so remove it from the settings for good.
   { const stale = Object.keys(alias).filter(o => pay.includes(o));
@@ -3732,14 +3734,21 @@ $("cats").addEventListener("click", e => {
 $("clearFilter").onclick = () => { filterCat = null; filterAcc = null; render(); };
 $("segVar").onclick = () => { catMode = "var"; $("segVar").setAttribute("aria-pressed", "true"); $("segFixed").setAttribute("aria-pressed", "false"); render(); };
 $("segFixed").onclick = () => { catMode = "fixed"; $("segFixed").setAttribute("aria-pressed", "true"); $("segVar").setAttribute("aria-pressed", "false"); render(); };
-$("startDay").addEventListener("change", e => {
-  const v = Math.min(28, Math.max(1, parseInt(e.target.value, 10) || 1));
-  e.target.value = v; startDay = v;
+// the billing day lives in the settings (V2), so every device and every visit sees the same one;
+// this device keeps a copy only to draw the first screen before the settings arrive
+function useStartDay(v) {
+  startDay = v; $("startDay").value = v;
   try { localStorage.setItem("startDay", v); } catch (err) {}
   view = { y: now.getFullYear(), m: now.getMonth() };
   if (now.getDate() < startDay) shift(-1);
+}
+$("startDay").addEventListener("change", async e => {
+  const v = Math.min(28, Math.max(1, parseInt(e.target.value, 10) || 1));
+  useStartDay(v);
   afterData(); // payment dates follow the billing day
+  try { await writeRange("'הגדרות'!V2", [[v]]); sdMsg(""); } catch (err) { sdMsg(writeError(err)); }
 });
+const sdMsg = t => { const m = $("startDayMsg"); if (m) m.textContent = t; };
 
 /* every card can be folded; the choice is remembered on this device */
 const FOLDED_BY_DEFAULT = ["חודש מול חודש", "לוח ההוצאות של השנה", "מה אם הייתי מוציא פחות"];
@@ -3819,7 +3828,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261021214256";
+const BUILD_ID = "20261024183524";
 let updToast = null;
 async function checkUpdate() {
   try {
