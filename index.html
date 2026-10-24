@@ -879,6 +879,13 @@ body.dragging { -webkit-user-select: none; user-select: none; }
 body.dragging .day-grp { transition: background .2s, box-shadow .2s; border-radius: 16px; }
 
 #days .tx-sw { -webkit-touch-callout: none; }
+.ns-back { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ns-back[hidden] { display: none; }
+.ns-back-q { border: 0; background: none; color: var(--brand); font-weight: 600; font-size: .86rem; text-decoration: underline; text-underline-offset: 3px; }
+.ns-back .ns-chips { flex-wrap: wrap; justify-content: center; gap: 6px; }
+.ns-back .ns-chips button { white-space: nowrap; padding: 7px 13px; font-size: .82rem; flex: none; }
+.ns-back-q { font-size: .82rem !important; }
+.ns-back .ns-chips button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
 .inst-empty { margin: 0; font-size: .86rem; color: var(--muted); text-align: center; padding: 6px 0; }
 /* the area under the gauge, tidied: one line, then the chips side by side; salary and goal live in the money card */
 .g-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
@@ -1433,6 +1440,11 @@ body { margin: 0; }
     <section class="card">
       <h2>מועד החיוב</h2>
       <div class="row">
+        <label for="startMonth">החודש הראשון באתר</label>
+        <input type="month" id="startMonth" style="width:auto">
+      </div>
+      <p class="note" style="margin:0">אפשר לחזור אחורה עד החודש הזה, גם אם עוד אין בו תנועות, ולהזין לו משכורת והוצאות.</p>
+      <div class="row">
         <label for="startDay">יום החיוב בכרטיסי האשראי</label>
         <input type="number" id="startDay" min="1" max="28" value="1" style="width:5em">
         <span class="note" id="startDayMsg" role="status" style="margin:0"></span>
@@ -1575,6 +1587,10 @@ body { margin: 0; }
       </div>
       <div class="ns-preview" id="nsPreview" hidden></div>
       <p class="form-msg" id="salPopMsg"></p>
+      <div class="ns-back" id="nsBack" hidden>
+        <button type="button" class="ns-back-q" id="nsBackQ">התחלתם לפני החודש הזה? אפשר להוסיף חודשים קודמים</button>
+        <div class="ns-chips" id="nsBackChips" hidden></div>
+      </div>
       <button type="submit" class="ns-save" id="salPopSave">שומרים ומתחילים</button>
       <button type="button" class="sal-later" id="salLater">אזכיר לך מחר</button>
     </div>
@@ -2627,6 +2643,13 @@ function askSalary() {
   if (last != null) { $("salSame").innerHTML = `כמו ב${MONTHS[pm]} · ${fmt(last)}`; $("salSame").dataset.v = last; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); $("salAmount").focus(); }; }
   $("salAmount").value = ""; fitSal(); $("salPopMsg").textContent = "";
   $("salPopSave").disabled = false; $("salPopSave").textContent = "שומרים ומתחילים"; nsUpdate(true);
+  { // a new account: offer to open earlier months as well
+    const nb = $("nsBack"), fresh = !tx.length; nb.hidden = !fresh; $("nsBackChips").hidden = true;
+    if (fresh) {
+      const opts = [[1, "חודש אחד"], [3, "3 חודשים"], [6, "חצי שנה"], [m, "מתחילת השנה"]].filter(([n], i, a) => n > 0 && a.findIndex(x => x[0] === n) === i);
+      $("nsBackChips").innerHTML = opts.map(([n, t]) => `<button type="button" data-back="${n}">${t}</button>`).join("");
+    }
+  }
   $("salBg").hidden = false;
   setTimeout(() => $("salAmount").focus(), 50);
 }
@@ -2660,6 +2683,14 @@ $("salGoalRange").addEventListener("input", e => { const sal = nsNum("salAmount"
 $("salGoalChips").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (b) { $("salGoal").value = withCommas(b.dataset.g); nsUpdate(true); } });
 $("salGoal").addEventListener("input", e => { e.target.value = withCommas(e.target.value); nsUpdate(true); });
 const closeSal = () => { $("salBg").hidden = true; };
+$("nsBackQ").onclick = () => { $("nsBackChips").hidden = false; };
+$("nsBackChips").addEventListener("click", async e => {
+  const b = e.target.closest("[data-back]"); if (!b) return;
+  const k = now.getFullYear() * 12 + now.getMonth() - +b.dataset.back;
+  $("nsBackChips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  await setStartMonth(k);
+  $("nsBackQ").textContent = "✓ נפתח מ" + MONTHS[k % 12] + " " + Math.floor(k / 12) + ". עוברים בין החודשים בחיצים למעלה";
+});
 function salLater() { try { localStorage.setItem("salLater", iso(today) + "|" + salKey); } catch (e) {} closeSal(); }
 $("salLater").onclick = salLater;
 $("salClose").onclick = salLater;
@@ -4078,6 +4109,7 @@ function applySettings(values) {
   { const rj = String((values[4] || [])[21] || "").trim(); if (rj && !txDrag && Date.now() - rankSavedAt > 15000) { /* a fresh local change wins over an older copy from the sheet */ try { const o = JSON.parse(rj); if (o && typeof o === "object") { txRank = o; try { localStorage.setItem("txRank", rj); } catch (e) {} } } catch (e) {} } }
   { const lj = String((values[3] || [])[21] || "").trim(); if (lj && !arranging) { try { const l = normLayout(JSON.parse(lj)); if (JSON.stringify(l) !== JSON.stringify(layout)) { layout = l; try { localStorage.setItem("layout4", lj); } catch (e) {} applyLayout(); } } catch (e) {} } }
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
+  { const sm = String((values[5] || [])[21] || "").trim().match(/^(\d{4})-(\d{1,2})$/); if (sm) { startMonthPref = +sm[1] * 12 + +sm[2] - 1; applyStartMonth(); } }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
   // Older copies of the page let that alias win, so remove it from the settings for good.
@@ -5111,7 +5143,8 @@ function openAdd() {
   $("addCard").innerHTML = PAY.map(c => `<option>${esc(c)}</option>`).join("");
   $("addCard").value = defaultCard();
   $("addAmount").value = ""; $("addDesc").value = ""; $("addMsg").textContent = "";
-  $("addDate").value = iso(new Date()); // the date when the form opens, even if the page stayed open overnight
+  // the date when the form opens; while looking at another month, a date inside that month
+  { const { start, end } = period(view.y, view.m), t0 = new Date(); $("addDate").value = iso(t0 < start ? start : t0 > end ? end : t0); }
   $("addInst").value = "1";
   setKind("exp");
   $("addSave").disabled = false; $("addSave").textContent = "שמירה";
@@ -5311,6 +5344,18 @@ $("segVar").onclick = () => { catMode = "var"; $("segVar").setAttribute("aria-pr
 $("segFixed").onclick = () => { catMode = "fixed"; $("segFixed").setAttribute("aria-pressed", "true"); $("segVar").setAttribute("aria-pressed", "false"); render(); };
 // the billing day lives in the settings (V2), so every device and every visit sees the same one;
 // this device keeps a copy only to draw the first screen before the settings arrive
+/* 1–2: going back to earlier months: a start month chosen in the settings (V7) or when signing up */
+let startMonthPref = null;
+function applyStartMonth() {
+  if (startMonthPref != null && startMonthPref < FIRST_MONTH) FIRST_MONTH = startMonthPref;
+  const el = $("startMonth"); if (el) { const k = FIRST_MONTH; el.value = Math.floor(k / 12) + "-" + String(k % 12 + 1).padStart(2, "0"); el.max = mkey(now.getFullYear(), now.getMonth()); }
+}
+async function setStartMonth(k) {
+  startMonthPref = k; FIRST_MONTH = Math.min(FIRST_MONTH, k); applyStartMonth();
+  try { await writeRange("'הגדרות'!V7", [[Math.floor(k / 12) + "-" + String(k % 12 + 1).padStart(2, "0")]]); } catch (e) {}
+  render();
+}
+$("startMonth").addEventListener("change", e => { const m = e.target.value.match(/^(\d{4})-(\d{2})$/); if (m) { const k = +m[1] * 12 + +m[2] - 1; if (k <= now.getFullYear() * 12 + now.getMonth()) setStartMonth(k); } });
 function useStartDay(v) {
   startDay = v; $("startDay").value = v;
   try { localStorage.setItem("startDay", v); } catch (err) {}
@@ -5501,7 +5546,7 @@ const TOUR = [
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: תקציב שבועי, לוח של ימים, השוואה לחודש הקודם לפי קטגוריות, תחזית לסוף החודש, החיובים הקבועים ומה שצפוי לרדת בחודש הבא." },
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות. חיפוש חכם כמו ״סופר מעל 200״ או ״מקס ספטמבר״. מחליקים תנועה ימינה כדי לערוך או למחוק, ולחיצה ארוכה מאפשרת לגרור אותה לכל מקום, באותו יום או ליום אחר." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה, השוואה בין חודשים, וסיכום שנתי. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
-  { t: "#tabAdmin", h: "הגדרות", b: "משכורת לכל חודש, קטגוריות ואמצעי תשלום משלכם, יום החיוב בכרטיס, מצב כהה, קישור להוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
+  { t: "#tabAdmin", h: "הגדרות", b: "משכורת לכל חודש, קטגוריות ואמצעי תשלום משלכם, מאיזה חודש להתחיל, יום החיוב בכרטיס, מצב כהה, קישור להוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
   { t: null, e: "👆", h: "עוד שני טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
 ];
@@ -5555,7 +5600,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025010330";
+const BUILD_ID = "20261025011246";
 let updToast = null;
 async function checkUpdate() {
   try {
