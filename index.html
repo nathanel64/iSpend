@@ -1195,7 +1195,7 @@ body { margin: 0; }
 .tour { position: fixed; inset: 0; z-index: 70; }
 .tour-dim { position: absolute; inset: 0; background: rgba(18, 17, 23, .6); }
 .tour-spot { position: fixed; border-radius: 20px; box-shadow: 0 0 0 9999px rgba(18, 17, 23, .62), 0 0 0 3px #fff; transition: all .35s cubic-bezier(.3, .8, .3, 1); pointer-events: none; }
-.tour-tip { position: fixed; inset-inline: 16px; margin: 0 auto; max-width: 360px; background: var(--surface); color: var(--ink); border-radius: 22px; padding: 18px; box-shadow: 0 18px 44px rgba(0,0,0,.3); display: flex; flex-direction: column; gap: 8px; transition: top .35s, bottom .35s; }
+.tour-tip { position: fixed; inset-inline: 16px; margin: 0 auto; max-width: 360px; max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; background: var(--surface); color: var(--ink); border-radius: 22px; padding: 18px; box-shadow: 0 18px 44px rgba(0,0,0,.3); display: flex; flex-direction: column; gap: 8px; transition: top .35s, bottom .35s; }
 .tour-tip h3 { margin: 0; font-size: 1.15rem; }
 .tour-tip p { margin: 0; font-size: .92rem; line-height: 1.55; color: var(--muted); }
 .tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
@@ -1206,6 +1206,20 @@ body { margin: 0; }
 .tour-emoji { font-size: 2rem; line-height: 1; }
 @media (prefers-reduced-motion: no-preference) { .tour-tip { animation: tourIn .3s ease; } }
 @keyframes tourIn { from { opacity: 0; transform: translateY(10px); } }
+.admin-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.admin-head .admin-title { margin-bottom: 0; }
+.tour-chip { display: inline-flex; align-items: center; gap: 5px; flex: none; border: 0; cursor: pointer; padding: 7px 13px 7px 11px; border-radius: 999px; font: 700 .82rem/1.2 var(--font-body); color: var(--brand); background: var(--brand-soft); position: relative; overflow: hidden; transition: transform .15s; -webkit-tap-highlight-color: transparent; }
+.tour-chip svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.tour-chip .tc-needle { fill: currentColor; stroke: none; transform-origin: 12px 12px; }
+.tour-chip:hover .tc-needle, .tour-chip.pop .tc-needle { animation: tcSpin .7s cubic-bezier(.3,1.6,.5,1); }
+.tour-chip:active { transform: scale(.93); }
+.tour-chip.pop { animation: tcPop .32s ease; }
+.tour-chip.glow::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.75) 50%, transparent 70%); transform: translateX(-120%); animation: tcShine 2.8s ease-in-out infinite; }
+:root[data-theme="dark"] .tour-chip.glow::after { background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.18) 50%, transparent 70%); }
+@keyframes tcShine { 0%, 55% { transform: translateX(120%); } 100% { transform: translateX(-120%); } }
+@keyframes tcSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes tcPop { 50% { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .tour-chip.glow::after, .tour-chip .tc-needle { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -1532,7 +1546,6 @@ body { margin: 0; }
     <section class="card">
       <h2>החשבון שלי</h2>
       <div class="row" style="justify-content:space-between"><span class="note" id="whoAmI"></span><button class="btn ghost" type="button" id="logoutBtn">התנתקות</button></div>
-      <button class="btn ghost" type="button" id="tourAgain">סיור מודרך באתר</button>
     </section>
 
     <section class="card" id="sheetBox" hidden>
@@ -5973,7 +5986,7 @@ const TOUR = [
   { t: null, e: "👆", h: "עוד שני טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
 ];
-let tourEl = null, tourI = 0, tourRestore = null;
+let tourEl = null, tourI = 0, tourRestore = null, tourPlace = null;
 function startTour() {
   if (tourEl) tourEl.remove();
   showView("flow"); window.scrollTo(0, 0);
@@ -5985,6 +5998,7 @@ function endTour() {
   if (tourRestore) { try { tourRestore(); } catch (e) {} tourRestore = null; }
   try { localStorage.setItem("tourDone-" + USER_ID, "1"); } catch (e) {}
   if (tourEl) { tourEl.remove(); tourEl = null; }
+  if (tourPlace) { removeEventListener("scroll", tourPlace); tourPlace = null; }
   window.scrollTo(0, 0);
   if (TOUR_PENDING) { TOUR_PENDING = false; salAsked = false; askSalary(); }
 }
@@ -6002,7 +6016,7 @@ function tourStep() {
   if (el && s.soft && !vis(s.t)) el = null; // not on screen yet: the tip alone, in the middle
   if (s.enter && el) { const undo = s.enter(el), prevR = tourRestore; if (undo) tourRestore = () => { undo(); if (prevR) prevR(); }; }
   const fixed = el && getComputedStyle(el.closest(".nav") || el).position === "fixed";
-  if (el && !fixed) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  if (el && !fixed) el.scrollIntoView({ block: el.offsetHeight > innerHeight * .45 ? "start" : "center", behavior: "smooth" });
   tip.innerHTML = (s.e && !el ? `<div class="tour-emoji">${s.e}</div>` : "") + `<h3>${typeof s.h === "function" ? s.h() : s.h}</h3><p>${s.b}</p>
     <div class="tour-foot"><div class="tour-dots">${TOUR.map((_, i) => `<i class="${i === tourI ? "on" : ""}"></i>`).join("")}</div>
     ${s.last ? "" : `<button class="tour-skip" type="button" data-skip>דלג</button>`}<button class="btn" type="button" data-next>${s.last ? "יאללה" : tourI === 0 ? "בואו נתחיל" : "הבא"}</button></div>`;
@@ -6011,21 +6025,42 @@ function tourStep() {
   const place = () => {
     if (!el) { spot.hidden = true; dim.hidden = false; tip.style.top = "50%"; tip.style.bottom = "auto"; tip.style.transform = "translateY(-50%)"; return; }
     dim.hidden = true; spot.hidden = false; tip.style.transform = "none";
-    const r = el.getBoundingClientRect(), pad = 8;
-    Object.assign(spot.style, { top: r.top - pad + "px", left: r.left - pad + "px", width: r.width + pad * 2 + "px", height: r.height + pad * 2 + "px" });
-    if (r.top + r.height / 2 > innerHeight / 2) { tip.style.top = "auto"; tip.style.bottom = (innerHeight - r.top + pad + 14) + "px"; }
-    else { tip.style.bottom = "auto"; tip.style.top = (r.bottom + pad + 14) + "px"; }
+    // the phone's visible height (the address bar and the keyboard take part of the window)
+    const vh = Math.min(innerHeight, (window.visualViewport && visualViewport.height) || innerHeight);
+    const r0 = el.getBoundingClientRect(), pad = 8;
+    // the highlight is kept on screen, even for a card taller than the screen
+    const t0 = Math.max(6, r0.top - pad), b0 = Math.min(vh - 6, r0.bottom + pad);
+    Object.assign(spot.style, { top: t0 + "px", left: r0.left - pad + "px", width: r0.width + pad * 2 + "px", height: Math.max(0, b0 - t0) + "px" });
+    // the tip goes where it fits whole: below, above, or (a tall card) over the bottom of the screen
+    const th = tip.offsetHeight, gap = 14, below = vh - (b0 + gap) - 12, above = t0 - gap - 12;
+    const prefAbove = r0.top + r0.height / 2 > vh / 2;
+    if (prefAbove ? above >= th : below < th && above >= th) { tip.style.top = "auto"; tip.style.bottom = (innerHeight - t0 + gap) + "px"; }
+    else if (below >= th) { tip.style.bottom = "auto"; tip.style.top = (b0 + gap) + "px"; }
+    else { tip.style.bottom = "auto"; tip.style.top = Math.max(12, vh - th - 12) + "px"; }
   };
-  place(); setTimeout(place, 450);
+  // the page may still be scrolling to the card: follow it until it settles
+  if (tourPlace) removeEventListener("scroll", tourPlace);
+  tourPlace = () => requestAnimationFrame(place); addEventListener("scroll", tourPlace, { passive: true });
+  place(); setTimeout(place, 450); setTimeout(place, 1000);
   tip.querySelector("[data-next]").focus();
 }
 addEventListener("resize", () => { if (tourEl) tourStep(); });
-document.getElementById("tourAgain").onclick = () => startTour();
+// the tour button sits at the top of the settings, on the left
+(function tourChip() {
+  const title = document.querySelector("#adminView .admin-title"); if (!title) return;
+  const b = document.createElement("button"); b.type = "button"; b.id = "tourAgain"; b.className = "tour-chip";
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="tc-needle" d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>סיור באתר</span>';
+  b.setAttribute("aria-label", "סיור מודרך באתר");
+  const fresh = () => { try { return !localStorage.getItem("tourDone-" + USER_ID); } catch (e) { return true; } };
+  const mark = () => b.classList.toggle("glow", fresh());
+  const row = document.createElement("div"); row.className = "admin-head"; title.replaceWith(row); row.append(title, b); mark(); setInterval(mark, 4000);
+  b.onclick = () => { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); setTimeout(() => startTour(), 320); };
+})();
 </script>
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025013638";
+const BUILD_ID = "20261025014929";
 let updToast = null;
 async function checkUpdate() {
   try {
