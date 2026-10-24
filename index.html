@@ -476,6 +476,26 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 body { overflow-x: clip; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); -webkit-tap-highlight-color: transparent; }
 .wrap { gap: 16px; padding-top: 6px; }
 .card { border-radius: 24px; padding: 18px; box-shadow: 0 1px 2px rgba(28, 27, 34, .04); }
+/* what goes out on the next billing day */
+.up-strip { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; margin: 0 -18px; padding: 2px 18px 4px; }
+.up-strip::-webkit-scrollbar { display: none; }
+.up-i { flex: none; width: 148px; scroll-snap-align: start; background: var(--bg); border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 8px; animation: upIn .45s cubic-bezier(.2, .8, .2, 1) both; }
+.up-i .top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.up-i .tag { font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); white-space: nowrap; }
+.up-i .tag.fx { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--muted); }
+.up-i .n { font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up-i .a { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.up-note { margin: 0; font-size: .74rem; color: var(--muted); line-height: 1.5; }
+@keyframes upIn { from { opacity: 0; transform: translateX(-14px); } }
+/* a new expense: a coin flies from the + button into the gauge */
+.fly-coin { position: fixed; z-index: 80; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #ffe7a3, #ffcf5c 55%, #e3a429); box-shadow: 0 0 0 2px rgba(255, 255, 255, .7), 0 6px 14px rgba(160, 110, 0, .35); }
+.ring-wrap.gauge.landing #ringTip .coin { opacity: 0; }
+.ring-wrap.gauge.bump #ringTip .coin { animation: coinBump .55s cubic-bezier(.3, 1.6, .5, 1); transform-box: fill-box; transform-origin: center; }
+.ring-wrap.gauge.bump > svg { animation: gaugePulse .55s ease-out; }
+@keyframes coinBump { 0% { transform: scale(1); } 40% { transform: scale(1.8); } 100% { transform: scale(1); } }
+@keyframes gaugePulse { 0% { transform: scale(1); } 35% { transform: scale(1.025); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .up-i { animation: none; } }
 .card h2 { font-size: 1.05rem; }
 .month h1, .admin-title, .yhero .big, .status .big, .week-now .left, .w-slide .w-big, .w-slide .w-mid, .whatif-total .big, .streak-n, .amount-in input, .amount-in span, .sal-hero h3, .sal-amount input { font-weight: 700; letter-spacing: -.01em; }
 /* header: greeting + month, arrows on the sides */
@@ -550,7 +570,7 @@ header.top { padding-block: 8px 2px; }
 .list-total { font-size: .9rem; font-weight: 600; color: var(--muted); margin-inline-start: 6px; white-space: nowrap; }
 .swipe-hint { text-align: center; font-size: .74rem; color: var(--muted); margin: 0; }
 /* bottom navigation */
-.nav { position: fixed; z-index: 15; inset-inline: 0; bottom: 0; display: grid; grid-template-columns: 1fr 1fr 86px 1fr 1fr; align-items: start;
+.nav { position: fixed; z-index: 15; inset-inline: 0; bottom: 0; display: grid; grid-template-columns: 1fr 1fr 1fr 80px 1.5fr 1.5fr; align-items: start;
   padding: 10px max(8px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 10px) max(8px, env(safe-area-inset-left, 0px));
   background: color-mix(in srgb, var(--surface) 86%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid var(--line); }
 .nav button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: .68rem; color: var(--muted); padding: 2px 0; }
@@ -585,6 +605,346 @@ header.top { gap: 10px; }
 .today .td-v { font-size: 1.45rem; font-weight: 700; line-height: 1.15; letter-spacing: -.01em; }
 .today .td-side { font-size: .74rem; color: var(--muted); text-align: end; line-height: 1.45; }
 .today .td-side b { color: var(--ink); font-weight: 600; }
+/* today's allowance as an hourglass: the top holds what is left for today, every expense pours sand down */
+.today .td-ic.hg { width: 46px; height: 50px; border-radius: 15px; background: linear-gradient(160deg, #fffaf0, #fdebc4); }
+.hg svg { width: 34px !important; height: 42px !important; stroke: none !important; overflow: visible; }
+.hg .glass { fill: #ffffff; stroke: #b7791f; stroke-width: 1.6; stroke-linejoin: round; }
+.hg .cap { fill: #b7791f; }
+.hg .sand { fill: url(#hgSand); transform-box: fill-box; transition: transform 1s cubic-bezier(.3, .8, .3, 1); }
+.hg .sand.top { transform-origin: 50% 100%; }
+.hg .sand.bot { transform-origin: 50% 100%; }
+.hg .stream { stroke: #e9a92c; stroke-width: 1.4; stroke-dasharray: 1.6 2.4; animation: hgFlow .5s linear infinite; }
+.hg .grain { fill: #e9a92c; opacity: 0; }
+.today.pour .hg .stream { stroke-width: 2.6; animation-duration: .18s; }
+.today.pour .hg .grain { animation: hgGrain .7s ease-in 3; }
+.today.pour .hg .grain:nth-of-type(2) { animation-delay: .12s; } .today.pour .hg .grain:nth-of-type(3) { animation-delay: .24s; }
+.today.pour .td-ic.hg { animation: hgShake .5s ease-in-out; }
+@keyframes hgFlow { to { stroke-dashoffset: -8; } }
+@keyframes hgGrain { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(14px); } }
+@keyframes hgShake { 25% { transform: rotate(-6deg); } 60% { transform: rotate(4deg); } }
+.today.over .hg .glass { stroke: var(--bad); } .today.over .hg .cap { fill: var(--bad); } .today.over .hg .stream { display: none; }
+@media (prefers-reduced-motion: reduce) { .hg .stream, .today.pour .hg .grain, .today.pour .td-ic.hg { animation: none; } }
+/* deleting a row: it tears like a receipt, with a few seconds to undo */
+.tear-half { position: fixed; z-index: 70; pointer-events: none; background: var(--surface); border-radius: 16px; overflow: hidden; }
+.tear-half > .tx { margin: 0; }
+.tx-sw.restored { animation: rowBack .45s cubic-bezier(.2, .8, .2, 1); }
+@keyframes rowBack { from { opacity: 0; transform: scale(.96); } }
+.undo-bar { position: fixed; z-index: 30; inset-inline: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 118px); max-width: 520px; margin: 0 auto; background: var(--ink); color: var(--bg);
+  border-radius: 16px; padding: 12px 14px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 12px 30px rgba(20, 16, 40, .3); overflow: hidden; animation: undoIn .35s cubic-bezier(.2, .8, .2, 1); }
+.undo-bar[hidden] { display: none; }
+.undo-bar span { font-size: .92rem; }
+.undo-bar button { border: 0; background: none; color: #b9b0ff; font-weight: 700; font-size: .95rem; padding: 4px 6px; }
+.undo-bar i { position: absolute; inset-inline: 0; bottom: 0; height: 3px; background: #8f84ff; transform-origin: right; }
+.undo-bar.run i { animation: undoTime 5s linear forwards; }
+@keyframes undoTime { to { transform: scaleX(0); } }
+@keyframes undoIn { from { opacity: 0; transform: translateY(16px); } }
+/* 4: a monthly cap per category: a ring around the bubble fills up toward it */
+.bub { position: relative; }
+.bub.capped::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, var(--cc) calc(var(--pct) * 1%), color-mix(in srgb, var(--ink) 9%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); }
+.bub.capped { --cc: hsl(var(--h) calc(var(--s) * .9) 48%); }
+.bub.capped.warn { --cc: var(--warn); } .bub.capped.warn::before { animation: capPulse 1.6s ease-in-out infinite; }
+.bub.capped.over { --cc: var(--bad); }
+.bub .cap-of { font-size: .62rem; opacity: .85; font-weight: 600; }
+@keyframes capPulse { 50% { opacity: .45; } }
+.cap-btn { border: 0; border-radius: 999px; padding: 5px 12px; font-size: .78rem; font-weight: 700; background: var(--brand-soft); color: var(--brand); }
+.cap-btn[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
+.cap-hint { margin: -4px 0 0; font-size: .8rem; color: var(--brand); text-align: center; }
+.cap-hint[hidden] { display: none; }
+.bub.editing { animation: capWiggle 2.4s ease-in-out infinite; }
+.bub.editing:nth-child(2n) { animation-delay: -1.2s; }
+@keyframes capWiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-1.6deg); } 75% { transform: rotate(1.6deg); } }
+.bub.ghost { opacity: .55; outline: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); outline-offset: -1.5px; }
+.bub .cap-add { font-size: .62rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, currentColor 16%, transparent); margin-top: 2px; }
+.cap-amt { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+.cap-amt span { font-size: 1.5rem; color: var(--muted); }
+.cap-amt input { border: 0; background: none; outline: none; text-align: center; font: 700 2.6rem/1.1 var(--font-display); color: var(--ink); width: 6.5em; letter-spacing: -.02em; }
+#capRange { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 6px; direction: rtl;
+  background: linear-gradient(to left, var(--brand) var(--p, 0%), color-mix(in srgb, var(--ink) 10%, transparent) var(--p, 0%)); margin: 6px 0 2px; }
+#capRange::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffe7a3, #ffcf5c 55%, #e3a429); box-shadow: 0 2px 8px rgba(120, 80, 0, .35), 0 0 0 3px #fff; }
+#capRange::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #ffcf5c; box-shadow: 0 2px 8px rgba(120, 80, 0, .35), 0 0 0 3px #fff; }
+.cap-meter { height: 8px; border-radius: 5px; background: color-mix(in srgb, var(--ink) 8%, transparent); overflow: hidden; direction: rtl; margin-top: 8px; }
+.cap-meter i { display: block; height: 100%; border-radius: 5px; background: var(--good); transition: width .35s cubic-bezier(.3, .8, .3, 1), background .3s; }
+.cap-meter.warn i { background: var(--warn); } .cap-meter.over i { background: var(--bad); } .cap-meter.none i { width: 0 !important; }
+.cap-legend { font-size: .84rem; color: var(--muted); text-align: center; margin-top: 4px; }
+.cap-legend b { color: var(--ink); }
+.cap-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+.cap-chips button { border: 0; border-radius: 999px; padding: 6px 12px; font-size: .82rem; font-weight: 600; background: var(--bg); color: var(--ink); }
+.cap-chips button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand); }
+.cap-note { font-size: .76rem; color: var(--muted); text-align: center; margin: 10px 0 0; }
+@media (prefers-reduced-motion: reduce) { .bub.editing { animation: none; } }
+/* 5: an expense saved on the phone, waiting for a connection */
+.pend { display: inline-flex; align-items: center; gap: 3px; color: var(--warn); font-weight: 600; }
+.pend svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toast { position: fixed; z-index: 90; inset-inline: 16px; top: calc(env(safe-area-inset-top, 0px) + 12px); max-width: 520px; margin: 0 auto; background: var(--ink); color: var(--bg); border-radius: 16px;
+  padding: 11px 14px; font-size: .9rem; font-weight: 600; text-align: center; box-shadow: 0 12px 30px rgba(20, 16, 40, .3); animation: undoIn .35s cubic-bezier(.2, .8, .2, 1); }
+/* 7: days without variable spending in a row */
+.streak { align-self: center; font-size: .8rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; background: linear-gradient(135deg, #fff1d6, #ffe0a8); color: #9a5a00; }
+.streak[hidden] { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .streak { background: #3a2a14; color: #f6c46a; } }
+:root[data-theme="dark"] .streak { background: #3a2a14; color: #f6c46a; }
+.burst { position: fixed; z-index: 95; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #ffe7a3, #ffcf5c 55%, #e3a429); box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .6); }
+/* 8: past the gauge, a slim summary stays under the month bar */
+.mini { position: absolute; top: 100%; inset-inline: 0; padding: 6px 16px 8px; background: color-mix(in srgb, var(--bg) 97%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center;
+  opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity .25s, transform .3s cubic-bezier(.2, .8, .2, 1); }
+.mini.show { opacity: 1; transform: none; pointer-events: auto; }
+.mini .mb-t { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.mini .mb-t span { font-size: .74rem; color: var(--muted); white-space: nowrap; }
+.mini .mb-t b { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.mini .mb-today { font-size: .78rem; color: var(--muted); white-space: nowrap; }
+.mini .mb-today b { color: var(--ink); }
+.mini .mb-bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 8%, transparent); overflow: hidden; direction: rtl; }
+.mini .mb-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(270deg, #5b4cf0, #a35bdc); transition: width .6s cubic-bezier(.3, .8, .3, 1); }
+.mini.mid .mb-bar i { background: linear-gradient(270deg, #ea7d1c, #f7bf4f); } .mini.neg .mb-bar i { background: linear-gradient(270deg, #d33a3a, #f07a5c); }
+.mini.neg .mb-t b { color: var(--bad); }
+.ins-wrap { display: flex; flex-direction: column; gap: 10px; }
+.fc-big { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.fc-big .k { font-size: .82rem; color: var(--muted); }
+.fc-big b { font: 700 2.3rem/1.1 var(--font-display); letter-spacing: -.02em; transition: color .3s; }
+.fc-big b.good { color: var(--good); } .fc-big b.warn { color: #c0670f; } .fc-big b.bad { color: var(--bad); }
+.fc-sl { background: var(--bg); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.fc-row { display: flex; justify-content: space-between; align-items: baseline; font-size: .84rem; color: var(--muted); } .fc-row b { color: var(--ink); font-size: 1.1rem; }
+#fcRange { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 6px; direction: rtl; background: linear-gradient(to left, var(--brand) var(--p, 0%), color-mix(in srgb, var(--ink) 10%, transparent) var(--p, 0%)); }
+#fcRange::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffe7a3, #ffcf5c 55%, #e3a429); box-shadow: 0 2px 8px rgba(120, 80, 0, .35), 0 0 0 3px #fff; }
+#fcRange::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #ffcf5c; }
+.fc-marks { display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); gap: 8px; }
+.fc-note { margin: 0; font-size: .84rem; color: var(--muted); text-align: center; } .fc-note b { color: var(--ink); }
+.cs-r { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: "ic n v" "ic b b" "ic s s"; gap: 3px 10px; align-items: center; border: 0; background: none; color: var(--ink); text-align: start; padding: 8px 2px; border-top: 1px solid var(--line); width: 100%; }
+.cs-r:first-child { border-top: 0; }
+.cs-r > .ic { grid-area: ic; width: 30px; height: 30px; border-radius: 10px; align-self: start; } .cs-r > .ic svg { width: 15px; height: 15px; }
+.cs-r .n { grid-area: n; font-weight: 600; } .cs-r .v { grid-area: v; font-weight: 700; } .cs-r .v small { color: var(--muted); font-weight: 500; }
+.cs-r .bar { grid-area: b; height: 7px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 8%, transparent); overflow: hidden; direction: rtl; }
+.cs-r .bar i { display: block; height: 100%; border-radius: 4px; background: var(--good); }
+.cs-r.warn .bar i { background: var(--warn); } .cs-r.over .bar i { background: var(--bad); }
+.cs-r .s { grid-area: s; font-size: .74rem; color: var(--muted); } .cs-r.over .s { color: var(--bad); } .cs-r.warn .s { color: #c0670f; }
+#merchList { display: grid; grid-template-columns: 1fr; }
+.mr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; border: 0; background: none; color: var(--ink); text-align: start; padding: 6px 0; font-size: .9rem; }
+.mr .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .mr .n small { color: var(--muted); } .mr .a { font-weight: 700; }
+.mr .b { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 7%, transparent); overflow: hidden; direction: rtl; }
+.mr .b i { display: block; height: 100%; border-radius: 3px; background: hsl(var(--h) 60% 55%); }
+.mr-tip { margin: 6px 0 0; font-size: .82rem; background: var(--bg); border-radius: 12px; padding: 8px 10px; }
+.recap { position: fixed; inset: 0; z-index: 45; display: flex; align-items: flex-end; justify-content: center; background: color-mix(in srgb, var(--ink) 30%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: rcFade .3s ease; }
+.recap[hidden] { display: none; }
+.rc-sheet { width: 100%; max-width: 640px; height: min(94vh, 100%); background: var(--bg); border-radius: 30px 30px 0 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -20px 60px rgba(20, 16, 40, .25); animation: rcUp .5s cubic-bezier(.2, .8, .2, 1); }
+.rc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 22px 20px 12px; }
+.rc-head::before { content: ""; position: absolute; left: 50%; margin-left: -20px; margin-top: -14px; width: 40px; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 15%, transparent); }
+.rc-kick { font-size: .78rem; font-weight: 700; color: var(--brand); letter-spacing: .02em; }
+.rc-head h2 { margin: 2px 0 0; font: 700 1.75rem/1.15 var(--font-display); letter-spacing: -.02em; }
+.rc-x { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--surface); color: var(--ink); font-size: 1rem; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); flex: none; }
+.rc-body { flex: 1; overflow-y: auto; padding: 4px 16px calc(env(safe-area-inset-bottom, 0px) + 28px); display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; }
+.rc-t { background: var(--surface); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; box-shadow: 0 1px 2px rgba(28, 27, 34, .05); animation: rcIn .55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--d); }
+.rc-t.w2 { grid-column: span 2; }
+.rc-t .k { font-size: .78rem; color: var(--muted); font-weight: 600; }
+.rc-t .v { font: 700 1.35rem/1.2 var(--font-display); letter-spacing: -.01em; overflow-wrap: anywhere; }
+.rc-t .v small { font: 500 .8rem var(--font-body); color: var(--muted); }
+.rc-t .s { font-size: .8rem; color: var(--muted); line-height: 1.45; } .rc-t .s b { color: var(--ink); }
+.rc-t.good .v { color: var(--good); } .rc-t.bad .v { color: var(--bad); }
+.rc-ic { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; margin-bottom: 6px; background: hsl(var(--h, 250) 70% 55% / .14); color: hsl(var(--h, 250) 60% 45%); }
+.rc-ic svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rc-ic.e { background: var(--bg); font-size: 1.15rem; }
+.rc-t.hero { padding: 20px; gap: 6px; background: linear-gradient(160deg, var(--surface), color-mix(in srgb, var(--brand) 6%, var(--surface))); }
+.rc-t.hero .v { font-size: 2.9rem; line-height: 1.05; letter-spacing: -.03em; color: var(--ink); }
+.rc-t.hero.good .s b { color: var(--good); } .rc-t.hero.bad .s b { color: var(--bad); }
+.rc-meter { position: relative; height: 10px; border-radius: 6px; background: color-mix(in srgb, var(--ink) 8%, transparent); overflow: hidden; margin-top: 8px; direction: rtl; }
+.rc-meter i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(270deg, var(--brand), var(--brand2)); transform-origin: right; animation: rcGrow 1.1s cubic-bezier(.2, .8, .2, 1) .3s both; }
+.rc-t.hero.bad .rc-meter i { background: linear-gradient(270deg, #e3714f, var(--bad)); }
+.rc-meter u { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); }
+.rc-ml { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); }
+.rc-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.rc-br { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: "ic n a" "ic b b"; gap: 3px 10px; align-items: center; }
+.rc-br .rc-ic { grid-area: ic; width: 30px; height: 30px; border-radius: 10px; margin: 0; } .rc-br .rc-ic svg { width: 15px; height: 15px; }
+.rc-br .n { grid-area: n; font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .rc-br .a { grid-area: a; font-weight: 700; font-size: .9rem; }
+.rc-br .b { grid-area: b; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 7%, transparent); overflow: hidden; direction: rtl; }
+.rc-br .b i { display: block; height: 100%; width: var(--w); border-radius: 3px; background: hsl(var(--h) 60% 55%); transform-origin: right; animation: rcGrow .9s cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--d2); }
+.rc-spark { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 3px; align-items: end; height: 110px; margin-top: 8px; direction: ltr; }
+.rc-spark div { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; min-width: 0; }
+.rc-spark i { width: 100%; max-width: 22px; border-radius: 4px 4px 2px 2px; background: color-mix(in srgb, var(--brand) 35%, transparent); transform-origin: bottom; animation: rcGrowY .8s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--d2) + .3s); }
+.rc-spark .hi i { background: linear-gradient(180deg, var(--brand2), var(--brand)); }
+.rc-spark .zero i { background: color-mix(in srgb, var(--good) 40%, transparent); }
+.rc-spark span { font-size: .58rem; color: var(--muted); white-space: nowrap; height: .8rem; }
+.rc-end { grid-column: span 2; text-align: center; font-size: .8rem; color: var(--muted); margin: 6px 0 0; }
+@keyframes rcUp { from { transform: translateY(60px); opacity: .3; } }
+@keyframes rcFade { from { opacity: 0; } }
+@keyframes rcIn { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes rcGrow { from { transform: scaleX(0); } }
+@keyframes rcGrowY { from { transform: scaleY(0); } }
+@media (prefers-reduced-motion: reduce) { .rc-sheet, .rc-t, .rc-meter i, .rc-br .b i, .rc-spark i { animation: none; } }
+.h3-acts { display: inline-flex; align-items: center; gap: 8px; }
+.mic { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; }
+.mic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.voice { display: flex; align-items: center; gap: 12px; background: var(--brand-soft); border-radius: 16px; padding: 10px 12px; margin-bottom: 4px; }
+.voice[hidden] { display: none; }
+.voice > div { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: .86rem; }
+.voice b { color: var(--brand); } .voice span#voiceText { color: var(--ink); }
+.voice button { border: 0; background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-weight: 600; font-size: .82rem; }
+.vdot { width: 14px; height: 14px; border-radius: 50%; background: var(--brand); flex: none; }
+.voice.on .vdot { animation: vPulse 1s ease-in-out infinite; }
+@keyframes vPulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 50%, transparent); } 50% { box-shadow: 0 0 0 10px transparent; } }
+.cmp-note { margin: -6px 0 0; font-size: .78rem; color: var(--muted); }
+.cmp-list { display: flex; flex-direction: column; }
+.cmp-r { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: "ic n d" "ic b b" "ic v v"; gap: 3px 10px; align-items: center; text-align: start; border: 0; background: none; color: var(--ink);
+  padding: 9px 2px; border-top: 1px solid var(--line); animation: vibeIn .4s ease both; }
+.cmp-r:first-child { border-top: 0; }
+.cmp-r > .ic { grid-area: ic; width: 30px; height: 30px; border-radius: 10px; align-self: start; } .cmp-r > .ic svg { width: 15px; height: 15px; }
+.cmp-n { grid-area: n; font-weight: 600; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-d { grid-area: d; font-size: .74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.cmp-d.up, #cmpSide .up { color: var(--bad); } .cmp-d.up { background: var(--bad-soft); }
+.cmp-d.down, #cmpSide .down { color: var(--good); } .cmp-d.down { background: var(--good-soft); }
+.cmp-d.same { color: var(--muted); background: var(--bg); }
+.cmp-bars { grid-area: b; display: flex; flex-direction: column; gap: 3px; direction: rtl; }
+.cmp-bars i { display: block; height: 6px; border-radius: 3px; min-width: 2px; transition: width .5s cubic-bezier(.3, .8, .3, 1); }
+.cmp-bars .was { background: color-mix(in srgb, var(--ink) 14%, transparent); } .cmp-bars .now { background: hsl(var(--h) 60% 55%); }
+.cmp-v { grid-area: v; font-size: .76rem; color: var(--muted); } .cmp-v b { color: var(--ink); }
+#yWrapPill { align-self: center; }
+.up-when { font-size: .78rem; font-weight: 500; color: var(--muted); }
+.fx-list { display: flex; flex-direction: column; gap: 2px; }
+.fxr { display: grid; grid-template-columns: 22px 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--line); }
+.fxr:first-child { border-top: 0; }
+.fxr .ic { width: 32px; height: 32px; border-radius: 10px; } .fxr .ic svg { width: 16px; height: 16px; }
+.fx-ic { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .7rem; font-weight: 800; }
+.fxr.ok .fx-ic { background: var(--good-soft); color: var(--good); }
+.fxr.wait .fx-ic { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.fxr.late .fx-ic, .fxr.warn .fx-ic { background: var(--warn-soft); color: #c0670f; }
+.fxr.bad .fx-ic { background: var(--bad-soft); color: var(--bad); }
+.fx-m { min-width: 0; font-size: .92rem; line-height: 1.3; }
+.fx-m bdi { font-weight: 600; } .fx-m small { display: block; font-size: .76rem; color: var(--muted); }
+.fxr.late small, .fxr.warn small { color: #c0670f; } .fxr.bad small { color: var(--bad); }
+.fx-tag { font-size: .66rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--muted); }
+.fx-a { font-weight: 700; } .fx.wait .fx-a { color: var(--muted); font-weight: 600; }
+.cal-wd, .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.cal-wd span { text-align: center; font-size: .7rem; color: var(--muted); font-weight: 600; }
+.cal .cd { aspect-ratio: 1; border: 0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0; color: var(--ink);
+  background: color-mix(in srgb, var(--brand) calc(var(--l) * 22%), var(--bg)); transition: transform .15s; }
+.cal .cd[style*="--l:3"], .cal .cd[style*="--l:4"] { color: #fff; }
+.cal .cd b { font-size: .86rem; font-weight: 700; line-height: 1.1; }
+.cal .cd small { font-size: .58rem; opacity: .85; line-height: 1.1; }
+.cal .cd.pad { background: none; }
+.cal .cd.fut { opacity: .35; }
+.cal .cd.free { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--good) 55%, transparent); }
+.cal .cd.free::after { content: "✓"; font-size: .58rem; color: var(--good); font-weight: 800; line-height: 1.1; }
+.cal .cd.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+.cal .cd.sel { transform: scale(1.08); box-shadow: 0 4px 12px rgba(40, 30, 90, .25); }
+.cal .cd:active { transform: scale(.94); }
+.cal-leg { display: flex; align-items: center; gap: 4px; font-size: .68rem; color: var(--muted); flex-wrap: wrap; }
+.cal-leg i { width: 14px; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--brand) calc(var(--l) * 22%), var(--bg)); }
+.cal-leg .cal-free { margin-inline-start: auto; color: var(--good); font-weight: 600; }
+.cal-day { border-top: 1px solid var(--line); padding-top: 6px; animation: vibeIn .3s ease; }
+.cal-day .day-head { display: flex; justify-content: space-between; font-size: .86rem; padding: 4px 2px; }
+.inst-empty { margin: 0; font-size: .86rem; color: var(--muted); text-align: center; padding: 6px 0; }
+/* the area under the gauge, tidied: one line, then the chips side by side; salary and goal live in the money card */
+.g-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.g-chips > *:not([hidden]) { margin: 0; }
+.g-chips .streak { padding: 4px 11px; font-size: .74rem; }
+.money #incomeArea { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px; }
+.money #incomeArea:empty { display: none; }
+.money .goal-box { flex: 1 1 0; min-width: 0; display: flex; }
+.money .goal-box.editing, .money .income-form { flex-basis: 100%; }
+.money .mt { flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; gap: 0 6px; text-align: start;
+  background: var(--bg); border: 0; border-radius: 14px; padding: 8px 12px; color: var(--ink); text-decoration: none; font-weight: 400; opacity: 1; }
+.money .mt .k { font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.money .mt b { grid-row: 2; font-size: .98rem; font-weight: 700; color: var(--ink); }
+.money .mt b.gold { color: #b7791f; } .money .mt b.add { color: var(--brand); font-size: .88rem; }
+.money .mt .pen { grid-row: 1 / 3; grid-column: 2; width: 15px; height: 15px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.money .goal-form { box-shadow: none; background: var(--bg); width: 100%; }
+.money .income-form { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
+.money .income-form input { background: var(--surface); }
+.wrapped-pill { padding: 6px 14px; font-size: .84rem; }
+/* 2: one smart sentence on top: the thing that matters most right now, a different one on each visit */
+.vibe { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; text-align: start; border-radius: 18px; padding: 10px 12px; font: inherit; font-size: .9rem; line-height: 1.35;
+  color: var(--ink); background: var(--surface); box-shadow: 0 1px 2px rgba(28, 27, 34, .05); animation: vibeIn .5s cubic-bezier(.2, .8, .2, 1); }
+.vibe[hidden] { display: none; }
+.vibe .e { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-size: 1.05rem; flex: none; background: var(--brand-soft); }
+.vibe.good .e { background: var(--good-soft); } .vibe.warn .e { background: var(--warn-soft); } .vibe.bad .e { background: var(--bad-soft); }
+.vibe.good b { color: var(--good); } .vibe.warn b { color: #c0670f; } .vibe.bad b { color: var(--bad); } .vibe.info b { color: var(--brand); }
+.vibe .t { flex: 1; min-width: 0; }
+.vibe .chev { color: var(--muted); font-size: 1.1rem; }
+@keyframes vibeIn { from { opacity: 0; transform: translateY(-6px); } }
+/* the bottom bar: five even tabs; the + floats above it */
+.nav { grid-template-columns: repeat(5, 1fr) !important; }
+.nav > div:has(.fab) { position: absolute; inset-inline-end: max(14px, env(safe-area-inset-left, 0px)); bottom: calc(100% + 14px); }
+.nav .fab { margin: 0 !important; inset: auto !important; width: 58px !important; height: 58px !important; border-radius: 20px !important; }
+body { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 170px); }
+.undo-bar { bottom: calc(env(safe-area-inset-bottom, 0px) + 172px); }
+.ins-wrap:not(:has(.insight)) { display: none; }
+.arr-open { align-self: center; border: 0; background: none; color: var(--muted); font-size: .8rem; padding: 6px 12px; text-decoration: underline; text-underline-offset: 3px; }
+/* 1: arranging the screens: cards wiggle, each gets a small toolbar; hidden ones wait in a tray */
+body.arrange [data-k] { position: relative; animation: arrWiggle 2.6s ease-in-out infinite; min-height: 56px; }
+body.arrange [data-k]:nth-of-type(2n) { animation-delay: -1.3s; }
+body.arrange [data-k]::after { content: ""; position: absolute; inset: 0; z-index: 4; border-radius: inherit; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand) 45%, transparent); background: color-mix(in srgb, var(--surface) 35%, transparent); }
+body.arrange .ins-wrap { display: flex !important; background: var(--surface); border-radius: 20px; padding: 8px; }
+body.arrange .arr-open { display: none !important; }
+@keyframes arrWiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-.6deg); } 75% { transform: rotate(.6deg); } }
+.arr-bar { position: absolute; z-index: 5; top: 8px; inset-inline: 8px; display: flex; align-items: center; gap: 6px; }
+.arr-bar .nm { font-size: .8rem; font-weight: 700; background: var(--brand); color: var(--brand-ink); border-radius: 999px; padding: 4px 11px; margin-inline-end: auto; white-space: nowrap; }
+.arr-bar button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--surface); color: var(--ink); box-shadow: 0 2px 8px rgba(20, 16, 40, .18); display: grid; place-items: center; font-size: .9rem; }
+.arr-bar button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.arr-bar button[disabled] { opacity: .35; }
+.arr-done { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 132px); border: 0; border-radius: 999px; padding: 12px 28px; font-weight: 700; font-size: 1rem;
+  background: var(--ink); color: var(--bg); box-shadow: 0 10px 26px rgba(20, 16, 40, .3); animation: undoIn .3s ease; }
+.arr-tray { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 12px; border-radius: 20px; border: 1.5px dashed color-mix(in srgb, var(--ink) 20%, transparent); }
+.arr-tray b { width: 100%; text-align: center; font-size: .8rem; color: var(--muted); font-weight: 600; }
+.arr-tray button { border: 0; border-radius: 999px; padding: 6px 12px; font-size: .84rem; font-weight: 600; background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+@media (prefers-reduced-motion: reduce) { body.arrange [data-k] { animation: none; } }
+/* 3: a category's own page */
+.ci { display: flex; flex-direction: column; gap: 14px; margin-bottom: 6px; }
+.ci-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ci-top .v { font: 700 2rem/1.1 var(--font-display); letter-spacing: -.02em; }
+.ci-top .d { font-size: .84rem; font-weight: 600; } .ci-top .d.up { color: var(--bad); } .ci-top .d.down { color: var(--good); }
+.ci-bars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; align-items: end; height: 96px; direction: ltr; }
+.ci-bars div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
+.ci-bars i { width: 100%; max-width: 30px; border-radius: 7px 7px 3px 3px; background: hsl(var(--h) 55% 70% / .55); transform-origin: bottom; animation: ciGrow .6s cubic-bezier(.2, .8, .2, 1) both; }
+.ci-bars .cur i { background: hsl(var(--h) 60% 50%); }
+.ci-bars span { font-size: .66rem; color: var(--muted); } .ci-bars em { font-style: normal; font-size: .62rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ci-bars .cur span, .ci-bars .cur em { color: var(--ink); font-weight: 700; }
+@keyframes ciGrow { from { transform: scaleY(0); } }
+.ci-h { font-size: .8rem; font-weight: 700; color: var(--muted); margin: 0; }
+.ci-m { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: .9rem; }
+.ci-m .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ci-m .n small { color: var(--muted); }
+.ci-m .a { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ci-m .b { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 7%, transparent); overflow: hidden; margin-bottom: 6px; direction: rtl; }
+.ci-m .b i { display: block; height: 100%; border-radius: 3px; background: hsl(var(--h) 60% 55%); }
+.ci-cap { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg); border-radius: 16px; padding: 10px 12px; font-size: .88rem; }
+.ci-cap button, .ci-go { border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: .84rem; background: var(--brand-soft); color: var(--brand); white-space: nowrap; }
+.ci-go { align-self: center; background: none; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+/* 4: sliding between tabs */
+.swipe-hint { position: fixed; z-index: 14; top: 50%; width: 46px; height: 46px; margin-top: -23px; border-radius: 50%; background: var(--surface); box-shadow: 0 6px 18px rgba(20, 16, 40, .18);
+  display: grid; place-items: center; pointer-events: none; opacity: 0; color: var(--brand); font-size: 1.3rem; font-weight: 700; }
+/* 2: category bubbles pop in one by one */
+.bub.pop { animation: bubIn .55s cubic-bezier(.3, 1.45, .5, 1) both; }
+@keyframes bubIn { from { opacity: 0; transform: scale(.3); } }
+/* 3: the gauge changing stage: colors flow, a light runs along the arc, the number pulses */
+.rg0, .rg1 { transition: stop-color .9s ease; }
+#ringSweep { fill: none; stroke: #fff; stroke-width: 18; stroke-linecap: round; opacity: 0; pointer-events: none; mix-blend-mode: soft-light; }
+.status .big.flash { animation: bigFlash .9s ease-out; }
+@keyframes bigFlash { 0% { transform: scale(1); } 30% { transform: scale(1.1); } 100% { transform: scale(1); } }
+.g-plus.pop, .ring-pill.pop { animation: chipPop .6s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes chipPop { from { opacity: 0; transform: translateY(6px) scale(.9); } }
+/* 4: pull down to refresh */
+.ptr { position: fixed; z-index: 40; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 6px); width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--surface);
+  box-shadow: 0 6px 18px rgba(30, 20, 80, .18); display: grid; place-items: center; opacity: 0; transform: translateY(-50px); pointer-events: none; }
+.ptr svg { width: 26px; height: 26px; }
+.ptr.spin svg { animation: ptrSpin .8s linear infinite; }
+@keyframes ptrSpin { to { transform: rotateY(360deg); } }
+/* 5: what a smart search understood */
+.q-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
+.q-chips span { font-size: .74rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); }
+.q-chips[hidden] { display: none; }
+/* 8: the same point last month */
+.pace { font-size: .78rem; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; text-align: center; }
+.pace b { font-weight: 700; }
+.pace .up { color: var(--bad); } .pace .down { color: var(--good); }
+.pace[hidden] { display: none; }
+/* 7: dark mode details */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .today .td-ic.hg { background: linear-gradient(160deg, #2c2416, #3a2f17); } :root:not([data-theme="light"]) .hg .glass { fill: #1d1c24; stroke: #e2ad4c; } :root:not([data-theme="light"]) .hg .cap { fill: #e2ad4c; }
+  :root:not([data-theme="light"]) .undo-bar { background: #2e2c3a; color: var(--ink); } :root:not([data-theme="light"]) .fly-coin { box-shadow: 0 0 0 2px rgba(0, 0, 0, .4), 0 6px 14px rgba(0, 0, 0, .5); } }
+:root[data-theme="dark"] .today .td-ic.hg { background: linear-gradient(160deg, #2c2416, #3a2f17); } :root[data-theme="dark"] .hg .glass { fill: #1d1c24; stroke: #e2ad4c; } :root[data-theme="dark"] .hg .cap { fill: #e2ad4c; }
+:root[data-theme="dark"] .undo-bar { background: #2e2c3a; color: var(--ink); }
+.theme-seg { display: inline-flex; background: var(--bg); border-radius: 12px; padding: 3px; gap: 2px; }
+.theme-seg button { border: 0; background: none; border-radius: 9px; padding: 6px 12px; font-size: .85rem; color: var(--muted); }
+.theme-seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
 .today.over .td-ic { background: var(--bad-soft); } .today.over .td-ic svg { stroke: var(--bad); } .today.over .td-v { color: var(--bad); }
 .today.done .td-ic { background: var(--warn-soft); } .today.done .td-ic svg { stroke: var(--warn); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .today .td-ic { background: #3a2f17; } :root:not([data-theme="light"]) .today .td-ic svg { stroke: #f3c25c; } }
@@ -768,6 +1128,7 @@ body { margin: 0; }
 
 <div class="wrap" dir="rtl" lang="he">
   <header class="top" id="monthBar">
+    <div class="mini" id="miniBar" aria-hidden="true"><div class="mb-t"><span id="mbLbl"></span><b class="num" id="mbVal"></b></div><span class="mb-today num" id="mbToday"></span><div class="mb-bar"><i id="mbFill"></i></div></div>
     <span class="brand-logo" title="iSpend"><svg viewBox="0 0 64 64" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lgH" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b4cf0"/><stop offset="1" stop-color="#9a52d6"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#lgH)"/><circle cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="6"/><path d="M32 14 A18 18 0 1 1 14.6 36.6" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><circle cx="14.6" cy="36.6" r="3" fill="#ffd36e"/><path d="M24 37 L29.5 31.5 L33.5 35 L40 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M35.5 27 H40.5 V32" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     <div class="month">
       <div class="hello" id="hello"></div>
@@ -784,11 +1145,13 @@ body { margin: 0; }
   <div class="banner" id="cardPrompt" hidden></div>
 
   <section class="status" id="status" aria-label="מצב החודש">
+    <button type="button" class="vibe" id="vibe" hidden></button>
     <div class="ring-wrap gauge">
       <svg viewBox="0 0 240 136" aria-hidden="true">
         <defs><linearGradient id="ringGrad" x1="1" y1="0" x2="0" y2="0"><stop offset="0" class="rg0"/><stop offset="1" class="rg1"/></linearGradient></defs>
         <path class="ring-bg" d="M220 124 A100 100 0 0 0 20 124"/>
         <path id="ringFg" d="M220 124 A100 100 0 0 0 20 124" stroke="url(#ringGrad)" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+        <path id="ringSweep" d="M220 124 A100 100 0 0 0 20 124" pathLength="100" stroke-dasharray="10 110" stroke-dashoffset="10"/>
         <g id="goalMark" style="opacity:0"><line id="goalTick" stroke-linecap="round"/><text id="goalTxt" text-anchor="middle">יעד</text></g>
         <g id="ringTip" style="opacity:0"><circle class="halo" r="10"/><circle class="coin" r="6"/></g>
       </svg>
@@ -800,7 +1163,8 @@ body { margin: 0; }
     <div class="g-under">
       <div class="g-plus num" id="statusPlus" hidden></div>
       <div class="sub" id="statusSub">טוען…</div>
-      <div class="ring-pill" id="ringPill" hidden></div>
+      <div class="g-chips"><div class="ring-pill" id="ringPill" hidden></div><div class="streak" id="streakPill" hidden></div></div>
+      <div class="pace" id="paceLine" hidden></div>
     </div>
     <div class="today" id="todayBox" hidden></div>
     <div class="money" aria-label="לאן הולכת ההכנסה">
@@ -808,56 +1172,102 @@ body { margin: 0; }
         <div class="mc"><i class="md in"><svg viewBox="0 0 24 24"><path d="M12 4v13 M6 11l6 6 6-6 M5 20h14"/></svg></i><div><div class="k">נכנס</div><div class="v num" id="fIncome">—</div></div></div>
         <div class="mc"><i class="md vr"><svg viewBox="0 0 24 24"><path d="M12 17V4 M6 10l6-6 6 6 M5 20h14"/></svg></i><div><div class="k">יצא</div><div class="v num" id="fOut">—</div></div></div>
       </div>
+      <div id="incomeArea"></div>
     </div>
-    <div id="incomeArea"></div>
   </section>
 
   <button class="wrapped-pill" id="wrappedPill" hidden></button>
 
+  <div class="ins-wrap" id="insWrap" data-k="ins">
   <div class="insights" id="instSuggest" aria-live="polite"></div>
   <div class="insights" id="insights" aria-live="polite"></div>
+  </div>
 
 
-  <section class="card" id="weekCard">
-    <h2>תקציב שבועי להוצאות משתנות <span class="side num" id="weekBudget"></span></h2>
-    <div id="weekNow"></div>
-    <div class="weeks" id="weeks"></div>
-  </section>
 
-  <section class="card">
+
+  <section class="card" id="catsCard" data-k="cats">
     <h2>
       <span>לאן הלך הכסף <span class="side" style="font-weight:400;font-size:.75rem;color:var(--muted)">מול החודש הקודם</span></span>
       <span class="seg-wrap"><span class="seg" role="group" aria-label="סוג הוצאה">
         <button id="segVar" aria-pressed="true">משתנות</button>
         <button id="segFixed" aria-pressed="false">קבועות</button>
-      </span><b class="seg-sum num" id="segSum" aria-live="polite"></b></span>
+      </span><b class="seg-sum num" id="segSum" aria-live="polite"></b><button type="button" class="cap-btn" id="capEditBtn" aria-pressed="false">תקרות</button></span>
     </h2>
+    <p class="cap-hint" id="capHint" hidden>לחצו על קטגוריה כדי לקבוע כמה מותר להוציא עליה החודש</p>
     <div class="bubbles" id="cats"></div>
   </section>
 
-  <section class="card" id="burnCard">
+
+
+
+  <button type="button" class="arr-open" data-arrange>עריכת המסך</button>
+  </div>
+
+  <div id="anaView" hidden style="display:contents">
+  <section class="card" id="fcCard" data-k="fc" hidden>
+    <h2><span>תחזית לסוף החודש</span><span class="side num" id="fcSide"></span></h2>
+    <div class="fc-big"><span class="k" id="fcK"></span><b class="num" id="fcV"></b></div>
+    <div class="fc-sl">
+      <div class="fc-row"><span>אם אוציא ביום, עד סוף החודש</span><b class="num" id="fcDay"></b></div>
+      <input type="range" id="fcRange" min="0" max="1000" step="10" aria-label="הוצאה ליום עד סוף החודש">
+      <div class="fc-marks"><span id="fcPace"></span><span id="fcGoalAt"></span></div>
+    </div>
+    <p class="fc-note" id="fcNote"></p>
+  </section>
+  <section class="card" id="merchCard" data-k="merch" hidden>
+    <h2><span>העסקים של החודש</span><span class="side" id="merchSide"></span></h2>
+    <div class="ci-m" id="merchList"></div>
+  </section>
+  <section class="card" id="fixCard" data-k="fix" hidden>
+    <h2><span>חיובים קבועים החודש</span><span class="side num" id="fixSide"></span></h2>
+    <div class="fx-list" id="fixList"></div>
+  </section>
+  <section class="card" id="cmpCard" data-k="cmp" hidden>
+    <h2><span>הוצאות לפי קטגוריות <span class="up-when">מול <span id="cmpPrev"></span></span></span><span class="side num" id="cmpSide"></span></h2>
+    <p class="cmp-note" id="cmpNote"></p>
+    <div class="cmp-list" id="cmpList"></div>
+    <button type="button" class="ci-go" id="cmpMore" hidden>כל הקטגוריות</button>
+  </section>
+  <section class="card" id="calCard" data-k="cal">
+    <h2><span>לוח החודש</span><span class="side" id="calSide"></span></h2>
+    <div class="cal-wd" aria-hidden="true"><span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span></div>
+    <div class="cal" id="cal"></div>
+    <div class="cal-leg" aria-hidden="true"><span>פחות</span><i style="--l:0"></i><i style="--l:1"></i><i style="--l:2"></i><i style="--l:3"></i><i style="--l:4"></i><span>יותר</span><span class="cal-free">✓ בלי הוצאות</span></div>
+    <div class="cal-day" id="calDay" hidden></div>
+  </section>
+  <section class="card" id="upCard" data-k="up" hidden>
+    <h2><span>חיובים צפויים בחודש הבא <span class="up-when">מ-<span class="num" id="upDate"></span></span></span><span class="side num" id="upSum"></span></h2>
+    <div class="up-strip" id="upStrip"></div>
+    <p class="up-note">התשלום הבא בכל עסקה בתשלומים, וההוצאות הקבועות שחוזרות כל חודש. הכסף הזה כבר תפוס לחודש הבא, שמתחיל ביום החיוב שקבעתם בהגדרות.</p>
+  </section>
+  <section class="card" id="weekCard" data-k="week">
+    <h2>תקציב שבועי להוצאות משתנות <span class="side num" id="weekBudget"></span></h2>
+    <div id="weekNow"></div>
+    <div class="weeks" id="weeks"></div>
+  </section>
+  <section class="card" id="burnCard" data-k="burn">
     <h2>הוצאה מצטברת מול התוכנית <span class="side num" id="burnSide"></span></h2>
     <div class="burn" id="burn"><div class="burn-tip" id="burnTip"></div></div>
     <div class="burn-legend" id="burnLegend"></div>
   </section>
-
-  <section class="card" id="instCard" hidden>
+  <section class="card" id="instCard" data-k="inst" hidden>
     <h2>תשלומים פתוחים <span class="side num" id="instLeft"></span></h2>
     <div id="instList"></div>
   </section>
-
-  <section class="card" id="payCard">
+  <section class="card" id="payCard" data-k="pay">
     <h2>לפי אמצעי תשלום <span class="side num" id="payTotal"></span></h2>
     <div class="cats" id="payMethods"></div>
   </section>
-
+  <button type="button" class="arr-open" data-arrange>עריכת המסך</button>
   </div>
 
   <div id="txView" hidden style="display:contents">
   <section class="card">
     <h2><span><span id="listTitle">כל התנועות</span> <span class="list-total num" id="listTotal"></span></span> <button class="seg" id="clearFilter" hidden style="border:0;padding:4px 10px;font-size:.78rem">הצג הכול</button></h2>
     <div class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 100-14 7 7 0 000 14z M21 21l-5-5"/></svg>
-      <input type="search" id="txSearch" placeholder="חיפוש לפי עסק, קטגוריה או כרטיס" aria-label="חיפוש תנועות" autocomplete="off"></div>
+      <input type="search" id="txSearch" placeholder="חיפוש: ״סופר מעל 200״, ״מקס ספטמבר״" aria-label="חיפוש תנועות" autocomplete="off"></div>
+      <div class="q-chips" id="qChips" hidden></div>
     <div class="tx-chips" id="txChips" role="group" aria-label="סינון">
       <button data-kind="all" aria-pressed="true">הכול</button><button data-kind="exp" aria-pressed="false">הוצאות</button><button data-kind="inc" aria-pressed="false">הכנסות</button><button data-kind="inst" aria-pressed="false">בתשלומים</button>
     </div>
@@ -868,6 +1278,7 @@ body { margin: 0; }
 
   <div id="yearView" hidden style="display:contents">
     <div class="year-pick" id="yearPick" role="group" aria-label="שנה"></div>
+    <button class="wrapped-pill" id="yWrapPill" hidden></button>
     <section class="yhero">
       <div class="big num" id="yBig">—</div>
     </section>
@@ -956,6 +1367,24 @@ body { margin: 0; }
     </section>
 
     <section class="card">
+      <h2>תקרה לקטגוריה</h2>
+      <p class="note" style="margin:0">כמה מותר להוציא בחודש על כל קטגוריה. מגדירים את זה במסך הבית, ב״לאן הלך הכסף״, בכפתור ״תקרות״. כל חודש יכול לקבל תקרה משלו, וחודש בלי שינוי ממשיך עם התקרה הקודמת.</p>
+      <div class="save-row"><button class="btn ghost" type="button" id="goCaps">לעריכת התקרות</button></div>
+    </section>
+
+    <section class="card">
+      <h2>מראה</h2>
+      <div class="row"><span>ערכת צבעים</span><span class="theme-seg" role="group" aria-label="ערכת צבעים"><button data-theme-set="auto">אוטומטי</button><button data-theme-set="light">בהיר</button><button data-theme-set="dark">כהה</button></span></div>
+      <p class="note" style="margin:0">אוטומטי עובר לכהה לפי הגדרות הטלפון.</p>
+    </section>
+
+    <section class="card" id="quickAddCard">
+      <h2>הוספה מהירה מהטלפון</h2>
+      <p class="note" style="margin:0">קישור שפותח ישר את טופס ההוספה. באייפון: אפליקציית קיצורים ← קיצור חדש ← ״פתיחת כתובת URL״ עם הקישור, ואז אפשר לשים אותו במסך הבית, במרכז הבקרה או בכפתור הפעולה.</p>
+      <div class="row"><code id="quickAddUrl" style="direction:ltr;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0"></code><button class="btn ghost" id="quickAddCopy" type="button" style="padding:5px 12px;font-size:.8rem;flex:none">העתקה</button></div>
+    </section>
+
+    <section class="card">
       <h2>מועד החיוב</h2>
       <div class="row">
         <label for="startDay">יום החיוב בכרטיסי האשראי</label>
@@ -1009,14 +1438,23 @@ body { margin: 0; }
   <div class="foot" id="foot">טוען נתונים…</div>
 </div>
 
+<div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcf5c" stroke="#e0a22a" stroke-width="1.5"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="800" fill="#8a5a00">₪</text></svg></div>
+<div class="undo-bar" id="undoBar" dir="rtl" lang="he" role="status" hidden><span id="undoTxt">התנועה נמחקה</span><button type="button" id="undoBtn">ביטול</button><i></i></div>
 <nav class="nav" dir="rtl" lang="he" aria-label="ניווט">
   <button id="navHome" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8 M5 10v11h14V10 M10 21v-6h4v6"/></svg>בית</button>
   <button id="navTx" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16 M4 12h16 M4 18h10"/></svg>תנועות</button>
+  <button id="tabAna" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 109 9h-9z"/><path d="M15 3.5A9 9 0 0120.5 9H15z"/></svg>חודשי</button>
   <div><button class="fab" id="fab" aria-label="הוספת תנועה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14 M5 12h14"/></svg></button></div>
   <button id="tabYear" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10 M10 20V4 M16 20v-7 M22 20H2"/></svg>שנתי</button>
   <button id="tabAdmin" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>הגדרות</button>
 </nav>
 
+<div class="recap" id="recap" hidden dir="rtl" lang="he" role="dialog" aria-modal="true" aria-labelledby="rcTitle">
+  <div class="rc-sheet">
+    <header class="rc-head"><div><span class="rc-kick" id="rcKick"></span><h2 id="rcTitle"></h2></div><button type="button" class="rc-x" id="rcClose" aria-label="סגירה">✕</button></header>
+    <div class="rc-body" id="rcBody"></div>
+  </div>
+</div>
 <div class="wrapped" id="wrapped" hidden dir="rtl" lang="he" role="dialog" aria-modal="true" aria-label="סיכום החודש">
   <div class="w-bars" id="wBars"></div>
   <div class="w-top"><span class="brand-logo"><svg viewBox="0 0 64 64" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lgW" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b4cf0"/><stop offset="1" stop-color="#9a52d6"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#lgW)"/><circle cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="6"/><path d="M32 14 A18 18 0 1 1 14.6 36.6" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><circle cx="14.6" cy="36.6" r="3" fill="#ffd36e"/><path d="M24 37 L29.5 31.5 L33.5 35 L40 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M35.5 27 H40.5 V32" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>iSpend</div>
@@ -1029,6 +1467,7 @@ body { margin: 0; }
 <div class="sheet-bg" id="catSheetBg" hidden dir="rtl" lang="he">
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="catSheetTitle">
     <h3><span class="cs-head" id="catSheetTitle"></span><button type="button" class="x" id="closeCatSheet" aria-label="סגירה">✕</button></h3>
+    <div class="ci" id="catInfo" hidden></div>
     <div class="cs-sum" id="catSheetSum"></div>
     <div class="days" id="catSheetList"></div>
   </div>
@@ -1036,7 +1475,8 @@ body { margin: 0; }
 
 <div class="sheet-bg" id="sheetBg" hidden dir="rtl" lang="he" style="z-index:30">
   <form class="sheet" id="addForm" role="dialog" aria-modal="true" aria-labelledby="addTitle" novalidate>
-    <h3><span id="addTitle">הוספת תנועה</span><button type="button" class="x" id="closeAdd" aria-label="סגירה">✕</button></h3>
+    <h3><span id="addTitle">הוספת תנועה</span><span class="h3-acts"><button type="button" class="mic" id="micBtn" aria-label="הוספה בקול"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0 M12 18v3"/></svg></button><button type="button" class="x" id="closeAdd" aria-label="סגירה">✕</button></span></h3>
+    <div class="voice" id="voiceBox" hidden><span class="vdot" aria-hidden="true"></span><div><b id="voiceState">מקשיב…</b><span id="voiceText">אמרו למשל: ״45 שקל שווארמה במקס״</span></div><button type="button" id="voiceStop">סיום</button></div>
     <div class="kind" role="group" aria-label="סוג">
       <button type="button" id="kExp" aria-pressed="true">הוצאה</button>
       <button type="button" id="kInc" aria-pressed="false">קיבלתי כסף</button>
@@ -1110,6 +1550,29 @@ body { margin: 0; }
       <p class="form-msg" id="mvMsg"></p>
       <button type="submit" class="ns-save" id="mvGo"></button>
       <button type="button" class="sal-later" id="mvCancel">ביטול, להשאיר אותה</button>
+    </div>
+  </form>
+</div>
+
+<div class="sheet-bg sal-bg" id="capBg" hidden dir="rtl" lang="he" style="z-index:32">
+  <form class="sal-sheet ns cap-sheet" id="capForm" role="dialog" aria-modal="true" aria-labelledby="capTitle" novalidate>
+    <button type="button" class="ns-x" id="capClose" aria-label="סגירה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg></button>
+    <div class="ns-top">
+      <div class="mv-ic" id="capIc"></div>
+      <div class="ns-kicker" id="capKick">תקרה</div>
+      <h3 id="capTitle"></h3>
+      <p id="capText"></p>
+    </div>
+    <div class="ns-body">
+      <label class="cap-amt"><span>₪</span><input id="capAmt" inputmode="numeric" autocomplete="off" placeholder="ללא" aria-label="תקרה בשקלים"></label>
+      <input type="range" id="capRange" min="0" max="2000" step="50" value="0" aria-label="תקרה">
+      <div class="cap-meter" id="capMeter"><i id="capFill"></i></div>
+      <div class="cap-legend" id="capLegend"></div>
+      <div class="cap-chips" id="capChips"></div>
+      <p class="cap-note" id="capNote"></p>
+      <p class="form-msg" id="capMsg2"></p>
+      <button type="submit" class="ns-save" id="capSave">שמירת תקרה</button>
+      <button type="button" class="sal-later" id="capCancel">ביטול</button>
     </div>
   </form>
 </div>
@@ -1376,7 +1839,7 @@ const SHEET_ID = "1CwS8tTfMiKgwk-ke0ScWgYEYvABhqIQltITGK3d9Px8";
 const SERVER = "Google Sheets";
 const R_APPLE = "'עסקאות'!A2:I"; // I: number of payments (empty = one)
 const R_BANK = "'_moneyman'!A2:L";
-const R_SETTINGS = "'הגדרות'!A2:V300";
+const R_SETTINGS = "'הגדרות'!A2:Z300";
 const R_MANUAL = "'הוצאות יומיות'!D4:I";
 // Earlier monthly files (July 2025 – September 2026), read as they are. October 2026 onward lives in the main file.
 let HISTORY = []; // filled when the account is linked to Google Sheets
@@ -1430,6 +1893,9 @@ const MERCHANTS = [
   ["yohananof", "יוחננוף", "סופר"], ["shufersal", "שופרסל", "סופר"], ["rami levy", "רמי לוי", "סופר"], ["victory", "ויקטורי", "סופר"],
   ["osher ad", "אושר עד", "סופר"], ["tiv taam", "טיב טעם", "סופר"], ["hazi hinam", "חצי חינם", "סופר"], ["hatzi hinam", "חצי חינם", "סופר"],
   ["yeinot bitan", "יינות ביתן", "סופר"], ["mega ba", "מגה בעיר", "סופר"], ["carrefour", "קרפור", "סופר"], ["am:pm", "AM:PM", "סופר"], ["ampm", "AM:PM", "סופר"],
+  ["hyper cohen", "היפר כהן", "סופר"], ["cohen hyper", "היפר כהן", "סופר"], ["king store", "קינג סטור", "סופר"], ["kingstore", "קינג סטור", "סופר"],
+  ["machsanei lahav", "מחסני להב", "סופר"], ["mahsanei lahav", "מחסני להב", "סופר"], ["stop market", "סטופ מרקט", "סופר"], ["eden teva", "עדן טבע מרקט", "סופר"],
+  ["coop ", "קואופ", "סופר"], ["co-op", "קואופ", "סופר"], ["super dosh", "סופר דוש", "סופר"], ["hatzlacha", "שוק ההצלחה", "סופר"], ["mahsanei hashuk", "מחסני השוק", "סופר"],
   ["super yuda", "סופר יודה", "סופר"], ["keshet teamim", "קשת טעמים", "סופר"], ["machsanei hashuk", "מחסני השוק", "סופר"], ["fresh market", "פרשמרקט", "סופר"],
   ["freshmarket", "פרשמרקט", "סופר"], ["super dosh", "סופר דוש", "סופר"], ["zol vebegadol", "זול ובגדול", "סופר"], ["good market", "גוד מרקט", "סופר"],
   ["cool market", "קול מרקט", "סופר"], ["yesh hesed", "יש חסד", "סופר"], ["mahsaney", "מחסני השוק", "סופר"],
@@ -1601,7 +2067,7 @@ const BUSINESS_TYPES = [
   ["דגים", "סופר", ["fish market", "fishmonger", "seafood", "דגים", "פירות ים"]],
   ["ירקן", "סופר", ["greengrocer", "fruit", "vegetable", "produce", "yerakot", "ירקות", "פירות", "ירקן"]],
   ["תבלינים", "סופר", ["spices", "spice", "תבלינים"]],
-  ["סופר", "סופר", ["supermarket", "super market", "minimarket", "mini market", "market", "grocery", "groceries", "makolet", "shuk", "hypermarket", "סופרמרקט", "מרקט", "מכולת", "מינימרקט", "סופר", "שוק "]],
+  ["סופר", "סופר", ["supermarket", "super market", "minimarket", "mini market", "market", "grocery", "groceries", "makolet", "shuk", "hypermarket", "hyper ", "היפר ", "סופרמרקט", "מרקט", "מכולת", "מינימרקט", "סופר", "שוק "]],
   // health & beauty
   ["בית מרקחת", "טיפוח ופארם", ["pharmacy", "pharm", "drugstore", "apteka", "מרקחת", "פארם"]],
   ["מספרה", "טיפוח ופארם", ["barber", "barbershop", "hair", "salon", "coiffure", "mispara", "מספרה", "ספרות", "תספורת"]],
@@ -1672,8 +2138,13 @@ function typeWord(w) {
   }
   return typeRe.get(w);
 }
+// town names on card slips ("... BEER SHEVA") must not read as a kind of place ("beer" → bar)
+const PLACE_NAMES = ["beer sheva", "beer-sheva", "be'er sheva", "beersheba", "beer yaakov", "beer yaacov", "tel aviv", "ramat gan", "bat yam", "petah tikva", "petach tikva",
+  "rishon lezion", "rishon le zion", "kfar saba", "ramat hasharon", "bnei brak", "beit shemesh", "nes ziona", "rosh haayin", "rosh ha'ayin", "givat shmuel", "kiryat gat",
+  "kiryat ono", "kiryat shmona", "ganei tikva", "gan yavne", "kfar yona", "hod hasharon", "ramat yishai", "beit shean", "maale adumim", "באר שבע", "באר יעקב", "בת ים", "רמת גן"];
 function businessType(raw) {
-  const n = normMerchant(raw);
+  let n = normMerchant(raw);
+  PLACE_NAMES.forEach(c => { n = n.split(c).join(" "); });
   for (const [name, cat, words] of BUSINESS_TYPES) if (words.some(w => typeWord(w).test(n))) return { name, cat };
   return null;
 }
@@ -1998,6 +2469,8 @@ function render() {
   const goal = incomeExpected ? Math.min(goalFor(view.y, view.m).amount, incomeExpected) : 0;
   const allow = incomeExpected - goal; // what may go out and still meet the savings goal
   const stage = !incomeExpected ? "none" : spent <= allow ? "ok" : spent <= incomeExpected ? "goal" : "over";
+  const stageKey = view.y + "-" + view.m, stageChanged = lastStage && lastStage.k === stageKey && lastStage.s !== stage && stage !== "none";
+  lastStage = { k: stageKey, s: stage };
   st.classList.toggle("neg", stage === "over");
   st.classList.toggle("mid", stage === "goal");
   plus.hidden = true;
@@ -2034,6 +2507,31 @@ function render() {
   const fill = incomeExpected ? Math.min(spent / incomeExpected, 1) : (spent > 0 ? 1 : 0);
   const P = (fr, r = 100) => [120 + r * Math.cos(Math.PI * fr), 124 - r * Math.sin(Math.PI * fr)];
   $("ringFg").style.strokeDashoffset = String(100 - fill * 100);
+  if (stageChanged) stageFx(fill);
+  setTimeout(() => { try { renderVibe(); } catch (e) { console.error(e); } }, 0);
+  // 8: the slim bar under the month title
+  {
+    const mb = $("miniBar"); mb.classList.toggle("neg", stage === "over"); mb.classList.toggle("mid", stage === "goal");
+    $("mbLbl").textContent = stage === "none" ? "הוצאת" : stage === "over" ? "חרגת ב-" : "יתרה";
+    $("mbVal").textContent = fmt(stage === "none" ? spent : Math.abs(incomeExpected - spent));
+    $("mbFill").style.width = (fill * 100).toFixed(1) + "%";
+  }
+  try { renderStreak(isCurrent); } catch (e) { console.error(e); }
+  vibeCtx = { isCurrent, f, incomeExpected, spent, goal, allow, elapsed, days, daysLeft, stage, fixedExpected };
+  // 8: compared with the same point of last month (spent by the same day of the period)
+  {
+    const pl = $("paceLine"); pl.hidden = true; paceInfo = null;
+    if (isCurrent && prev.spend.length) {
+      const [py, pm] = prevYM(view.y, view.m), ps = period(py, pm).start, cut = new Date(ps.getFullYear(), ps.getMonth(), ps.getDate() + elapsed - 1);
+      const then = prev.spend.filter(t => t.date <= cut).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+      const d = spent - then;
+      paceInfo = { d, then, pm };
+      if (Math.abs(d) >= 1 && false) {
+        pl.innerHTML = `באותה נקודה ב${MONTHS[pm]} יצאו ${fmt(then)} · <span class="${d > 0 ? "up" : "down"}"><b><bdi>${d > 0 ? "▲" : "▼"} ${fmt(Math.abs(d))}</bdi></b> ${d > 0 ? "יותר" : "פחות"} החודש</span>`;
+        pl.hidden = false;
+      }
+    }
+  }
   const [tx, ty] = P(fill), tip = $("ringTip");
   tip.style.transform = `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px)`; tip.style.opacity = fill > 0.01 ? "1" : "0";
   const gm = $("goalMark");
@@ -2053,6 +2551,12 @@ function render() {
   try { renderWrappedPill(isCurrent); } catch (e) { console.error(e); }
   try { renderPayMethods(f); } catch (e) { console.error(e); }
   try { renderInstallments(); } catch (e) { console.error(e); }
+  try { renderUpcoming(isCurrent); } catch (e) { console.error(e); }
+  try { renderFixed(f, isCurrent); } catch (e) { console.error(e); }
+  try { renderCal(f, isCurrent); } catch (e) { console.error(e); }
+  try { renderCmp(f, isCurrent, elapsed); } catch (e) { console.error(e); }
+  try { renderFc(f, isCurrent, { incomeExpected, goal, fixedExpected, elapsed, days, daysLeft }); } catch (e) { console.error(e); }
+  try { renderMerch(f); } catch (e) { console.error(e); }
   renderList(f.inP);
 }
 
@@ -2200,8 +2704,14 @@ function renderInstallments() {
   });
   rows.sort((a, b) => a.end - b.end);
   renderInstSuggest();
-  $("instCard").hidden = !rows.length;
-  if (!rows.length) return;
+  const card = $("instCard"), empty = !rows.length;
+  if (!layout.hidden.includes("inst") && !arranging) {
+    if (empty && layout.flow.includes("inst")) { const end = $("anaView").querySelector(":scope > .arr-open"); if (card.parentElement !== $("anaView") || card.nextElementSibling !== end) end.before(card); }
+    else if (!empty && layout.flow.includes("inst") && card.parentElement !== $("flowView")) applyLayout();
+  }
+  card.hidden = layout.hidden.includes("inst");
+  card.classList.toggle("is-empty", empty);
+  if (empty) { $("instLeft").textContent = ""; $("instList").innerHTML = `<p class="inst-empty">אין כרגע עסקאות בתשלומים. כשתוסיפו קנייה בתשלומים היא תופיע כאן, ובמסך הבית.</p>`; return; }
   $("instLeft").textContent = "נשאר " + fmt(rows.reduce((s, r) => s + r.left, 0));
   $("instList").innerHTML = rows.map(r => `<div class="tx inst-row">${catIcon(r.t.category)}
     <div class="m"><bdi>${esc(r.t.merchant)}</bdi> <bdi dir="ltr" class="inst">(${r.cur}/${r.n})</bdi></div>
@@ -2231,10 +2741,11 @@ function renderIncome(sal) {
     $("incomeForm").onsubmit = saveIncome;
     $("incomeInput").focus();
   } else {
-    const label = sal.missing ? `הזינו את המשכורת של ${name}`
-      : sal.est ? `משכורת ${name}: הערכה ${fmt(sal.amount)} · הזינו את מה שקיבלתם`
-      : `משכורת ${name}: ${fmt(sal.amount)} · עריכה`;
-    a.innerHTML = `<button class="edit-income" id="editIncome">${label}</button>`;
+    const pen = `<svg class="pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`;
+    const label = sal.missing ? `<span class="k">משכורת ${name}</span><b class="add">+ להזין</b>`
+      : sal.est ? `<span class="k">משכורת ${name} · הערכה</span><b class="num">${fmt(sal.amount)}</b>${pen}`
+      : `<span class="k">משכורת ${name}</span><b class="num">${fmt(sal.amount)}</b>${pen}`;
+    a.innerHTML = `<button class="edit-income mt" id="editIncome" aria-label="עריכת המשכורת">${label}</button>`;
     $("editIncome").onclick = () => { editingIncome = true; renderIncome(sal); };
     if (!sal.missing) renderGoal(a, sal);
   }
@@ -2242,9 +2753,10 @@ function renderIncome(sal) {
 
 function renderGoal(a, sal) {
   const g = goalFor(view.y, view.m), name = MONTHS[view.m], inc = sal.amount;
-  const box = document.createElement("div"); box.style.marginTop = "6px"; a.appendChild(box);
+  const box = document.createElement("div"); box.className = editingGoal ? "goal-box editing" : "goal-box"; a.appendChild(box);
   if (!editingGoal) {
-    box.innerHTML = `<button class="goal-btn" id="editGoal">${g.missing ? "+ להגדיר כמה לחסוך ב" + name : `יעד חיסכון ל${name}: <b class="num">${fmt(g.amount)}</b>${g.est ? " (כמו בחודש הקודם)" : ""} · עריכה`}</button>`;
+    const pen = `<svg class="pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`;
+    box.innerHTML = `<button class="goal-btn mt" id="editGoal" ${g.est ? 'title="כמו בחודש הקודם"' : ""}>${g.missing ? `<span class="k">יעד חיסכון</span><b class="add">+ להגדיר</b>` : `<span class="k">יעד חיסכון${g.est ? " · כמו קודם" : ""}</span><b class="num gold">${fmt(g.amount)}</b>${pen}`}</button>`;
     $("editGoal").onclick = () => { editingGoal = true; render(); };
     return;
   }
@@ -2395,7 +2907,7 @@ function animateView(id) {
 }
 // how much can still go out today, so the rest of the month stays covered
 function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
-  const box = $("todayBox");
+  const box = $("todayBox"); $("mbToday").innerHTML = "";
   if (!isCurrent || !income) { box.hidden = true; return; }
   const val = t => t.refund ? -t.amount : t.amount;
   const spentToday = f.spend.filter(t => iso(t.date) === iso(today)).reduce((s, t) => s + val(t), 0);
@@ -2416,10 +2928,32 @@ function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
     const tomorrow = days > 1 ? (pool - spentToday) / (days - 1) : 0;
     side = days > 1 ? `מחר: <b>${fmt(Math.max(0, tomorrow))}</b> ליום<br>במקום ${fmt(perDay)}` : dLeft;
   }
+  // the hourglass: the top bulb holds what is left of today's share, the bottom what was spent today
+  const r = perDay > 0 ? Math.max(0, Math.min(1, left / perDay)) : 0, r0 = box.dataset.r != null ? +box.dataset.r : 1; box.dataset.r = r;
+  const prevSp = +(box.dataset.sp || 0); box.dataset.sp = spentToday;
+  const poured = box.dataset.sp0 != null && spentToday > prevSp + 0.004; box.dataset.sp0 = 1;
+  const glass = "M9 5 C9 15 18 19 18 23 C18 27 9 31 9 41 L31 41 C31 31 22 27 22 23 C22 19 31 15 31 5 Z";
+  const hg = `<svg viewBox="0 0 40 46" aria-hidden="true"><defs><clipPath id="hgClip"><path d="${glass}"/></clipPath>
+    <linearGradient id="hgSand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8c94a"/><stop offset="1" stop-color="#d88d10"/></linearGradient></defs>
+    <path class="glass" d="${glass}"/>
+    <g clip-path="url(#hgClip)">
+      <rect class="sand top" x="8" y="7" width="24" height="16" style="transform:scaleY(${r0.toFixed(3)})"/>
+      <rect class="sand bot" x="8" y="${(41 - 14).toFixed(1)}" width="24" height="14" style="transform:scaleY(${Math.max(.04, 1 - r0).toFixed(3)})"/>
+      ${r > 0 ? `<line class="stream" x1="20" y1="23" x2="20" y2="40"/>` : ""}
+      <circle class="grain" cx="19.3" cy="24" r=".9"/><circle class="grain" cx="20.7" cy="25" r=".8"/><circle class="grain" cx="20" cy="24.5" r="1"/>
+    </g>
+    <rect class="cap" x="6" y="2" width="28" height="3" rx="1.5"/><rect class="cap" x="6" y="41" width="28" height="3" rx="1.5"/></svg>`;
   box.className = "today " + cls;
-  box.innerHTML = `<span class="td-ic">${sun}</span><div><div class="td-k">${k}</div><div class="td-v num" id="todayVal"></div></div><div class="td-side num">${side}</div>`;
+  box.innerHTML = `<span class="td-ic hg">${hg}</span><div><div class="td-k">${k}</div><div class="td-v num" id="todayVal"></div></div><div class="td-side num">${side}</div>`;
+  $("mbToday").innerHTML = left >= 0 ? `היום: <b>${fmt(left)}</b>` : `היום: <b style="color:var(--bad)">−${fmt(-left)}</b>`;
   const tv = $("todayVal"); tv.dataset.v = box.dataset.v || 0; countTo(tv, pool <= 0 ? pool : left >= 0 ? left : -left, fmt); box.dataset.v = tv.dataset.v;
   box.hidden = false;
+  // the sand settles from where it was to where it is now
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const top = box.querySelector(".sand.top"), bot = box.querySelector(".sand.bot");
+    if (top) top.style.transform = `scaleY(${r.toFixed(3)})`; if (bot) bot.style.transform = `scaleY(${Math.max(.04, 1 - r).toFixed(3)})`;
+  }));
+  if (poured) { void box.offsetWidth; box.classList.add("pour"); setTimeout(() => box.classList.remove("pour"), 2200); }
 }
 function readDismissed() { try { return JSON.parse(localStorage.getItem("insightsOff") || "{}"); } catch (e) { return {}; } }
 let insIdx = 0, insTimer = null, insHold = 0;
@@ -2563,9 +3097,145 @@ function wrappedFor(y, m) {
   slides.push({ h: 262, html: `<div class="w-k">זהו, זה היה ${name}</div><div class="w-mid">${isCur ? "נתראה בסוף החודש" : "נתראה ב" + MONTHS[(m + 1) % 12]}</div><div class="w-sub">לחצו על ✕ כדי לחזור לתזרים</div>` });
   return slides;
 }
-function openWrapped(y, m) {
-  const sl = wrappedFor(y, m); if (!sl) return;
-  wSlides = sl; wIdx = 0; $("wrapped").hidden = false; drawWrapped();
+// 6: the year as a story
+function yearWrapped(y) {
+  const ym = yearMonths(y).filter(x => x.f.spend.length); if (ym.length < 2) return null; // months with data only
+  const spend = ym.flatMap(x => x.f.spend), val = t => t.refund ? -t.amount : t.amount;
+  const buys = spend.filter(t => !t.refund && t.amount > 0 && !(t.gen > 1)); if (buys.length < 10) return null;
+  const total = ym.reduce((s, x) => s + x.expense, 0), income = ym.reduce((s, x) => s + x.income, 0);
+  const slides = [];
+  slides.push({ h: 262, html: `<div class="w-k">השנה שלך ב-iSpend · ${y}</div><div class="w-big num">${fmt(total)}</div><div class="w-sub">יצאו ב-${buys.length.toLocaleString("en-US")} רכישות, לאורך ${ym.length} חודשים</div>` });
+  const byC = new Map(); spend.forEach(t => byC.set(t.category, (byC.get(t.category) || 0) + val(t)));
+  const [tc, tv] = [...byC.entries()].sort((a, b) => b[1] - a[1])[0], [ic, hue] = iconFor(tc);
+  slides.push({ h: hue, html: `<div class="w-ic"><svg viewBox="0 0 24 24"><path d="${ICONS[ic] || ICONS.tag}"/></svg></div><div class="w-k">הקטגוריה של השנה</div><div class="w-mid">${esc(tc)}</div><div class="w-sub num">${fmt(tv)} · ${Math.round(tv / Math.max(total, 1) * 100)}% מכל ההוצאות</div>` });
+  const byM = new Map(); buys.forEach(t => { const k = mKey(t), o = byM.get(k) || { n: 0, a: 0, name: t.merchant }; o.n++; o.a += t.amount; byM.set(k, o); });
+  const fav = [...byM.values()].sort((a, b) => b.n - a.n || b.a - a.a)[0];
+  if (fav && fav.n >= 3) slides.push({ h: 28, html: `<div class="w-k">המקום הקבוע שלך</div><div class="w-mid">${esc(fav.name)}</div><div class="w-sub num">${fav.n} פעמים · ${fmt(fav.a)} בסך הכול</div>` });
+  const big = buys.filter(t => !t.gen).sort((a, b) => b.amount - a.amount)[0];
+  if (big) slides.push({ h: 330, html: `<div class="w-k">הקנייה הכי גדולה</div><div class="w-mid">${esc(big.merchant)}</div><div class="w-sub num">${fmt(big.amount)} · ${big.date.getDate()} ב${MONTHS[big.date.getMonth()]}</div>` });
+  const withInc = ym.filter(x => x.income > 0);
+  if (withInc.length) { const best = withInc.slice().sort((a, b) => (b.income - b.expense) - (a.income - a.expense))[0];
+    slides.push({ h: 152, html: `<div class="w-k">החודש הכי חסכוני</div><div class="w-mid">${MONTHS[best.m]}</div><div class="w-sub num">${best.income - best.expense >= 0 ? "נשארו " + fmt(best.income - best.expense) : "יצא רק " + fmt(best.expense)} מתוך ${fmt(best.income)}</div>` }); }
+  { // the longest run of days with no variable spending
+    const days = new Set(spend.filter(t => !t.refund && !t.gen && !t.inst && !FIXED.has(t.category) && t.amount > 0).map(t => iso(t.date)));
+    const s0 = new Date(Math.max(ym[0].f.start, Math.min(...spend.map(t => +t.date)))), e0 = ym[ym.length - 1].f.end < today ? ym[ym.length - 1].f.end : today;
+    let best = 0, run = 0, bestEnd = null;
+    for (let d = new Date(s0); d <= e0; d.setDate(d.getDate() + 1)) { if (days.has(iso(d))) run = 0; else { run++; if (run > best) { best = run; bestEnd = new Date(d); } } }
+    if (best >= 2) slides.push({ h: 20, html: `<div class="w-k">הרצף הכי ארוך 🔥</div><div class="w-big num">${best} ימים</div><div class="w-sub">בלי אף הוצאה משתנה, עד ${bestEnd.getDate()} ב${MONTHS[bestEnd.getMonth()]}</div>` });
+  }
+  const goalsMet = ym.filter(x => { const g = goalFor(x.y, x.m); return x.income > 0 && g.amount > 0 && x.income - x.expense >= g.amount; }).length;
+  if (income > 0) slides.push({ h: income - total >= 0 ? 152 : 8, html: `<div class="w-k">בשורה התחתונה</div><div class="w-big num">${income - total >= 0 ? "+" : "−"}${fmt(Math.abs(income - total))}</div><div class="w-sub">${income - total >= 0 ? "נשארו לך מכל מה שנכנס השנה" : "יצא יותר ממה שנכנס השנה"}${goalsMet ? ` · עמדת ביעד החיסכון ב-${goalsMet} חודשים` : ""}</div>` });
+  return slides;
+}
+function openWrapped(y, m) { const r = recapMonth(y, m); if (r) openRecap(r); }
+
+/* the summaries (week, month, year) as one calm page of tiles instead of a story */
+const rcTone = v => v > 0 ? "bad" : v < 0 ? "good" : "";
+function rcIcon(t) {
+  if (t.cat) { const [ic, hue] = iconFor(t.cat); return `<span class="rc-ic" style="--h:${hue}"><svg viewBox="0 0 24 24"><path d="${ICONS[ic] || ICONS.tag}"/></svg></span>`; }
+  return t.e ? `<span class="rc-ic e">${t.e}</span>` : "";
+}
+function rcTile(t, i) {
+  const d = `style="--d:${i * 70}ms${t.hue != null ? ";--h:" + t.hue : ""}"`;
+  if (t.type === "hero") return `<section class="rc-t w2 hero ${t.tone || ""}" ${d}><span class="k">${t.k}</span><b class="v num" data-count="${t.v}">${fmt(0)}</b>${t.sub ? `<span class="s">${t.sub}</span>` : ""}
+    ${t.meter ? `<div class="rc-meter"><i style="width:${Math.min(100, t.meter.p).toFixed(1)}%"></i>${t.meter.p > 100 ? `<u style="right:${(100 / t.meter.p * 100).toFixed(1)}%"></u>` : ""}</div><div class="rc-ml"><span>${t.meter.a}</span><span>${t.meter.b}</span></div>` : ""}</section>`;
+  if (t.type === "bars") { const mx = Math.max(1, ...t.rows.map(r => r.v)); return `<section class="rc-t w2" ${d}><span class="k">${t.k}</span><div class="rc-bars">${t.rows.map((r, j) => { const [, hue] = iconFor(r.cat); return `<div class="rc-br" style="--h:${hue};--w:${(r.v / mx * 100).toFixed(1)}%;--d2:${i * 70 + j * 60 + 200}ms">${rcIcon({ cat: r.cat })}<span class="n">${esc(r.cat)}</span><span class="a num">${fmt(r.v)}</span><span class="b"><i></i></span></div>`; }).join("")}</div></section>`; }
+  if (t.type === "spark") { const mx = Math.max(1, ...t.vals.map(x => x.v)); return `<section class="rc-t w2" ${d}><span class="k">${t.k}</span>${t.sub ? `<span class="s">${t.sub}</span>` : ""}<div class="rc-spark" style="--n:${t.vals.length}">${t.vals.map((x, j) => `<div class="${x.hi ? "hi" : ""} ${x.v <= 0 ? "zero" : ""}" title="${esc(x.label)}: ${fmt(x.v)}"><i style="height:${Math.max(3, x.v / mx * 100).toFixed(1)}%;--d2:${j * 18}ms"></i><span>${x.tick ? esc(x.label) : ""}</span></div>`).join("")}</div></section>`; }
+  return `<section class="rc-t ${t.w2 ? "w2" : ""} ${t.tone || ""}" ${d}>${rcIcon(t)}<span class="k">${t.k}</span><b class="v">${t.v}</b>${t.sub ? `<span class="s">${t.sub}</span>` : ""}</section>`;
+}
+function openRecap(r) {
+  $("rcKick").textContent = r.kick; $("rcTitle").textContent = r.title;
+  $("rcBody").innerHTML = r.tiles.filter(Boolean).map(rcTile).join("") + `<p class="rc-end">${r.end || ""}</p>`;
+  $("recap").hidden = false; $("rcBody").scrollTop = 0; document.body.style.overflow = "hidden";
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  $("rcBody").querySelectorAll("[data-count]").forEach(el => {
+    const target = +el.dataset.count, t0 = performance.now() + 150;
+    if (reduced) { el.textContent = fmt(target); return; }
+    const step = t => { const k = Math.max(0, Math.min(1, (t - t0) / 1000)), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(target * e); if (k < 1 && !$("recap").hidden) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
+function closeRecap() { $("recap").hidden = true; document.body.style.overflow = ""; setTimeout(() => { try { render(); } catch (e) {} }, 200); }
+$("rcClose").onclick = closeRecap;
+$("recap").addEventListener("click", e => { if (e.target.id === "recap") closeRecap(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("recap").hidden) closeRecap(); });
+
+function recapMonth(y, m) {
+  const f = monthFigures(y, m), val = t => t.refund ? -t.amount : t.amount;
+  const buys = netPurchases(f.spend).filter(t => t.net > 0); if (buys.length < 3) return null;
+  const total = f.fixed + f.variable, isCur = today >= f.start && today <= f.end, income = salaryFor(y, m, isCur).amount + f.income, name = MONTHS[m];
+  const tiles = [];
+  const left = income - total;
+  tiles.push({ type: "hero", k: income > 0 ? "יצא החודש, מתוך " + fmt(income) + " שנכנסו" : "יצא החודש", v: Math.round(total), tone: income > 0 ? (left >= 0 ? "good" : "bad") : "",
+    sub: `${buys.length} רכישות` + (income > 0 ? (left >= 0 ? ` · נשארו <b>${fmt(left)}</b> (${Math.round(left / income * 100)}%)` : ` · <b>${fmt(-left)}</b> מעבר להכנסה`) : ""),
+    meter: income > 0 ? { p: total / income * 100, a: "₪0", b: fmt(income) } : null });
+  const [py, pm] = prevYM(y, m);
+  if (py * 12 + pm >= FIRST_MONTH) { const pf = monthFigures(py, pm), pt = pf.fixed + pf.variable; if (pt > 0) { const ch = Math.round((total - pt) / pt * 100); tiles.push({ e: ch > 0 ? "📈" : "📉", k: "לעומת " + MONTHS[pm], v: `${ch > 0 ? "▲" : "▼"} ${Math.abs(ch)}%`, tone: rcTone(ch), sub: `${fmt(total)} מול ${fmt(pt)}` }); } }
+  const big = buys.slice().sort((a, b) => b.net - a.net)[0];
+  tiles.push({ cat: big.category, k: "הקנייה הגדולה", v: fmt(big.net), sub: `<bdi>${esc(big.merchant)}</bdi> · ${dd(big.date)}` });
+  const byCat = new Map(); f.spend.forEach(t => byCat.set(t.category, (byCat.get(t.category) || 0) + val(t)));
+  const cats = [...byCat.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]);
+  if (cats.length) tiles.push({ type: "bars", k: "לאן הלך הכסף", rows: cats.slice(0, 5).map(([cat, v]) => ({ cat, v })) });
+  const per = new Map(); buys.forEach(t => { const k = t.merchant.trim(), e = per.get(k) || { n: 0, v: 0, cat: t.t ? t.t.category : t.category }; e.n++; e.v += t.net; per.set(k, e); });
+  const fav = [...per.entries()].sort((a, b) => b[1].n - a[1].n || b[1].v - a[1].v)[0];
+  if (fav && fav[1].n >= 2) tiles.push({ e: "🔁", k: "המקום הקבוע", v: `<bdi>${esc(fav[0])}</bdi>`, sub: `${fav[1].n} פעמים · ${fmt(fav[1].v)}` });
+  const end = isCur ? today : f.end, byDay = new Map(), varDays = new Set();
+  buys.forEach(t => byDay.set(iso(t.date), (byDay.get(iso(t.date)) || 0) + t.net));
+  f.spend.forEach(t => { if (!t.refund && !t.gen && !t.inst && !FIXED.has(t.category) && t.amount > 0) varDays.add(iso(t.date)); });
+  let nd = 0, free = 0; for (let d = new Date(f.start); d <= end; d.setDate(d.getDate() + 1)) { nd++; if (!varDays.has(iso(d))) free++; }
+  tiles.push({ e: "🌿", k: "ימים בלי הוצאות", v: `${free} <small>מתוך ${nd}</small>`, tone: free ? "good" : "" });
+  const vals = []; let mxd = null; for (let d = new Date(f.start); d <= f.end; d.setDate(d.getDate() + 1)) { const v = byDay.get(iso(d)) || 0; vals.push({ label: dd(d), v: d > end ? 0 : v, tick: d.getDate() % 5 === 0 }); if (!mxd || v > mxd.v) mxd = { v, label: d.getDate() + " ב" + MONTHS[d.getMonth()], i: vals.length - 1 }; }
+  if (mxd) vals[mxd.i].hi = true;
+  tiles.push({ type: "spark", k: "יום אחרי יום", sub: mxd && mxd.v > 0 ? `היום הכי יקר: ${mxd.label}, ${fmt(mxd.v)}` : "", vals });
+  return { kick: isCur ? "עד עכשיו" : "סיכום חודשי", title: name + " " + y, tiles, end: isCur ? "הסיכום מתעדכן עד סוף החודש" : "" };
+}
+function recapWeek() {
+  const ws = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay()), a = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 7), b = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 1);
+  const a2 = new Date(a.getFullYear(), a.getMonth(), a.getDate() - 7), b2 = new Date(a.getFullYear(), a.getMonth(), a.getDate() - 1);
+  const inR = (t, x, y) => t.date >= x && t.date <= y && !t.income, val = t => t.refund ? -t.amount : t.amount;
+  const wk = tx.filter(t => inR(t, a, b)), prevWk = tx.filter(t => inR(t, a2, b2)), buys = wk.filter(t => !t.refund && t.amount > 0);
+  if (buys.length < 3) return null;
+  const total = wk.reduce((s, t) => s + val(t), 0), ptotal = prevWk.reduce((s, t) => s + val(t), 0), d = total - ptotal;
+  const by = new Map(); wk.forEach(t => by.set(t.category, (by.get(t.category) || 0) + val(t)));
+  const cats = [...by.entries()].filter(e => e[1] > 0).sort((x, y) => y[1] - x[1]);
+  const days = new Map(); wk.forEach(t => { if (!t.refund && !t.gen && !FIXED.has(t.category)) days.set(iso(t.date), (days.get(iso(t.date)) || 0) + t.amount); });
+  const vals = []; for (let x = new Date(a); x <= b; x.setDate(x.getDate() + 1)) vals.push({ label: WEEKDAYS[x.getDay()].slice(0, 3), v: days.get(iso(x)) || 0, tick: true });
+  const mx = Math.max(...vals.map(v => v.v)); vals.forEach(v => { if (v.v === mx && mx > 0) v.hi = true; });
+  const tiles = [
+    { type: "hero", k: "יצא בשבוע שעבר", v: Math.round(total), sub: `${buys.length} רכישות · ${dd(a)}–${dd(b)}` },
+    ptotal > 0 ? { e: d > 0 ? "📈" : "📉", k: "לעומת השבוע שלפניו", v: `${d > 0 ? "▲" : "▼"} ${fmt(Math.abs(d))}`, tone: rcTone(d), sub: `${d > 0 ? "יותר" : "פחות"} מ-${fmt(ptotal)}` } : null,
+    { e: "🌿", k: "ימים בלי הוצאות", v: `${7 - days.size} <small>מתוך 7</small>`, tone: days.size < 7 ? "" : "good" },
+    cats.length ? { type: "bars", k: "על מה", rows: cats.slice(0, 4).map(([cat, v]) => ({ cat, v })) } : null,
+    { type: "spark", k: "יום אחרי יום", vals }
+  ];
+  return { r: { kick: "סיכום שבועי", title: "השבוע שעבר", tiles, end: "נתראה ביום ראשון הבא" }, key: iso(ws) };
+}
+function recapYear(y) {
+  const ym = yearMonths(y).filter(x => x.f.spend.length); if (ym.length < 2) return null;
+  const spend = ym.flatMap(x => x.f.spend), val = t => t.refund ? -t.amount : t.amount;
+  const buys = spend.filter(t => !t.refund && t.amount > 0 && !(t.gen > 1)); if (buys.length < 10) return null;
+  const total = ym.reduce((s, x) => s + x.expense, 0), income = ym.reduce((s, x) => s + x.income, 0), left = income - total;
+  const tiles = [];
+  tiles.push({ type: "hero", k: income > 0 ? "יצא השנה, מתוך " + fmt(income) + " שנכנסו" : "יצא השנה", v: Math.round(total), tone: income > 0 ? (left >= 0 ? "good" : "bad") : "",
+    sub: `${buys.length.toLocaleString("en-US")} רכישות ב-${ym.length} חודשים` + (income > 0 ? (left >= 0 ? ` · נשארו <b>${fmt(left)}</b>` : ` · <b>${fmt(-left)}</b> מעבר להכנסות`) : ""), meter: income > 0 ? { p: total / income * 100, a: "₪0", b: fmt(income) } : null });
+  const goalsMet = ym.filter(x => { const g = goalFor(x.y, x.m); return x.income > 0 && g.amount > 0 && x.income - x.expense >= g.amount; }).length;
+  tiles.push({ e: "🎯", k: "עמדת ביעד החיסכון", v: `${goalsMet} <small>מתוך ${ym.length} חודשים</small>`, tone: goalsMet ? "good" : "" });
+  const withInc = ym.filter(x => x.income > 0);
+  if (withInc.length) { const best = withInc.slice().sort((a, b) => (b.income - b.expense) - (a.income - a.expense))[0]; tiles.push({ e: "🏆", k: "החודש הכי חסכוני", v: MONTHS[best.m], sub: best.income - best.expense >= 0 ? "נשארו " + fmt(best.income - best.expense) : "יצאו " + fmt(best.expense) }); }
+  const byC = new Map(); spend.forEach(t => byC.set(t.category, (byC.get(t.category) || 0) + val(t)));
+  tiles.push({ type: "bars", k: "הקטגוריות של השנה", rows: [...byC.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([cat, v]) => ({ cat, v })) });
+  const byM = new Map(); buys.forEach(t => { const k = mKey(t), o = byM.get(k) || { n: 0, a: 0, name: t.merchant, cat: t.category }; o.n++; o.a += t.amount; byM.set(k, o); });
+  const fav = [...byM.values()].sort((a, b) => b.n - a.n || b.a - a.a)[0];
+  if (fav && fav.n >= 3) tiles.push({ e: "🔁", k: "המקום הקבוע", v: `<bdi>${esc(fav.name)}</bdi>`, sub: `${fav.n} פעמים · ${fmt(fav.a)}` });
+  const big = buys.filter(t => !t.gen).sort((a, b) => b.amount - a.amount)[0];
+  if (big) tiles.push({ cat: big.category, k: "הקנייה הגדולה", v: fmt(big.amount), sub: `<bdi>${esc(big.merchant)}</bdi> · ${big.date.getDate()} ב${MONTHS[big.date.getMonth()]}` });
+  { const days = new Set(spend.filter(t => !t.refund && !t.gen && !t.inst && !FIXED.has(t.category) && t.amount > 0).map(t => iso(t.date)));
+    const s0 = new Date(Math.max(ym[0].f.start, Math.min(...spend.map(t => +t.date)))), e0 = ym[ym.length - 1].f.end < today ? ym[ym.length - 1].f.end : today;
+    let best = 0, run = 0; for (let d = new Date(s0); d <= e0; d.setDate(d.getDate() + 1)) { if (days.has(iso(d))) run = 0; else { run++; best = Math.max(best, run); } }
+    if (best >= 2) tiles.push({ e: "🔥", k: "הרצף הכי ארוך", v: `${best} <small>ימים בלי הוצאות</small>` }); }
+  const vals = ym.map(x => ({ label: MONTHS[x.m].slice(0, 3), v: x.expense, tick: true })), mx = Math.max(...vals.map(v => v.v)); vals.forEach(v => { if (v.v === mx) v.hi = true; });
+  tiles.push({ type: "spark", k: "חודש אחרי חודש", vals });
+  return { kick: "סיכום שנתי", title: y + (y === today.getFullYear() ? " עד עכשיו" : ""), tiles };
 }
 function drawWrapped() {
   const sld = wSlides[wIdx];
@@ -2586,7 +3256,7 @@ function drawWrapped() {
 ["pointerdown", "pointerup", "pointercancel", "pointerleave"].forEach(ev => $("wrapped").addEventListener(ev, () => $("wrapped").classList.toggle("paused", ev === "pointerdown")));
 function wStep(d) { const n = wIdx + d; if (n < 0) return; if (n >= wSlides.length) { $("wrapped").hidden = true; return; } wIdx = n; drawWrapped(); }
 $("wNext").onclick = () => wStep(1); $("wPrev").onclick = () => wStep(-1);
-$("wClose").onclick = () => { $("wrapped").hidden = true; };
+$("wClose").onclick = () => { $("wrapped").hidden = true; setTimeout(() => { try { render(); } catch (e) {} }, 300); };
 document.addEventListener("keydown", e => {
   if ($("wrapped").hidden) return;
   if (e.key === "Escape") $("wrapped").hidden = true;
@@ -2605,6 +3275,399 @@ function renderWrappedPill(isCurrent) {
   pill.hidden = false;
 }
 
+/* the fixed charges of the month on screen, as a checklist: what already went out, what is still due,
+   and what looks off (a different price, charged twice, late) */
+const mKey = t => String(t.merchant || "").trim().toLowerCase();
+function renderFixed(f, isCurrent) {
+  const card = $("fixCard"), { start, end } = f, ref = isCurrent ? today : end;
+  const items = [];
+  // installments: the payment that falls in this period
+  tx.forEach(t => { if (t.gen && !t.income && t.date >= start && t.date <= end) items.push({ name: t.merchant, cat: t.category, exp: t.amount, tag: t.inst.k + "/" + t.inst.n, due: t.date, done: t.date <= ref ? [t] : [] }); });
+  // payments typed month by month ("טלויזיה (9/10)"): this month's one, or the next one still to come
+  tx.forEach(t => { if (t.inst && !t.gen && !t.income && t.date >= start && t.date <= end) items.push({ name: t.merchant, cat: t.category, exp: t.amount, tag: t.inst.k + "/" + t.inst.n, due: t.date, done: [t] }); });
+  instPlans.forEach(({ last, next }) => { if (next >= start && next <= end && !items.some(i => i.name === last.merchant)) items.push({ name: last.merchant, cat: last.category, exp: last.amount, tag: (last.inst.k + 1) + "/" + last.inst.n, due: next, done: [] }); });
+  // fixed expenses seen in either of the two months before: expected again
+  const [py, pm] = prevYM(view.y, view.m), [qy, qm] = prevYM(py, pm), was = new Map();
+  [period(qy, qm), period(py, pm)].forEach(({ start: a, end: b }) => tx.forEach(t => {
+    if (t.income || t.refund || t.gen || t.inst || !FIXED.has(t.category) || t.date < a || t.date > b) return;
+    was.set(mKey(t), t); // the latest wins
+  }));
+  const seenNow = f.spend.filter(t => FIXED.has(t.category) && !t.refund && !t.gen && !t.inst);
+  was.forEach((t, k) => {
+    const hit = seenNow.filter(x => mKey(x) === k);
+    const due = new Date(start.getFullYear(), start.getMonth() + (t.date.getDate() < startDay ? 1 : 0), t.date.getDate());
+    items.push({ name: t.merchant, cat: t.category, exp: t.amount, tag: "קבוע", due, done: hit });
+  });
+  // a fixed expense that is new this month
+  seenNow.forEach(x => { if (!was.has(mKey(x)) && !items.some(i => mKey({ merchant: i.name }) === mKey(x))) items.push({ name: x.merchant, cat: x.category, exp: x.amount, tag: "חדש", due: x.date, done: [x], fresh: true }); });
+  if (!items.length) { card.hidden = true; return; }
+  card.hidden = layout.hidden.includes("fix");
+  items.forEach(i => {
+    const got = i.done.reduce((a, t) => a + t.amount, 0);
+    if (i.done.length > 1 && i.tag !== "חדש") { i.st = "bad"; i.note = `ירד ${i.done.length} פעמים · ${fmt(got)}`; }
+    else if (i.done.length) { i.st = "ok"; i.note = "ירד ב-" + dd(i.done[0].date) + (Math.abs(got - i.exp) > Math.max(2, i.exp * .05) && !i.fresh ? ` · ${fmt(got)} במקום ${fmt(i.exp)}` : ""); if (i.note.includes("במקום")) i.st = "warn"; }
+    else if (daysBetween(i.due, ref) > 5) { i.st = "late"; i.note = "עוד לא ירד · בדרך כלל ב-" + dd(i.due); }
+    else { i.st = "wait"; i.note = "צפוי ב-" + dd(i.due); }
+  });
+  const order = { bad: 0, warn: 0, ok: 0, late: 1, wait: 2 }; // paid first (by date), then late, then still to come
+  items.sort((a, b) => order[a.st] - order[b.st] || (a.done.length && b.done.length ? a.done[0].date - b.done[0].date : a.due - b.due));
+  const paid = items.filter(i => i.st === "ok" || i.st === "warn" || i.st === "bad").length;
+  $("fixSide").textContent = paid + " מתוך " + items.length + " ירדו";
+  const ic = { ok: "✓", warn: "!", bad: "!!", late: "⏰", wait: "⏳" };
+  $("fixList").innerHTML = items.map(i => `<div class="fxr ${i.st}"><span class="fx-ic" aria-hidden="true">${ic[i.st]}</span>${catIcon(i.cat, true)}
+    <div class="fx-m"><bdi>${esc(i.name)}</bdi> <span class="fx-tag">${esc(i.tag)}</span><small>${i.note}</small></div><span class="fx-a num">${fmt(i.done.length ? i.done.reduce((a, t) => a + t.amount, 0) : i.exp)}</span></div>`).join("");
+}
+
+/* 2: where the month is heading, and a slider to try a daily budget for the days left */
+let fcCtx = null, fcTouched = false, fcKey = "";
+function renderFc(f, isCurrent, c) {
+  const card = $("fcCard");
+  if (!isCurrent || !c.incomeExpected || c.elapsed < 2) { card.hidden = true; return; }
+  card.hidden = layout.hidden.includes("fc");
+  const spent = f.fixed + f.variable, fixedLeft = Math.max(0, c.fixedExpected - f.fixed), pace = Math.max(0, f.variable / c.elapsed), left = c.daysLeft;
+  const allow = c.incomeExpected - c.goal, room = allow - spent - fixedLeft; // what may still go out and meet the goal
+  fcCtx = { spent, fixedLeft, pace, left, inc: c.incomeExpected, goal: c.goal, allow, goalDay: left > 0 ? room / left : 0 };
+  const r = $("fcRange"), mx = Math.max(300, Math.ceil(Math.max(pace * 2, fcCtx.goalDay * 1.6, 200) / 50) * 50), k = view.y + "-" + view.m;
+  r.max = mx; r.step = mx > 1500 ? 50 : 10;
+  if (!fcTouched || fcKey !== k) { r.value = Math.round(pace); fcTouched = false; fcKey = k; }
+  $("fcPace").textContent = "הקצב עד עכשיו: " + fmt(pace) + " ליום";
+  $("fcGoalAt").textContent = c.goal ? (fcCtx.goalDay > 0 ? "ליעד: עד " + fmt(fcCtx.goalDay) + " ליום" : "היעד כבר לא בהישג") : "";
+  drawFc();
+}
+function drawFc() {
+  const c = fcCtx; if (!c) return;
+  const per = +$("fcRange").value, end = c.inc - (c.spent + c.fixedLeft + per * c.left), vsGoal = end - c.goal;
+  $("fcRange").style.setProperty("--p", (per / $("fcRange").max * 100).toFixed(1) + "%");
+  $("fcDay").textContent = fmt(per);
+  $("fcK").textContent = fcTouched ? "ככה תסיים את החודש" : "בקצב הנוכחי תסיים את החודש";
+  const v = $("fcV"); v.textContent = (end >= 0 ? "+" : "−") + fmt(Math.abs(end)); v.className = "num " + (end < 0 ? "bad" : vsGoal < 0 && c.goal ? "warn" : "good");
+  $("fcSide").textContent = c.left ? "עוד " + c.left + " ימים" : "היום האחרון";
+  $("fcNote").innerHTML = !c.goal ? `בלי יעד חיסכון לחודש. ${c.fixedLeft > 0 ? `כולל ${fmt(c.fixedLeft)} בחיובים קבועים שעוד לא ירדו.` : ""}`
+    : vsGoal >= 0 ? `עומד ביעד החיסכון (${fmt(c.goal)}), ונשארים עוד <b>${fmt(vsGoal)}</b> מעבר.${c.fixedLeft > 0 ? ` כולל ${fmt(c.fixedLeft)} בחיובים קבועים שעוד לא ירדו.` : ""}`
+    : end >= 0 ? `בפלוס, אבל <b>${fmt(-vsGoal)}</b> פחות מיעד החיסכון (${fmt(c.goal)}).` : `הוצאה כזו תעבור את ההכנסה של החודש ב-<b>${fmt(-end)}</b>.`;
+}
+$("fcRange").addEventListener("input", () => { fcTouched = true; drawFc(); });
+
+
+
+/* 4: the businesses of the month: where the money went, and how often */
+function renderMerch(f) {
+  const card = $("merchCard"), by = new Map();
+  f.spend.filter(t => !t.refund && !t.gen).forEach(t => { const k = mKey(t), o = by.get(k) || { name: t.merchant, cat: t.category, n: 0, a: 0 }; o.n++; o.a += t.amount; by.set(k, o); });
+  const top = [...by.values()].sort((a, b) => b.a - a.a).slice(0, 10);
+  if (top.length < 2) { card.hidden = true; return; }
+  card.hidden = layout.hidden.includes("merch");
+  const mx = top[0].a, often = [...by.values()].sort((a, b) => b.n - a.n)[0];
+  $("merchSide").textContent = by.size + " עסקים";
+  $("merchList").innerHTML = top.map(o => { const [, hue] = iconFor(o.cat); return `<button type="button" class="mr" data-q="${esc(o.name)}" style="--h:${hue}"><span class="n">${esc(o.name)} <small>· ${o.n === 1 ? "פעם אחת" : o.n + " פעמים"}</small></span><span class="a num">${fmt(o.a)}</span><span class="b"><i style="width:${(o.a / mx * 100).toFixed(1)}%"></i></span></button>`; }).join("")
+    + (often && often.n >= 3 ? `<p class="mr-tip">🔁 הכי הרבה ביקורים: <b>${esc(often.name)}</b>, ${often.n} פעמים החודש (${fmt(often.a)})</p>` : "");
+}
+$("merchList").addEventListener("click", e => { const b = e.target.closest("[data-q]"); if (!b) return; searchQ = b.dataset.q; $("txSearch").value = searchQ; showAll = false; showView("tx"); render(); });
+
+/* this month against last month, category by category. In the current month both are cut at the same day, so it is fair */
+let cmpAll = false;
+function renderCmp(f, isCurrent, elapsed) {
+  const card = $("cmpCard"), [py, pm] = prevYM(view.y, view.m);
+  if (py * 12 + pm < FIRST_MONTH) { card.hidden = true; return; }
+  const pv = monthFigures(py, pm), cut = isCurrent ? new Date(pv.start.getFullYear(), pv.start.getMonth(), pv.start.getDate() + elapsed - 1) : pv.end;
+  const val = t => t.refund ? -t.amount : t.amount, a = new Map(), b = new Map();
+  f.spend.forEach(t => a.set(t.category, (a.get(t.category) || 0) + val(t)));
+  pv.spend.filter(t => t.date <= cut).forEach(t => b.set(t.category, (b.get(t.category) || 0) + val(t)));
+  const rows = [...new Set([...a.keys(), ...b.keys()])].map(c => ({ c, now: a.get(c) || 0, was: b.get(c) || 0 })).filter(r => Math.abs(r.now) >= 1 || Math.abs(r.was) >= 1)
+    .map(r => ({ ...r, d: r.now - r.was })).sort((x, y) => Math.abs(y.d) - Math.abs(x.d));
+  if (!rows.length) { card.hidden = true; return; }
+  card.hidden = layout.hidden.includes("cmp");
+  const tn = rows.reduce((s, r) => s + r.now, 0), tw = rows.reduce((s, r) => s + r.was, 0), td = tn - tw;
+  $("cmpPrev").textContent = MONTHS[pm];
+  $("cmpSide").innerHTML = `<span class="${td > 0 ? "up" : "down"}"><bdi>${td > 0 ? "▲" : "▼"} ${fmt(Math.abs(td))}</bdi></span>`;
+  $("cmpNote").textContent = isCurrent ? `עד ה-${today.getDate()} בחודש מול אותה נקודה ב${MONTHS[pm]}` : `כל ${MONTHS[view.m]} מול כל ${MONTHS[pm]}`;
+  const mx = Math.max(1, ...rows.map(r => Math.max(r.now, r.was))), shown = cmpAll ? rows : rows.slice(0, 6);
+  $("cmpList").innerHTML = shown.map((r, i) => {
+    const [, hue] = iconFor(r.c), pct = r.was > 0 ? Math.round(r.d / r.was * 100) : null;
+    const chip = Math.abs(r.d) < 1 ? `<span class="cmp-d same">כמו קודם</span>` : Math.abs(r.was) < 1 ? `<span class="cmp-d up">חדש</span>` : `<span class="cmp-d ${r.d > 0 ? "up" : "down"}"><bdi>${r.d > 0 ? "▲" : "▼"} ${fmt(Math.abs(r.d))}</bdi>${pct !== null && Math.abs(pct) < 1000 ? ` · ${Math.abs(pct)}%` : ""}</span>`;
+    return `<button type="button" class="cmp-r" data-cat="${esc(r.c)}" style="--h:${hue};animation-delay:${i * 40}ms">${catIcon(r.c, true)}<span class="cmp-n">${esc(r.c)}</span>${chip}
+      <span class="cmp-bars"><i class="was" style="width:${(Math.max(0, r.was) / mx * 100).toFixed(1)}%"></i><i class="now" style="width:${(Math.max(0, r.now) / mx * 100).toFixed(1)}%"></i></span>
+      <span class="cmp-v num">${fmt(r.was)} ← <b>${fmt(r.now)}</b></span></button>`;
+  }).join("");
+  $("cmpMore").hidden = rows.length <= 6; $("cmpMore").textContent = cmpAll ? "פחות" : "כל " + rows.length + " הקטגוריות";
+}
+$("cmpMore").onclick = () => { cmpAll = !cmpAll; render(); };
+$("cmpList").addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (b) openCatInfo(b.dataset.cat); });
+
+/* the month as a calendar: each day colored by what went out, tap a day for its list */
+let calSel = null;
+function renderCal(f, isCurrent) {
+  const { start, end } = f, by = new Map();
+  f.spend.forEach(t => { const k = iso(t.date); by.set(k, (by.get(k) || 0) + (t.refund ? -t.amount : t.amount)); });
+  const vals = [...by.values()].filter(v => v > 0).sort((a, b) => a - b), q = p => vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * p))] : 0;
+  const cuts = [q(.25), q(.5), q(.75)];
+  const lvl = v => v <= 0 ? 0 : v <= cuts[0] ? 1 : v <= cuts[1] ? 2 : v <= cuts[2] ? 3 : 4;
+  const cells = [];
+  for (let i = 0; i < start.getDay(); i++) cells.push(`<span class="cd pad"></span>`);
+  let free = 0, top = null;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const k = iso(d), v = by.get(k) || 0, fut = d > today, isT = k === iso(today);
+    if (!fut && v <= 0) free++;
+    if (v > 0 && (!top || v > top.v)) top = { d: new Date(d), v };
+    cells.push(`<button type="button" class="cd ${fut ? "fut" : ""} ${isT ? "today" : ""} ${!fut && v <= 0 ? "free" : ""} ${calSel === k ? "sel" : ""}" style="--l:${fut ? 0 : lvl(v)}" data-day="${k}" ${fut ? "disabled" : ""} aria-label="${d.getDate()} ב${MONTHS[d.getMonth()]}: ${v > 0 ? fmt(v) : "בלי הוצאות"}"><b>${d.getDate()}</b>${!fut && v > 0 ? `<small class="num">${v >= 1000 ? (v / 1000).toFixed(1) + "K" : Math.round(v)}</small>` : ""}</button>`);
+  }
+  $("cal").innerHTML = cells.join("");
+  $("calSide").textContent = free ? free + " ימים בלי הוצאות" : "";
+  if (calSel && (calSel < iso(start) || calSel > iso(end))) calSel = null;
+  drawCalDay();
+}
+function drawCalDay() {
+  const box = $("calDay");
+  if (!calSel) { box.hidden = true; return; }
+  const d = parseDate(calSel), list = tx.filter(t => iso(t.date) === calSel).sort((a, b) => b.order - a.order);
+  const sum = list.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+  box.innerHTML = `<div class="day-head"><span class="dl"><b>יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}</b></span><span class="num">${list.length ? fmtX(sum) : ""}</span></div>` +
+    (list.length ? `<div class="days">${list.map(t => txRowHtml(t, false)).join("")}</div>` : `<p class="inst-empty">יום שלם בלי הוצאות 🎉</p>`);
+  box.hidden = false;
+}
+$("cal").addEventListener("click", e => {
+  const c = e.target.closest("[data-day]"); if (!c || c.disabled) return;
+  calSel = calSel === c.dataset.day ? null : c.dataset.day;
+  document.querySelectorAll("#cal .cd.sel").forEach(x => x.classList.remove("sel")); if (calSel) c.classList.add("sel");
+  drawCalDay();
+});
+$("calDay").addEventListener("click", onTxListClick);
+
+/* what goes out on the next billing day: installments due then, and fixed expenses that came back lately */
+let upKey = "";
+function renderUpcoming(isCurrent) {
+  const card = $("upCard");
+  upSoon = null;
+  if (!isCurrent) { card.hidden = true; return; }
+  const ns = chargeDate(today, 1), ne = new Date(ns.getFullYear(), ns.getMonth() + 1, startDay - 1);
+  const items = [], seenName = new Set(), key = t => (t.merchant || "").trim().toLowerCase();
+  tx.forEach(t => {
+    if (!t.gen || t.income || t.date < ns || t.date > ne) return;
+    items.push({ name: t.merchant, cat: t.category, amount: t.amount, tag: t.inst.k + "/" + t.inst.n, inst: true }); seenName.add(key(t));
+  });
+  instPlans.forEach(({ last, next }) => {
+    if (next < ns || next > ne || seenName.has(key(last))) return;
+    items.push({ name: last.merchant, cat: last.category, amount: last.amount, tag: (last.inst.k + 1) + "/" + last.inst.n, inst: true }); seenName.add(key(last));
+  });
+  // fixed expenses (subscriptions, insurance) seen this month or last: expected again, at their latest price
+  const since = period(...prevYM(...curYM())).start, rec = new Map();
+  tx.forEach(t => {
+    if (t.income || t.refund || t.inst || t.gen || !FIXED.has(t.category) || t.date < since || t.date > today) return;
+    const k = key(t); if (seenName.has(k)) return;
+    const was = rec.get(k); if (!was || t.date > was.date) rec.set(k, t);
+  });
+  rec.forEach(t => items.push({ name: t.merchant, cat: t.category, amount: t.amount, tag: "קבוע" }));
+  if (!items.length) { card.hidden = true; return; }
+  items.sort((a, b) => b.amount - a.amount);
+  card.hidden = false;
+  // most of the month it sits by the open installments; in the last 5 days before the billing day it moves up, under the insights
+  const soon = daysBetween(today, ns) <= 5;
+  upSoon = soon ? { date: ns, sum: items.reduce((a, i) => a + i.amount, 0) } : null;
+  // in the last days before the billing day it moves up to the home screen; otherwise it keeps its place in "חודשי"
+  if (soon && !arranging) { const a = $("catsCard"); if (card.parentElement !== a.parentElement || card.nextElementSibling !== a) a.before(card); }
+  else if (card.parentElement !== $(layout.flow.includes("up") ? "flowView" : "anaView")) applyLayout();
+  if (layout.hidden.includes("up")) card.hidden = true;
+  $("upDate").textContent = dd(ns);
+  countTo($("upSum"), items.reduce((s, i) => s + i.amount, 0), fmt);
+  const k = items.map(i => i.name + i.amount + i.tag).join("|"); if (k === upKey) return; upKey = k;
+  $("upStrip").innerHTML = items.map((i, n) => `<div class="up-i" style="animation-delay:${Math.min(n, 8) * 50}ms">
+    <div class="top">${catIcon(i.cat, true)}<span class="tag ${i.inst ? "" : "fx"}"><bdi>${esc(i.tag)}</bdi></span></div>
+    <div class="n" title="${esc(i.name)}">${esc(i.name)}</div><div class="a num">${fmt(i.amount)}</div></div>`).join("");
+}
+function curYM() { let y = now.getFullYear(), m = now.getMonth(); if (now.getDate() < startDay) { m--; if (m < 0) { m = 11; y--; } } return [y, m]; }
+
+/* a new expense: a coin flies from the + button into the gauge, which gives a small bump when it lands */
+function flyCoin(from) {
+  try {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || $("flowView").hidden) return;
+    const tip = $("ringTip"), svg = tip.ownerSVGElement, wrap = svg.closest(".ring-wrap");
+    const m = (tip.style.transform || "").match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/); if (!m || tip.style.opacity === "0") return;
+    const pt = svg.createSVGPoint(); pt.x = +m[1]; pt.y = +m[2]; const to = pt.matrixTransform(svg.getScreenCTM());
+    if (to.y < 0 || to.y > innerHeight) return;
+    const c = document.createElement("div"); c.className = "fly-coin"; document.body.appendChild(c);
+    const dx = to.x - from.x, dy = to.y - from.y, lift = Math.min(160, Math.abs(dy) * .45 + 60), frames = [];
+    for (let i = 0; i <= 24; i++) { const t = i / 24; frames.push({ transform: `translate(${from.x + dx * t - 12}px,${from.y + dy * t - Math.sin(Math.PI * t) * lift - 12}px) scale(${1.15 - .55 * t}) rotate(${t * 540}deg)` }); }
+    wrap.classList.add("landing");
+    c.animate(frames, { duration: 900, easing: "cubic-bezier(.45,0,.25,1)" }).onfinish = () => {
+      c.remove(); wrap.classList.remove("landing"); wrap.classList.remove("bump"); void wrap.offsetWidth; wrap.classList.add("bump");
+      try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
+      setTimeout(() => wrap.classList.remove("bump"), 600);
+    };
+  } catch (e) {}
+}
+
+let bubKey = "", lastStage = null, paceInfo = null, vibeCtx = null, upSoon = null;
+// 2: the smart line. Candidates are ranked (problems first); each visit shows the next one, so it changes from visit to visit
+let vibeIdx = 0;
+try { vibeIdx = +(localStorage.getItem("vibeVisit") || 0) + 1; localStorage.setItem("vibeVisit", vibeIdx); } catch (e) { vibeIdx = Math.floor(Math.random() * 9); }
+function vibeCands() {
+  const c = vibeCtx; if (!c || !c.isCurrent || !tx.length) return [];
+  const out = [], val = t => t.refund ? -t.amount : t.amount;
+  // the month's pace
+  if (c.incomeExpected && c.elapsed >= 3) {
+    const fixedLeft = Math.max(0, (vibeCtx.fixedExpected || 0) - c.f.fixed);
+    const proj = c.f.fixed + fixedLeft + c.f.variable / c.elapsed * c.days;
+    if (c.stage !== "over" && proj > c.incomeExpected + 50) out.push({ lvl: "bad", e: "⚠️", t: `בקצב הזה החודש ייגמר <b>${fmt(proj - c.incomeExpected)} במינוס</b>`, go: () => showView("ana") });
+    else if (c.goal && c.stage === "ok" && proj <= c.allow) out.push({ lvl: "good", e: "🎯", t: `בקצב הזה תעמוד ביעד ותחסוך <b>${fmt(c.incomeExpected - proj)}</b>`, go: () => showView("ana") });
+  }
+  // caps
+  Object.keys(Object.assign({}, ...Object.values(capsBy))).forEach(cat => {
+    const cap = capFor(cat); if (!cap) return;
+    const v = catSpent(cat, view.y, view.m), pct = v / cap * 100;
+    if (pct >= 100) out.push({ lvl: "bad", e: "🚫", t: `<b>${esc(cat)}</b> עברה את התקרה ב-<b>${fmt(v - cap)}</b>`, go: () => openCatInfo(cat) });
+    else if (pct >= 80) out.push({ lvl: "warn", e: "⏳", t: `<b>${esc(cat)}</b> כבר ב-<b>${Math.round(pct)}%</b> מהתקרה${c.daysLeft ? `, ונשארו ${c.daysLeft} ימים` : ""}`, go: () => openCatInfo(cat) });
+  });
+  // this week against a usual week (variable spending only)
+  {
+    const ws = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay()), n = today.getDay() + 1;
+    const varOn = (a, b) => tx.filter(t => !t.income && !t.gen && !t.inst && !FIXED.has(t.category) && t.date >= a && t.date <= b).reduce((s, t) => s + val(t), 0);
+    const past = [];
+    for (let w = 1; w <= 6; w++) { const a = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 7 * w), b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + n - 1); if (tx.some(t => t.date <= b)) past.push(varOn(a, b)); }
+    if (past.length >= 3) {
+      past.sort((x, y) => x - y); // the middle week: one big purchase does not make a week "usual"
+      const usual = past[Math.floor(past.length / 2)], now = varOn(ws, today), d = now - usual;
+      if (d < -60) out.push({ lvl: "good", e: "👏", t: `השבוע יצא לך <b>${fmt(-d)} פחות</b> מבשבוע רגיל`, go: () => showView("tx") });
+      else if (d > 150) out.push({ lvl: "warn", e: "📈", t: `השבוע יצא <b>${fmt(d)} יותר</b> מבשבוע רגיל`, go: () => showView("tx") });
+    }
+  }
+  // the same point last month
+  if (paceInfo && Math.abs(paceInfo.d) >= 50) out.push(paceInfo.d < 0
+    ? { lvl: "good", e: "📉", t: `עד היום יצא <b>${fmt(-paceInfo.d)} פחות</b> מבאותה נקודה ב${MONTHS[paceInfo.pm]}`, go: () => showView("ana") }
+    : { lvl: "warn", e: "📊", t: `עד היום יצא <b>${fmt(paceInfo.d)} יותר</b> מבאותה נקודה ב${MONTHS[paceInfo.pm]}`, go: () => showView("ana") });
+  // a streak
+  { const { n } = streakInfo(); if (n >= 2) out.push({ lvl: "good", e: "🔥", t: `<b>${n} ימים</b> ברצף בלי הוצאות משתנות`, go: () => showView("tx") }); }
+  // charges coming up
+  if (upSoon) out.push({ lvl: "info", e: "🗓️", t: `ב-${dd(upSoon.date)} יורדים <b>${fmt(upSoon.sum)}</b> בתשלומים ובקבועות`, go: () => { const u = $("upCard"); if (u) u.scrollIntoView({ behavior: "smooth", block: "center" }); } });
+  const rank = { bad: 0, warn: 1, good: 2, info: 3 };
+  return out.sort((a, b) => rank[a.lvl] - rank[b.lvl]);
+}
+let vibeShown = "";
+function renderVibe() {
+  const el = $("vibe"), list = vibeCands();
+  if (!list.length) { el.hidden = true; vibeShown = ""; return; }
+  const v = list[vibeIdx % list.length];
+  if (vibeShown !== v.t) { el.className = "vibe " + v.lvl; el.innerHTML = `<span class="e" aria-hidden="true">${v.e}</span><span class="t">${v.t}</span><span class="chev" aria-hidden="true">‹</span>`; vibeShown = v.t; }
+  el.onclick = v.go; el.hidden = false;
+}
+/* 4: a monthly cap per category. Each month may set its own; a month without one carries the last one set before it.
+   Settings W:X hold "2026-10|סופר" → 1500 (0 = no cap from that month on). */
+let capsBy = {}, capEdit = false;
+function capFor(cat, y = view.y, m = view.m) {
+  const k = mkey(y, m);
+  for (const key of Object.keys(capsBy).filter(x => x <= k).sort().reverse()) { const v = capsBy[key][cat]; if (v != null) return v > 0 ? v : null; }
+  return null;
+}
+async function saveCapsBy(next) {
+  const rows = []; Object.keys(next).sort().forEach(k => Object.entries(next[k]).forEach(([c, a]) => rows.push([k ? k + "|" + c : c, a])));
+  await writeRange("'הגדרות'!W2:X201", pad(rows, 200, 2)); capsBy = next;
+}
+// spent on a category in a month (purchases minus refunds)
+const catSpent = (cat, y, m) => monthFigures(y, m).spend.filter(t => t.category === cat).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+let capCat = null;
+function openCap(cat) {
+  capCat = cat;
+  const y = view.y, m = view.m, spent = catSpent(cat, y, m), cur = capFor(cat);
+  const [py, pm] = prevYM(y, m), prevSpent = catSpent(cat, py, pm);
+  let sum = 0, n = 0; { let yy = y, mm = m; for (let i = 0; i < 3; i++) { [yy, mm] = prevYM(yy, mm); if (yy * 12 + mm < FIRST_MONTH) break; sum += Math.max(0, catSpent(cat, yy, mm)); n++; } }
+  const avg = n ? sum / n : 0;
+  const max = Math.ceil(Math.max(avg * 2, spent * 1.5, prevSpent * 1.5, (cur || 0) * 1.5, 1000) / 100) * 100;
+  $("capIc").innerHTML = catIcon(cat);
+  $("capKick").textContent = "תקרה ל" + MONTHS[m];
+  $("capTitle").textContent = cat;
+  $("capText").textContent = spent > 0 ? "עד עכשיו יצאו " + fmt(spent) + " החודש" : "עוד לא יצא כלום החודש";
+  const r = $("capRange"); r.max = max; r.step = 50;
+  const chips = [];
+  if (prevSpent > 0) chips.push([Math.round(prevSpent / 50) * 50, "כמו ב" + MONTHS[pm] + " · " + fmt(prevSpent)]);
+  if (n >= 2 && avg > 0) chips.push([Math.round(avg / 50) * 50, "ממוצע " + n + " חודשים · " + fmt(avg)]);
+  chips.push([0, "בלי תקרה"]);
+  $("capChips").innerHTML = chips.map(([v, t]) => `<button type="button" data-capv="${v}">${esc(t)}</button>`).join("");
+  $("capNote").textContent = "חל על " + MONTHS[m] + " ועל החודשים שאחריו, עד שתשנו. חודשים קודמים לא משתנים.";
+  $("capMsg2").textContent = "";
+  $("capBg").dataset.spent = spent;
+  setCapVal(cur || 0, true);
+  $("capBg").hidden = false;
+}
+function setCapVal(v, fromCode) {
+  v = Math.max(0, Math.round(+v || 0));
+  const r = $("capRange"); if (v > +r.max) r.max = Math.ceil(v * 1.3 / 100) * 100;
+  r.value = v; if (fromCode || document.activeElement !== $("capAmt")) $("capAmt").value = v ? withCommas(String(v)) : "";
+  r.style.setProperty("--p", (v / r.max * 100).toFixed(1) + "%");
+  const spent = +$("capBg").dataset.spent || 0, mt = $("capMeter"), pct = v ? spent / v * 100 : 0;
+  mt.className = "cap-meter" + (!v ? " none" : pct >= 100 ? " over" : pct >= 80 ? " warn" : "");
+  $("capFill").style.width = (v ? Math.min(pct, 100) : 0).toFixed(1) + "%";
+  $("capLegend").innerHTML = !v ? "בלי תקרה לקטגוריה הזו" : pct >= 100 ? `עברת את התקרה ב-<b>${fmt(spent - v)}</b>` : `נשארו <b>${fmt(v - spent)}</b> מתוך ${fmt(v)} · ${Math.round(pct)}%`;
+  document.querySelectorAll("#capChips [data-capv]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.capv === v));
+}
+function closeCap() { $("capBg").hidden = true; capCat = null; }
+$("capRange").addEventListener("input", e => setCapVal(e.target.value));
+$("capAmt").addEventListener("input", e => { const v = parseFloat(e.target.value.replace(/[^\d.]/g, "")) || 0; setCapVal(v); });
+$("capChips").addEventListener("click", e => { const b = e.target.closest("[data-capv]"); if (b) setCapVal(+b.dataset.capv, true); });
+$("capClose").onclick = closeCap; $("capCancel").onclick = closeCap;
+$("capBg").addEventListener("click", e => { if (e.target.id === "capBg") closeCap(); });
+$("capForm").addEventListener("submit", async e => {
+  e.preventDefault(); if (!capCat) return;
+  const v = Math.round(+$("capRange").value || 0), k = mkey(view.y, view.m), cat = capCat;
+  const next = JSON.parse(JSON.stringify(capsBy)); next[k] = next[k] || {};
+  if (v > 0) next[k][cat] = v;
+  else if (capFor(cat, ...prevYM(view.y, view.m))) next[k][cat] = 0; // stop a cap carried from an earlier month
+  else delete next[k][cat];
+  if (!Object.keys(next[k]).length) delete next[k];
+  const btn = $("capSave"); btn.disabled = true; btn.textContent = "שומר…";
+  try { await saveCapsBy(next); closeCap(); bubKey = ""; render(); }
+  catch (err) { $("capMsg2").textContent = writeError(err); }
+  btn.disabled = false; btn.textContent = "שמירת תקרה";
+});
+function setCapEdit(on) {
+  capEdit = on; $("capEditBtn").setAttribute("aria-pressed", on); $("capEditBtn").textContent = on ? "סיום" : "תקרות";
+  $("capHint").hidden = !on; bubKey = ""; render();
+}
+$("capEditBtn").onclick = () => setCapEdit(!capEdit);
+$("goCaps").onclick = () => { showView("flow"); if (!capEdit) setCapEdit(true); setTimeout(() => $("cats").closest(".card").scrollIntoView({ behavior: "smooth", block: "start" }), 120); };
+// 7: days in a row with no variable spending (fixed bills and installments do not break it)
+function streakInfo() {
+  const spendDays = new Set(); let first = null;
+  tx.forEach(t => { if (!first || t.date < first) first = t.date; if (t.income || t.refund || t.gen || t.inst || FIXED.has(t.category) || t.amount <= 0) return; spendDays.add(iso(t.date)); });
+  const todayClean = !spendDays.has(iso(today)), evening = new Date().getHours() >= 20;
+  let n = todayClean && evening ? 1 : 0;
+  for (let d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1); first && d >= first && n < 99; d.setDate(d.getDate() - 1)) { if (spendDays.has(iso(d))) break; n++; }
+  return { n, todayClean, evening };
+}
+function renderStreak(isCurrent) {
+  const el = $("streakPill");
+  if (!isCurrent || !tx.length) { el.hidden = true; return; }
+  const { n, todayClean, evening } = streakInfo();
+  el.hidden = !(n >= 1 && todayClean && evening);
+  el.textContent = n === 1 ? "🔥 יום בלי הוצאות משתנות" : "🔥 " + n + " ימים ברצף בלי הוצאות משתנות";
+  // the evening of a clean day: a small celebration, once
+  let last = ""; try { last = localStorage.getItem("nsParty") || ""; } catch (e) {}
+  if (todayClean && evening && last !== iso(today) && !$("flowView").hidden && splashGone && $("wrapped").hidden && $("recap").hidden && $("salBg").hidden) {
+    try { localStorage.setItem("nsParty", iso(today)); } catch (e) {}
+    setTimeout(() => { coinBurst(el); toast(n > 1 ? "יום בלי הוצאות! " + n + " ימים ברצף 🔥" : "יום שלם בלי הוצאות משתנות 🔥"); }, 900);
+  }
+}
+function coinBurst(from) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const r = from && !from.hidden ? from.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 3, width: 0, height: 0 };
+  const x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+  for (let i = 0; i < 22; i++) {
+    const c = document.createElement("div"); c.className = "burst"; document.body.appendChild(c);
+    const a = -Math.PI / 2 + (Math.random() - .5) * Math.PI * 1.1, v = 140 + Math.random() * 170, vx = Math.cos(a) * v, vy = Math.sin(a) * v, g = 520, T = 1.1 + Math.random() * .4, fr = [];
+    for (let k = 0; k <= 12; k++) { const t = T * k / 12; fr.push({ transform: `translate(${x0 + vx * t - 10}px,${y0 + vy * t + g * t * t / 2 - 10}px) rotate(${k * 50}deg) scale(${1 - k / 30})`, opacity: k > 9 ? (12 - k) / 3 : 1 }); }
+    c.animate(fr, { duration: T * 1000, easing: "linear", delay: i * 12 }).onfinish = () => c.remove();
+  }
+}
+// 3: crossing into another stage (within the goal → past the goal → past the income): the new color flows along the arc,
+// a light runs from the start of the arc to the needle, and the big number pulses once
+function stageFx(fill) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const sw = $("ringSweep"), end = Math.max(8, fill * 100);
+  setTimeout(() => {
+    sw.animate([{ strokeDashoffset: 10, opacity: 0 }, { opacity: .95, offset: .15 }, { opacity: .95, offset: .8 }, { strokeDashoffset: -(end - 10), opacity: 0 }], { duration: 1100, easing: "cubic-bezier(.4,0,.2,1)" });
+    ["statusBig"].forEach(id => { const el = $(id); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); });
+    ["statusPlus", "ringPill"].forEach(id => { const el = $(id); if (el && !el.hidden) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); } });
+    try { navigator.vibrate && navigator.vibrate([10, 60, 10]); } catch (e) {}
+  }, 450);
+}
 function renderCats(f) {
   $("segSum").textContent = fmt(catMode === "fixed" ? f.fixed : f.variable);
   const list = f.spend.filter(t => catMode === "fixed" ? FIXED.has(t.category) : !FIXED.has(t.category));
@@ -2612,8 +3675,9 @@ function renderCats(f) {
   list.forEach(t => m.set(t.category, (m.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
   // a category can be negative: more came back for it than was paid this month. It still shows, after the rest.
   const rows = [...m.entries()].filter(e => Math.abs(e[1]) >= 0.005).sort((a, b) => (b[1] > 0) - (a[1] > 0) || Math.abs(b[1]) - Math.abs(a[1]));
+  if (capEdit) CATS.filter(c => c !== "הכנסה" && (catMode === "fixed" ? FIXED.has(c) : !FIXED.has(c)) && !m.has(c)).forEach(c => rows.push([c, 0]));
   const total = rows.reduce((s, r) => s + Math.abs(r[1]), 0) || 1;
-  const max = rows.length ? Math.max(...rows.map(r => Math.abs(r[1]))) : 1;
+  const max = rows.length ? Math.max(1, ...rows.map(r => Math.abs(r[1]))) : 1;
   const pv = monthFigures(...prevYM(view.y, view.m)), prevBy = new Map();
   pv.spend.forEach(t => prevBy.set(t.category, (prevBy.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
   const hasPrev = pv.spend.length > 0;
@@ -2629,13 +3693,15 @@ function renderCats(f) {
     if (ch >= 200) return `<span class="delta up" ${tip}>▲ פי ${(v / p).toFixed(1).replace(/\.0$/, "")}</span>`;
     return `<span class="delta ${ch > 0 ? "up" : "down"}" ${tip}><bdi>${ch > 0 ? "▲" : "▼"} ${Math.abs(ch)}%</bdi></span>`;
   };
-  // one bubble per category, its size by how much went there
+  // one bubble per category, its size by how much went there; a new month or switch makes them pop in one by one
+  const bk = view.y + "-" + view.m + "-" + catMode, popIn = bk !== bubKey; bubKey = bk;
   $("cats").innerHTML = rows.length ? rows.map(([c, v], i) => {
     const size = Math.round(66 + Math.sqrt(Math.abs(v) / max) * 84);
     const [icon, hue, sat] = iconFor(c);
-    return `<button class="bub ${size > 120 ? "lg" : ""}" data-cat="${esc(c)}" aria-pressed="${filterCat === c}" style="--h:${hue};--s:${sat}%;width:${size}px;height:${size}px" title="${esc(c)}${v > 0 ? " · " + Math.round(v / total * 100) + "%" : " · קיבלת בחזרה יותר ממה ששילמת"}">
+    const cap = capFor(c), pct = cap ? Math.max(0, v / cap * 100) : 0, capCls = (cap ? "capped" + (pct >= 100 ? " over" : pct >= 80 ? " warn" : "") : "") + (capEdit ? " editing" : "") + (v === 0 ? " ghost" : "");
+    return `<button class="bub ${size > 120 ? "lg" : ""} ${popIn ? "pop" : ""} ${capCls}" data-cat="${esc(c)}" aria-pressed="${filterCat === c}" style="--h:${hue};--s:${sat}%;--pct:${Math.min(pct, 100).toFixed(1)};width:${size}px;height:${size}px;animation-delay:${Math.min(i, 10) * 55}ms" title="${esc(c)}${v > 0 ? " · " + Math.round(v / total * 100) + "%" : " · קיבלת בחזרה יותר ממה ששילמת"}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[icon] || ICONS.tag}"/></svg>
-      ${size >= 80 ? `<span class="bn">${esc(c)}</span>` : ""}<span class="bv num">${fmt(v)}</span>${size >= 96 && v > 0 ? delta(c, v) : ""}</button>`;
+      ${size >= 80 ? `<span class="bn">${esc(c)}</span>` : ""}<span class="bv num">${fmt(v)}</span>${capEdit && !cap ? `<span class="cap-add">+ תקרה</span>` : cap && size >= 80 ? `<span class="cap-of num">${pct >= 100 ? "עבר את " : "מתוך "}${fmt(cap)}</span>` : size >= 96 && v > 0 ? delta(c, v) : ""}</button>`;
   }).join("") : `<div class="empty">אין הוצאות ${catMode === "fixed" ? "קבועות" : "משתנות"} בחודש הזה.</div>`;
 }
 
@@ -2647,9 +3713,10 @@ function txRowHtml(t, withDate) {
     ${catIcon(t.category)}
     <div class="m"><bdi>${esc(t.merchant)}</bdi>${t.inst ? ` <bdi dir="ltr" class="inst">(${t.inst.k}/${t.inst.n})</bdi>` : ""}</div>
     <div class="a num ${pos ? "in" : ""}">${pos ? ltr("+" + fmt2(t.amount)) : fmt2(t.amount)}</div>
-    <div class="meta"><span class="${t.category === "לא מסווג" ? "uncat" : ""}">${esc(t.category)}</span>${withDate === true ? " · " + dd(t.date) : ""} · ${esc(t.account)}${t.gen ? " · מתוך " + fmt(t.total) : ""}</div>
+    <div class="meta">${isPendingTx(t) ? `<span class="pend" title="נשמר בטלפון, יישלח כשיהיה חיבור"><svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 01-.5-9.97A6 6 0 0118 9a4.5 4.5 0 01-.5 9z"/></svg>ממתין · </span>` : ""}<span class="${t.category === "לא מסווג" ? "uncat" : ""}">${esc(t.category)}</span>${withDate === true ? " · " + dd(t.date) : ""} · ${esc(t.account)}${t.gen ? " · מתוך " + fmt(t.total) : ""}</div>
   </div>`;
   if (!k) return row;
+  if (pendingDel && pendingDel.k === k) return "";
   const sure = confirmTx === k;
   // actions sit behind the row; swiping it (or tapping it) slides the row aside to show them
   return `<div class="tx-sw ${open ? "open" : ""}" data-k="${k}">
@@ -2665,11 +3732,39 @@ let txMsgText = "";
 let txKind = "all";
 $("txChips").addEventListener("click", e => { const b = e.target.closest("[data-kind]"); if (!b) return; txKind = b.dataset.kind; showAll = false; openTx = null; render(); });
 let searchQ = "";
+// 5: a search can say more than a name: "סופר מעל 200", "מקס ספטמבר", "קפה פחות מ-30 2025"
+function parseQuery(q) {
+  const out = { min: null, max: null, month: null, year: null, words: [], chips: [] };
+  let s = " " + q.replace(/[₪,]/g, "").replace(/\s+/g, " ") + " ";
+  const num = "(\\d+(?:\\.\\d+)?)";
+  s = s.replace(new RegExp("\\s(?:מעל|יותר מ-?|לפחות|>)\\s*" + num, "g"), (m, n) => { out.min = +n; return " "; });
+  s = s.replace(new RegExp("\\s(?:מתחת ל-?|מתחת|פחות מ-?|עד|<)\\s*" + num, "g"), (m, n) => { out.max = +n; return " "; });
+  s = s.replace(/\s(20\d\d)(?=\s)/g, (m, y) => { out.year = +y; return " "; });
+  s = s.replace(/\s[בל]?(ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)(?=\s)/g, (m, mn) => { out.month = MONTHS.indexOf(mn === "מרס" ? "מרץ" : mn); return " "; });
+  out.words = s.trim().split(" ").filter(Boolean);
+  if (out.words.length) out.chips.push("״" + out.words.join(" ") + "״");
+  if (out.min != null) out.chips.push("מעל " + fmt(out.min));
+  if (out.max != null) out.chips.push("עד " + fmt(out.max));
+  if (out.month != null) out.chips.push(MONTHS[out.month] + (out.year ? " " + out.year : ""));
+  else if (out.year) out.chips.push("שנת " + out.year);
+  if (out.chips.length === 1 && out.words.length && out.min == null && out.max == null) out.chips = []; // a plain search needs no explanation
+  return out;
+}
+function matchQuery(t, sq) {
+  if (sq.min != null && t.amount < sq.min) return false;
+  if (sq.max != null && t.amount > sq.max) return false;
+  if (sq.month != null && t.date.getMonth() !== sq.month) return false;
+  if (sq.year != null && t.date.getFullYear() !== sq.year) return false;
+  const hay = [t.merchant, t.rawMerchant, t.category, t.account, accOf(t), String(t.amount)].map(x => String(x || "").toLowerCase()).join(" | ");
+  return sq.words.every(w => hay.includes(w));
+}
 function renderList(inP) {
   const all = tx.length === 0;
   const q = searchQ.trim().toLowerCase();
   // a search looks through every month, not just the one on screen
-  const pool = q ? tx.filter(t => [t.merchant, t.rawMerchant, t.category, t.account, String(t.amount)].some(x => String(x || "").toLowerCase().includes(q))) : inP;
+  const sq = q ? parseQuery(q) : null;
+  const pool = q ? tx.filter(t => matchQuery(t, sq)) : inP;
+  const qc = $("qChips"); if (qc) { const ch = sq ? sq.chips : []; qc.hidden = !ch.length; qc.innerHTML = ch.map(c => `<span>${esc(c)}</span>`).join(""); }
   const kindOk = t => txKind === "all" ? true : txKind === "exp" ? !t.income && !t.refund : txKind === "inc" ? (t.income || t.refund) : !!t.inst;
   const list = (filterCat ? pool.filter(t => t.category === filterCat) : pool).filter(t => !filterAcc || accOf(t) === filterAcc).filter(kindOk).slice().sort((a, b) => b.date - a.date || b.order - a.order);
   document.querySelectorAll("#txChips button").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === txKind));
@@ -2768,16 +3863,94 @@ function handleError(key, err) {
   } else showBanner("לא הצלחתי לטעון את הגיליון", "נסו לרענן בעוד רגע.", "רענון", refresh);
 }
 
+// 6: a link with ?add opens the add form straight away (for a home-screen / Control Center shortcut)
+let quickAddDone = false;
+const wantsQuickAdd = (() => { try { return new URLSearchParams(location.search).has("add") || /(^|[#&])add\b/.test(location.hash); } catch (e) { return false; } })();
+function maybeQuickAdd() {
+  if (quickAddDone || !wantsQuickAdd || !(data.manual !== null || data.apple !== null)) return;
+  quickAddDone = true;
+  setTimeout(() => { try { openAdd(); $("addAmount").focus(); } catch (e) {} }, 400);
+  try { const u = new URL(location.href); u.searchParams.delete("add"); u.hash = u.hash.replace(/(^#|&)add\b/, ""); history.replaceState(null, "", u.pathname + u.search + (u.hash && u.hash !== "#" ? u.hash : "")); } catch (e) {}
+}
+/* 9: the first visit of a new week (Sunday) opens a short story about last week */
+let weekSeen = "", weekTried = false;
+try { weekSeen = localStorage.getItem("weekRecap") || ""; } catch (e) {}
+function weekSlides() {
+  const ws = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay()), a = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 7), b = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 1);
+  const a2 = new Date(a.getFullYear(), a.getMonth(), a.getDate() - 7), b2 = new Date(a.getFullYear(), a.getMonth(), a.getDate() - 1);
+  const inR = (t, x, y) => t.date >= x && t.date <= y && !t.income;
+  const val = t => t.refund ? -t.amount : t.amount;
+  const wk = tx.filter(t => inR(t, a, b)), prevWk = tx.filter(t => inR(t, a2, b2));
+  const buys = wk.filter(t => !t.refund && t.amount > 0);
+  if (buys.length < 3) return null;
+  const total = wk.reduce((s, t) => s + val(t), 0), ptotal = prevWk.reduce((s, t) => s + val(t), 0);
+  const by = new Map(); wk.forEach(t => by.set(t.category, (by.get(t.category) || 0) + val(t)));
+  const [tc, tv] = [...by.entries()].sort((x, y) => y[1] - x[1])[0];
+  const [ic, hue] = iconFor(tc);
+  const days = new Map(); wk.forEach(t => { if (!t.refund && !t.gen && !FIXED.has(t.category)) days.set(iso(t.date), (days.get(iso(t.date)) || 0) + t.amount); });
+  const clean = 7 - days.size, top = [...days.entries()].sort((x, y) => y[1] - x[1])[0];
+  const slides = [];
+  slides.push({ h: 262, html: `<div class="w-k">השבוע שעבר · ${dd(a)}–${dd(b)}</div><div class="w-big num">${fmt(total)}</div><div class="w-sub">יצאו ב-${buys.length} רכישות${clean > 0 ? ` · ${clean === 1 ? "יום אחד" : clean + " ימים"} בלי הוצאות משתנות` : ""}</div>` });
+  slides.push({ h: hue, html: `<div class="w-ic"><svg viewBox="0 0 24 24"><path d="${ICONS[ic] || ICONS.tag}"/></svg></div><div class="w-k">הכי הרבה הלך על</div><div class="w-mid">${esc(tc)}</div><div class="w-sub num">${fmt(tv)} · ${total > 0 ? Math.round(tv / total * 100) : 0}% מהשבוע</div>` });
+  const d = total - ptotal;
+  slides.push({ h: d > 0 ? 8 : 152, html: `<div class="w-k">לעומת השבוע שלפניו</div><div class="w-big num">${d > 0 ? "▲" : "▼"} ${fmt(Math.abs(d))}</div><div class="w-sub">${d > 0 ? "יותר" : "פחות"} מ-${fmt(ptotal)} בשבוע של ${dd(a2)}${top ? ` · היום הכי יקר: ${WEEKDAYS[parseDate(top[0]).getDay()]} (${fmt(top[1])})` : ""}</div>` });
+  return { slides, key: iso(ws) };
+}
+function maybeWeekRecap() {
+  if (weekTried || data.settings === null || !(data.manual !== null || data.apple !== null) || !splashGone) return;
+  const w = recapWeek(); if (!w) return; // more data may still be on its way
+  weekTried = true; if (weekSeen === w.key) return;
+  setTimeout(() => {
+    if (!$("salBg").hidden || !$("sheetBg").hidden || !$("recap").hidden) { weekTried = false; return; } // the new-month window comes first
+    weekSeen = w.key; try { localStorage.setItem("weekRecap", w.key); } catch (e) {}
+    writeRange("'הגדרות'!V4", [[w.key]]).catch(() => {});
+    openRecap(w.r);
+  }, 1400);
+}
 function afterData() {
+  maybeQuickAdd();
   if (data.manual !== null || data.apple !== null || data.bank !== null) hideBanner();
   build(); render(); renderBankStatus(); renderCardMap();
+  try { maybeWeekRecap(); } catch (e) { console.error(e); }
   try { renderYear(); renderCatSheet(); } catch (e) { console.error(e); }
 }
 
+/* 5: expenses added without a connection wait on the phone (by their id in column H) and go out when it is back */
+const readPending = () => { try { return JSON.parse(localStorage.getItem("pendingAdds") || "[]"); } catch (e) { return []; } };
+const writePending = l => { try { localStorage.setItem("pendingAdds", JSON.stringify(l)); } catch (e) {} };
+const pendingIds = () => new Set(readPending().map(r => r[7]));
+const isOfflineErr = err => !navigator.onLine || /failed to fetch|network|load failed|offline|internet/i.test(String((err && (err.message || err.code)) || ""));
+const isPendingTx = t => !!(t && t.del && t.del.key === "apple" && t.del.raw && pendingIds().has(t.del.raw[7]));
+function toast(text, ms = 3600) {
+  const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = text; document.body.appendChild(t);
+  setTimeout(() => { t.style.transition = "opacity .4s"; t.style.opacity = "0"; setTimeout(() => t.remove(), 450); }, ms);
+}
+let flushing = false;
+async function flushPending() {
+  if (flushing || !mcp || !navigator.onLine) return;
+  const list = readPending(); if (!list.length) return;
+  flushing = true; let sent = 0;
+  try {
+    for (const row of list) {
+      await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: [row] });
+      writePending(readPending().filter(r => r[7] !== row[7])); sent++;
+    }
+  } catch (e) {}
+  flushing = false;
+  if (sent) { toast(sent === 1 ? "ההוצאה ששמרת בלי חיבור נשלחה ✓" : sent + " הוצאות ששמרת בלי חיבור נשלחו ✓"); afterData(); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {} }
+}
+window.addEventListener("online", () => setTimeout(flushPending, 800));
+setInterval(flushPending, 60000);
 function onData(key, payload, result) {
   const values = (payload && payload.values) || [];
   if (key === "settings") { applySettings(values); if (!TOUR_PENDING) askSalary(); }
   else data[key] = values;
+  if (key === "apple") {
+    const have = new Set(values.map(r => r[7])), wait = readPending().filter(r => !have.has(r[7]));
+    if (wait.length < readPending().length) writePending(wait); // already arrived
+    data.apple = [...values, ...wait];
+    if (wait.length) setTimeout(flushPending, 1500);
+  }
   afterData(); stamp(result);
 }
 
@@ -2854,7 +4027,11 @@ function applySettings(values) {
     const mr = (v[11] || "").trim(); if (mr && ((v[12] || "").trim() || (v[13] || "").trim())) mrules[mr] = { name: (v[12] || "").trim(), cat: (v[13] || "").trim() };
   });
   cardMap = cm; merchantRules = mrules; payAlias = alias; catAlias = calias;
+  { const cb = {}; values.forEach(v => { const w = (v[22] || "").trim(), a = parseAmount(v[23]); if (!w || a === null) return; const i = w.indexOf("|"), k = i > 0 && /^\d{4}-\d{2}$/.test(w.slice(0, i)) ? w.slice(0, i) : "", c = catName(k ? w.slice(i + 1) : w); (cb[k] = cb[k] || {})[c] = a; }); capsBy = cb; }
+  { const wk = String((values[2] || [])[21] || "").trim(); if (wk) weekSeen = wk; }
+  { const lj = String((values[3] || [])[21] || "").trim(); if (lj && !arranging) { try { const l = normLayout(JSON.parse(lj)); if (JSON.stringify(l) !== JSON.stringify(layout)) { layout = l; try { localStorage.setItem("layout4", lj); } catch (e) {} applyLayout(); } } catch (e) {} } }
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
+  { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
   // Older copies of the page let that alias win, so remove it from the settings for good.
   { const stale = Object.keys(alias).filter(o => pay.includes(o));
@@ -3163,13 +4340,16 @@ function showView(v) {
   // leaving the transactions screen drops any category or card filter, so the next visit starts from everything
   if (currentView === "tx" && v !== "tx" && (filterCat || filterAcc)) { filterCat = null; filterAcc = null; showAll = false; openTx = null; render(); }
   currentView = v;
-  $("navHome").setAttribute("aria-pressed", v === "flow"); $("navTx").setAttribute("aria-pressed", v === "tx"); $("tabYear").setAttribute("aria-pressed", v === "year"); $("tabAdmin").setAttribute("aria-pressed", v === "admin");
+  $("navHome").setAttribute("aria-pressed", v === "flow"); $("navTx").setAttribute("aria-pressed", v === "tx"); $("tabAna").setAttribute("aria-pressed", v === "ana"); $("anaView").hidden = v !== "ana"; $("tabYear").setAttribute("aria-pressed", v === "year"); $("tabAdmin").setAttribute("aria-pressed", v === "admin");
   $("flowView").hidden = v !== "flow"; $("txView").hidden = v !== "tx"; $("yearView").hidden = v !== "year"; $("adminView").hidden = v !== "admin";
   $("monthBar").hidden = v === "year" || v === "admin";
   if (v === "admin") { if (!adminDirty.sal) renderSal(); renderAdminLists(); }
   if (v === "year") renderYear();
   window.scrollTo(0, 0);
-  if (splashGone) animateView({ flow: "flowView", tx: "txView", year: "yearView", admin: "adminView" }[v]);
+  if (v === "ana") { try { render(); } catch (e) {} }
+  if (window.miniUpd) setTimeout(window.miniUpd, 0);
+  if (arranging) endArrange();
+  if (splashGone && !showView.noAnim) animateView({ flow: "flowView", tx: "txView", ana: "anaView", year: "yearView", admin: "adminView" }[v]);
   setHeadH();
 }
 function setHeadH() { const h = $("monthBar"); if (h && !h.hidden) document.documentElement.style.setProperty("--head-h", h.offsetHeight + "px"); }
@@ -3177,6 +4357,7 @@ window.addEventListener("resize", setHeadH);
 $("navHome").onclick = () => showView("flow");
 $("navTx").onclick = () => { if (filterCat || filterAcc) { filterCat = null; filterAcc = null; render(); } showView("tx"); };
 $("tabYear").onclick = () => showView("year");
+$("tabAna").onclick = () => showView("ana");
 
 /* ---------- year view ---------- */
 let yearSel = today.getFullYear();
@@ -3208,7 +4389,15 @@ function bindTips(box) {
   box.ontouchstart = e => box.onmousemove(e.touches[0] ? Object.assign({}, e, { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, target: e.target }) : e);
 }
 
+function renderYearPill() {
+  const pill = $("yWrapPill"), sl = recapYear(yearSel);
+  if (!sl) { pill.hidden = true; return; }
+  pill.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.2 6.8H21l-5.5 4 2.1 6.7L12 15.4l-5.6 4.1 2.1-6.7L3 8.8h6.8z"/></svg>הסיכום של ${yearSel}${yearSel === today.getFullYear() ? " עד עכשיו" : ""}`;
+  pill.onclick = () => { const r = recapYear(yearSel); if (r) openRecap(r); };
+  pill.hidden = false;
+}
 function renderYear() {
+  try { renderYearPill(); } catch (e) { console.error(e); }
   if (currentView !== "year") return;
   const firstY = Math.floor(FIRST_MONTH / 12), lastY = today.getFullYear();
   const years = []; for (let y = firstY; y <= lastY; y++) years.push(y);
@@ -3416,6 +4605,35 @@ function renderHighlights(months) {
   $("highlights").innerHTML = items.map(([k, v, d]) => `<div class="hl"><div class="k">${k}</div><div class="v num">${v}</div><div class="d">${esc(d)}</div></div>`).join("");
 }
 let donutOther = [], catSheet = null; // {label, names}
+// 3: tapping a bubble opens the category's page: this month, the last six months, where the money went, its cap
+function openCatInfo(cat) {
+  catSheet = { label: cat, names: [cat], months: [view.y * 12 + view.m], info: true };
+  openTx = null; confirmTx = null; txMsgText = "";
+  renderCatSheet(); $("catSheetBg").hidden = false;
+  const sh = $("catSheetBg").querySelector(".sheet"); sh.scrollTop = 0;
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) sh.animate([{ transform: "translateY(40px)", opacity: .4 }, { transform: "none", opacity: 1 }], { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" });
+}
+function renderCatInfo() {
+  const box = $("catInfo");
+  if (!catSheet || !catSheet.info) { box.hidden = true; return; }
+  const cat = catSheet.label, y = view.y, m = view.m, [, hue] = iconFor(cat);
+  const months = []; { let yy = y, mm = m; for (let i = 0; i < 6; i++) { if (yy * 12 + mm < FIRST_MONTH) break; months.unshift([yy, mm]); [yy, mm] = prevYM(yy, mm); } }
+  const vals = months.map(([yy, mm]) => Math.max(0, catSpent(cat, yy, mm))), mx = Math.max(1, ...vals);
+  const now = catSpent(cat, y, m), [py, pm] = prevYM(y, m), before = catSpent(cat, py, pm), d = now - before;
+  const spend = monthFigures(y, m).spend.filter(t => t.category === cat), byM = new Map();
+  spend.forEach(t => { const k = t.merchant; const o = byM.get(k) || { n: 0, a: 0 }; o.n++; o.a += t.refund ? -t.amount : t.amount; byM.set(k, o); });
+  const top = [...byM.entries()].filter(x => x[1].a > 0).sort((a, b) => b[1].a - a[1].a).slice(0, 4), tmax = top.length ? top[0][1].a : 1;
+  const cap = capFor(cat);
+  box.style.setProperty("--h", hue);
+  box.innerHTML = `<div class="ci-top"><span class="v num">${fmt(now)}</span>${before > 0 || now > 0 ? `<span class="d ${d > 0 ? "up" : "down"}">${Math.abs(d) < 1 ? "כמו ב" + MONTHS[pm] : `<bdi>${d > 0 ? "▲" : "▼"} ${fmt(Math.abs(d))}</bdi> ${d > 0 ? "יותר" : "פחות"} מב${MONTHS[pm]}`}</span>` : ""}</div>
+    <div class="ci-bars">${months.map(([yy, mm], i) => `<div class="${yy === y && mm === m ? "cur" : ""}"><em>${vals[i] >= 1000 ? (vals[i] / 1000).toFixed(1) + "K" : Math.round(vals[i])}</em><i style="height:${Math.max(4, vals[i] / mx * 100)}%;animation-delay:${i * 60}ms"></i><span>${MONTHS[mm].slice(0, 3)}</span></div>`).join("")}</div>
+    ${top.length ? `<p class="ci-h">איפה הוצאת הכי הרבה</p><div class="ci-m">${top.map(([n, o]) => `<span class="n">${esc(n)} <small>· ${o.n === 1 ? "פעם אחת" : o.n + " פעמים"}</small></span><span class="a">${fmt(o.a)}</span><span class="b"><i style="width:${(o.a / tmax * 100).toFixed(1)}%"></i></span>`).join("")}</div>` : ""}
+    <div class="ci-cap"><span>${cap ? `תקרה ל${MONTHS[m]}: <b>${fmt(cap)}</b> · ${now >= cap ? `<b style="color:var(--bad)">עברת ב-${fmt(now - cap)}</b>` : `נשארו <b>${fmt(cap - now)}</b>`}` : "אין תקרה לקטגוריה הזו"}</span><button type="button" id="ciCap">${cap ? "עריכה" : "הוספת תקרה"}</button></div>
+    <button type="button" class="ci-go" id="ciAll">לכל ההוצאות במסך התנועות</button>`;
+  box.hidden = false;
+  $("ciCap").onclick = () => { closeCatSheet(); openCap(cat); };
+  $("ciAll").onclick = () => { closeCatSheet(); filterCat = cat; filterAcc = null; txKind = "all"; showAll = false; render(); showView("tx"); };
+}
 function openCatSheet(label) {
   catSheet = { label, names: label === "אחר" ? donutOther.slice() : [label], months: null };
   openTx = null; confirmTx = null; txMsgText = "";
@@ -3424,11 +4642,13 @@ function openCatSheet(label) {
 function closeCatSheet() { catSheet = null; $("catSheetBg").hidden = true; openTx = null; confirmTx = null; }
 function renderCatSheet() {
   if (!catSheet) return;
+  renderCatInfo();
   const months = catSheet.months ? catSheet.months.map(k => ({ f: monthFigures(Math.floor(k / 12), k % 12) })) : yearMonths(yearSel);
   const list = months.flatMap(x => x.f.spend).filter(t => catSheet.names.includes(t.category))
     .sort((a, b) => catSheet.months ? catSheet.months.indexOf(a.date.getFullYear() * 12 + a.date.getMonth()) - catSheet.months.indexOf(b.date.getFullYear() * 12 + b.date.getMonth()) || b.date - a.date : b.date - a.date || b.order - a.order);
   const total = list.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
   $("catSheetTitle").innerHTML = (catSheet.label === "אחר" ? glyph("tag", 220, 10) : catIcon(catSheet.label)) + `<span>${esc(catSheet.label)} · ${catSheet.months ? catSheet.months.map(k => MONTHS[k % 12]).join(" מול ") : yearSel}</span>`;
+  $("catSheetSum").hidden = !!catSheet.info;
   $("catSheetSum").innerHTML = `<span>סה״כ <b>${fmtX(total)}</b></span><span><b>${list.length}</b> תנועות</span>` +
     (catSheet.label === "אחר" ? `<span>${esc(catSheet.names.join(", "))}</span>` : "");
   if (!list.length) { $("catSheetList").innerHTML = `<div class="empty">אין הוצאות בקטגוריה הזו ${catSheet.months ? "בחודשים האלה" : "השנה"}.</div>`; return; }
@@ -3476,10 +4696,10 @@ const trimRow = r => { const a = (r || []).map(x => String(x)); while (a.length 
 function redrawLists() { txMsgText = ""; render(); renderCatSheet(); }
 async function onTxListClick(e) {
   const ask = e.target.closest("[data-ask]"), del = e.target.closest("[data-del]"), cancel = e.target.closest("[data-cancel]"), ed = e.target.closest("[data-edit]");
-  if (ed) { const t = txByKey(ed.dataset.edit); if (t) openEdit(t); return; }
-  if (ask) { confirmTx = ask.dataset.ask; redrawLists(); return; }
+  if (ed) { const t = txByKey(ed.dataset.edit); if (t && isPendingTx(t)) { toast("אפשר לערוך אחרי שההוצאה תישלח. אפשר למחוק ולהוסיף מחדש."); return; } if (t) openEdit(t); return; }
+  if (ask) { const t = txByKey(ask.dataset.ask); if (t && !t.gen) { softDelete(ask.dataset.ask, ask.closest(".tx-sw")); return; } confirmTx = ask.dataset.ask; redrawLists(); return; }
   if (cancel) { confirmTx = null; openTx = null; redrawLists(); return; }
-  if (del) { await deleteTx(del.dataset.del, del); return; }
+  if (del) { softDelete(del.dataset.del, del.closest(".tx-sw")); return; }
   if (e.target.closest(".tx-acts")) return;
   if (swipeJustHappened) return;
   const row = e.target.closest(".tx-sw[data-k]"); if (!row) return;
@@ -3528,6 +4748,54 @@ $("insights").addEventListener("click", e => {
 });
 $("txSearch").addEventListener("input", e => { searchQ = e.target.value; showAll = false; openTx = null; render(); });
 $("catSheetList").addEventListener("click", onTxListClick);
+/* delete: the row tears in two and falls away; the real delete waits 5 seconds so it can be undone */
+let pendingDel = null;
+function tearRow(sw) {
+  const row = sw && sw.querySelector(".tx"); if (!row) return;
+  const r0 = row.getBoundingClientRect(), sr = sw.getBoundingClientRect(), r = { left: sr.left, top: r0.top, width: sr.width, height: r0.height };
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const zig = []; for (let i = 0; i <= 8; i++) zig.push(`${50 + (i % 2 ? 4 : -4) + (i === 4 ? 3 : 0)}% ${i * 12.5}%`);
+    const left = `polygon(0 0, ${zig.join(", ")}, 0 100%)`, right = `polygon(${zig.join(", ")}, 100% 100%, 100% 0)`;
+    [[left, -1], [right, 1]].forEach(([clip, dir]) => {
+      const h = document.createElement("div"); h.className = "tear-half";
+      h.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;clip-path:${clip};-webkit-clip-path:${clip}`;
+      const c = row.cloneNode(true); c.style.transform = "none"; h.appendChild(c); document.body.appendChild(h);
+      // RTL: the left half is the amount side; each half swings away from the tear and drops
+      h.animate([{ transform: "none", opacity: 1 }, { transform: `translate(${dir * 10}px, 6px) rotate(${dir * 4}deg)`, opacity: 1, offset: .25 },
+        { transform: `translate(${dir * 46}px, 120px) rotate(${dir * 16}deg)`, opacity: 0 }], { duration: 750, easing: "cubic-bezier(.5,0,.75,.4)" }).onfinish = () => h.remove();
+    });
+  }
+  const hgt = sw.offsetHeight; sw.style.overflow = "hidden";
+  sw.animate([{ height: hgt + "px", opacity: 0 }, { height: "0px", opacity: 0, marginTop: "0px" }], { duration: 380, delay: 120, easing: "ease-in", fill: "forwards" }).onfinish = () => { sw.style.display = "none"; };
+}
+function softDelete(k, sw) {
+  if (pendingDel) commitDel();
+  const t = txByKey(k); if (!t || !mcp) return;
+  if (isPendingTx(t)) { // never sent: just drop it from the phone
+    const id = t.del.raw[7]; tearRow(sw); writePending(readPending().filter(r => r[7] !== id)); data.apple = data.apple.filter(r => r[7] !== id);
+    openTx = null; confirmTx = null; setTimeout(afterData, 500); return;
+  }
+  openTx = null; confirmTx = null;
+  tearRow(sw);
+  pendingDel = { k, timer: setTimeout(commitDel, 5000) };
+  const bar = $("undoBar"); $("undoTxt").textContent = (t.gen ? "העסקה בתשלומים נמחקה" : "״" + t.merchant + "״ נמחקה");
+  bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run");
+}
+async function commitDel() {
+  const p = pendingDel; if (!p) return;
+  pendingDel = null; clearTimeout(p.timer); $("undoBar").hidden = true;
+  await deleteTx(p.k, document.createElement("button"));
+  if (txByKey(p.k)) { redrawLists(); const bar = $("undoBar"); $("undoTxt").textContent = "המחיקה נכשלה: " + (txMsgText || "נסו שוב"); bar.classList.remove("run"); bar.hidden = false; setTimeout(() => { bar.hidden = true; }, 4000); }
+}
+$("undoBtn").onclick = () => {
+  const p = pendingDel; if (!p) return;
+  pendingDel = null; clearTimeout(p.timer); $("undoBar").hidden = true; redrawLists();
+  const back = document.querySelector(`.tx-sw[data-k="${CSS.escape(p.k)}"]`); if (back) back.classList.add("restored");
+};
+// leaving the page finishes a pending delete
+document.addEventListener("visibilitychange", () => { if (document.hidden) commitDel(); });
+window.addEventListener("pagehide", () => commitDel());
+
 async function deleteTx(k, btn) {
   const t = txByKey(k); if (!t || !mcp) return;
   btn.disabled = true; btn.textContent = "מוחק…";
@@ -3552,6 +4820,73 @@ async function deleteTx(k, btn) {
 
 /* ---------- add entry ---------- */
 let addKind = "exp";
+/* 2: add by voice: "45 שקל שווארמה במקס" fills the amount, the description, the category and the card */
+const HEB_N = { "אפס": 0, "אחד": 1, "אחת": 1, "שתיים": 2, "שניים": 2, "שני": 2, "שתי": 2, "שלוש": 3, "שלושה": 3, "ארבע": 4, "ארבעה": 4, "חמש": 5, "חמישה": 5, "שש": 6, "שישה": 6, "שבע": 7, "שבעה": 7,
+  "שמונה": 8, "תשע": 9, "תשעה": 9, "עשר": 10, "עשרה": 10, "עשרים": 20, "שלושים": 30, "ארבעים": 40, "חמישים": 50, "שישים": 60, "שבעים": 70, "שמונים": 80, "תשעים": 90, "מאתיים": 200, "אלפיים": 2000 };
+function hebNumber(words) {
+  let total = 0, cur = 0, used = [], any = false;
+  for (const raw of words) {
+    let w = raw; if (!(w in HEB_N) && /^ו/.test(w) && (w.slice(1) in HEB_N || /^ו(מאה|מאות|אלף|אלפים|חצי)$/.test(w))) w = w.slice(1);
+    if (w in HEB_N) { const v = HEB_N[w]; if (v >= 1000) total += v; else if (v === 10 && cur > 0 && cur < 10) cur += 10; else cur += v; any = true; }
+    else if (w === "מאה") { cur = (cur || 1) * 100; any = true; } else if (w === "מאות") { cur = (cur || 1) * 100; any = true; }
+    else if (w === "אלף" || w === "אלפים") { total += (cur || 1) * 1000; cur = 0; any = true; } else if (w === "חצי" && any) { cur += .5; }
+    else if (any) break; else continue;
+    used.push(raw);
+  }
+  return any ? { n: total + cur, used } : null;
+}
+const CARD_WORDS = [[/מקס|max/i, /max|מקס/i], [/ישראכרט|אמקס|אמריקן|isracard|amex/i, /amex|american|ישראכרט|אמריקן|isracard/i], [/כאל|cal\b/i, /\bcal\b|כאל|visa/i], [/חבר|hever/i, /hever|חבר/i], [/פועלים|דיירקט|direct/i, /poalim|פועלים|direct|דיירקט/i], [/לאומי|leumi/i, /leumi|לאומי/i], [/מזומן|cash/i, /מזומן|cash/i]];
+function parseVoice(text) {
+  const out = { amount: null, card: null, desc: "", inc: false };
+  let t = " " + text.replace(/(\d)[,](\d{3})/g, "$1$2").replace(/(?<!\d)[.,]|[.,](?!\d)|[!?]/g, " ").replace(/\s+/g, " ").trim() + " ";
+  if (/קיבלתי|העביר לי|העבירה לי|החזיר לי|החזירה לי|הכנסה/.test(t)) out.inc = true;
+  const dm = t.match(/(\d+(?:[.,]\d+)?)/);
+  if (dm) { out.amount = parseFloat(dm[1].replace(",", ".")); t = t.replace(dm[0], " "); }
+  else { const ws = t.trim().split(" "), hn = hebNumber(ws); if (hn) { out.amount = hn.n; hn.used.forEach(w => { t = t.replace(" " + w + " ", " "); }); } }
+  // the card: "במקס", "בכרטיס של חבר", "במזומן", "מהבנק"
+  const cards = [...PAY.filter(x => x !== bankName()), bankName()]; // a card name wins over the bank ("אשראי פועלים")
+  for (const [say, pick] of CARD_WORDS) if (say.test(t)) { const p = cards.find(x => pick.test(x)); if (p) { out.card = p; t = t.replace(new RegExp("\\s(ב|מ|עם |בכרטיס |באשראי )?(" + say.source + ")\\S*", "i"), " "); break; } }
+  if (!out.card) for (const p of PAY) { const re = new RegExp("\\s[בם]?" + p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?=\\s)", "i"); if (re.test(t)) { out.card = p; t = t.replace(re, " "); break; } }
+  if (!out.card && /\s(ב|מה)?בנק|\sבביט|\sבהעברה/.test(t)) { out.card = bankName(); t = t.replace(/\s(ב|מה)?בנק\S*|\sבביט|\sבהעברה/, " "); }
+  t = t.replace(/\s(שקלים|שקל|ש"ח|ש״ח|₪|שח|nis)(?=\s)/gi, " ").replace(/^\s*(על|הוצאה|קניתי|שילמתי|הוצאתי|קיבלתי)\s/, " ").replace(/\s(על|ב)\s*$/, " ").replace(/^\s*על\s/, " ");
+  out.desc = t.replace(/\s+/g, " ").trim();
+  return out;
+}
+let rec = null;
+function stopVoice() { try { rec && rec.stop(); } catch (e) {} rec = null; $("voiceBox").classList.remove("on"); }
+function startVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const box = $("voiceBox"); box.hidden = false;
+  if (!SR) { $("voiceState").textContent = "אין כאן הקלטה"; $("voiceText").textContent = "הדפדפן הזה לא תומך בזיהוי דיבור. ב-Safari באייפון זה עובד."; return; }
+  stopVoice();
+  rec = new SR(); rec.lang = "he-IL"; rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
+  $("voiceState").textContent = "מקשיב…"; $("voiceText").textContent = "אמרו למשל: ״45 שקל שווארמה במקס״"; box.classList.add("on");
+  let finalText = "";
+  rec.onresult = e => { const r = [...e.results].map(x => x[0].transcript).join(" "); $("voiceText").textContent = "״" + r + "״"; if (e.results[e.results.length - 1].isFinal) finalText = r; };
+  rec.onerror = e => { $("voiceState").textContent = e.error === "not-allowed" ? "אין גישה למיקרופון" : "לא שמעתי"; $("voiceText").textContent = e.error === "not-allowed" ? "צריך לאשר לאתר להשתמש במיקרופון." : "נסו שוב, קרוב יותר לטלפון."; box.classList.remove("on"); };
+  rec.onend = () => { box.classList.remove("on"); if (finalText) applyVoice(finalText); };
+  try { rec.start(); } catch (e) {}
+}
+function applyVoice(text) {
+  const v = parseVoice(text);
+  if (v.inc) setKind("inc");
+  if (v.amount) $("addAmount").value = v.amount;
+  if (v.desc) { $("addDesc").value = v.desc; $("addDesc").dispatchEvent(new Event("input")); }
+  const hit = v.desc && recognizeMerchant(v.desc); if (hit && hit.cat && [...$("addCat").options].some(o => o.value === hit.cat)) $("addCat").value = hit.cat;
+  if (v.card && [...$("addCard").options].some(o => o.value === v.card)) $("addCard").value = v.card;
+  $("voiceState").textContent = "הבנתי ✓"; $("voiceText").innerHTML = [v.amount ? fmt(v.amount) : "בלי סכום", v.desc ? "״" + esc(v.desc) + "״" : "", $("addCat").value, $("addCard").value].filter(Boolean).join(" · ") + " · בדקו ושמרו";
+  if (!v.amount) $("addAmount").focus();
+}
+$("micBtn").onclick = () => startVoice();
+$("voiceStop").onclick = () => { if (rec) { try { rec.stop(); } catch (e) {} } else $("voiceBox").hidden = true; };
+// a long press on + opens the form already listening
+{
+  let lp = null, fired = false;
+  const fab = $("fab");
+  fab.addEventListener("touchstart", () => { fired = false; lp = setTimeout(() => { lp = null; fired = true; try { navigator.vibrate && navigator.vibrate(15); } catch (e) {} openAdd(); startVoice(); }, 550); }, { passive: true });
+  ["touchend", "touchcancel", "touchmove"].forEach(ev => fab.addEventListener(ev, () => { if (lp) { clearTimeout(lp); lp = null; } }, { passive: true }));
+  fab.addEventListener("click", e => { if (fired) { e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
+}
 function setKind(k) {
   addKind = k;
   $("kExp").setAttribute("aria-pressed", k === "exp"); $("kInc").setAttribute("aria-pressed", k === "inc");
@@ -3629,7 +4964,7 @@ $("quickChips").addEventListener("click", e => {
   $("addMsg").textContent = ""; instShown();
   if (!$("addAmount").value) $("addAmount").focus();
 });
-function closeAdd() { $("sheetBg").hidden = true; editTx = null; }
+function closeAdd() { $("sheetBg").hidden = true; editTx = null; stopVoice(); $("voiceBox").hidden = true; }
 function openEdit(t) {
   openAdd();
   editTx = t; renderQuick();
@@ -3676,7 +5011,7 @@ async function saveEdit(t, amount, desc, date, cat, card, kind) {
 $("fab").onclick = openAdd;
 $("closeAdd").onclick = closeAdd;
 $("sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") closeAdd(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheetBg").hidden) closeAdd(); if (e.key === "Escape" && !$("salBg").hidden) salLater(); if (e.key === "Escape" && !$("mvBg").hidden) closeMove(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("capBg").hidden) closeCap(); if (e.key === "Escape" && !$("sheetBg").hidden) closeAdd(); if (e.key === "Escape" && !$("salBg").hidden) salLater(); if (e.key === "Escape" && !$("mvBg").hidden) closeMove(); });
 $("kExp").onclick = () => setKind("exp");
 $("kInc").onclick = () => setKind("inc");
 $("addDesc").addEventListener("input", () => {
@@ -3708,14 +5043,25 @@ $("addForm").addEventListener("submit", async e => {
   const nInst = addKind === "exp" ? +$("addInst").value : 1;
   const row = [date, amount, desc, $("addCard").value, $("addCat").value, addKind === "inc" ? "הכנסה" : "הוצאה", "ידני", "m-" + Date.now(), nInst > 1 ? nInst : ""];
   const btn = $("addSave"); btn.disabled = true; btn.textContent = "שומר…"; $("addMsg").textContent = "";
+  // no connection: keep it on the phone and send it when the connection is back
+  const keepLocal = () => {
+    writePending([...readPending(), row]); data.apple = [...(data.apple || []), row];
+    const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
+    closeAdd(); afterData(); btn.disabled = false; btn.textContent = "שמירה";
+    toast("אין חיבור. ההוצאה נשמרה בטלפון ותישלח לבד כשהאינטרנט יחזור ☁");
+  };
+  if (!navigator.onLine) return keepLocal();
   try {
     await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: [row] });
     data.apple = [...(data.apple || []), row];
     const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
+    const fr = $("fab").getBoundingClientRect();
     closeAdd(); afterData();
+    if (addKind === "exp") requestAnimationFrame(() => flyCoin({ x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 }));
     try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
   } catch (err) {
     const c = err && err.code;
+    if (isOfflineErr(err)) return keepLocal();
     $("addMsg").textContent = c === "approval_required" || c === "not_in_manifest" ? "צריך לאשר לאתר לכתוב לגיליון. לחצו שוב על שמירה ואשרו."
       : c === "server_unavailable" || c === "upstream_error" ? "לא בטוח שהשמירה עברה. רעננו את העמוד ובדקו לפני שמנסים שוב."
       : c === "needs_reauth" ? "החיבור פג. התחברו מחדש."
@@ -3725,11 +5071,49 @@ $("addForm").addEventListener("submit", async e => {
 });
 
 /* ---------- events ---------- */
-$("prev").onclick = () => { shift(-1); showAll = false; render(); };
-$("next").onclick = () => { shift(1); showAll = false; render(); };
+// 1: moving between months: the screen slides in from the side of the month you came from, and the gauge fills up again from zero
+function monthAnim(dir) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const v = ["flowView", "txView", "anaView"].map($).find(x => x && !x.hidden);
+  if (v) v.animate([{ opacity: 0, transform: `translateX(${dir * 34}px)` }, { opacity: 1, transform: "none" }], { duration: 420, easing: "cubic-bezier(.2,.8,.2,1)" });
+  const fg = $("ringFg"), tip = $("ringTip");
+  fg.style.transition = "none"; fg.style.strokeDashoffset = "100"; tip.style.transition = "none"; tip.style.transform = "translate(220px,124px)";
+  void fg.getBoundingClientRect(); fg.style.transition = ""; tip.style.transition = "";
+  lastStage = null; bubKey = "";
+}
+// RTL: the earlier month is to the right
+// 4: pull the page down from the top to refresh: a coin follows the finger and spins while the data reloads
+{
+  let y0 = null, pulled = 0, busy = false;
+  const ptr = $("ptr"), coin = ptr.querySelector("svg");
+  const ok = () => !busy && window.scrollY <= 0 && $("sheetBg").hidden && $("salBg").hidden && $("mvBg").hidden && $("capBg").hidden && document.body.style.overflow !== "hidden";
+  document.addEventListener("touchstart", e => { y0 = ok() && e.touches.length === 1 ? e.touches[0].clientY : null; pulled = 0; }, { passive: true });
+  document.addEventListener("touchmove", e => {
+    if (y0 == null) return;
+    pulled = Math.max(0, e.touches[0].clientY - y0); if (window.scrollY > 0) { y0 = null; pulled = 0; }
+    const k = Math.min(pulled / 80, 1.4);
+    ptr.style.transition = "none"; ptr.style.opacity = String(Math.min(1, k)); ptr.style.transform = `translateY(${Math.min(pulled * .6, 70) - 50}px)`;
+    coin.style.transform = `rotateY(${pulled * 4}deg)`;
+  }, { passive: true });
+  document.addEventListener("touchend", async () => {
+    if (y0 == null) return; y0 = null;
+    ptr.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1), opacity .3s";
+    if (pulled < 80) { ptr.style.opacity = "0"; ptr.style.transform = "translateY(-50px)"; return; }
+    busy = true; coin.style.transform = ""; ptr.classList.add("spin"); ptr.style.transform = "translateY(10px)";
+    try { await refresh(); } catch (e) {}
+    ptr.classList.remove("spin"); ptr.style.opacity = "0"; ptr.style.transform = "translateY(-50px)"; busy = false;
+  });
+}
+$("prev").onclick = () => { shift(-1); showAll = false; monthAnim(1); render(); };
+$("next").onclick = () => { shift(1); showAll = false; monthAnim(-1); render(); };
 $("cats").addEventListener("click", e => {
-  const b = e.target.closest(".bub"); if (!b) return;
-  filterCat = b.dataset.cat; filterAcc = null; txKind = "all"; showAll = false; render(); showView("tx");
+  const b = e.target.closest(".bub"); if (!b || b.dataset.going) return;
+  if (capEdit) { openCap(b.dataset.cat); return; }
+  const go = () => { delete b.dataset.going; openCatInfo(b.dataset.cat); };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return go();
+  // the bubble swells for a moment before its list opens
+  b.dataset.going = 1; b.classList.remove("pop");
+  b.animate([{ transform: "scale(1)" }, { transform: "scale(1.16)" }, { transform: "scale(1.08)" }], { duration: 220, easing: "cubic-bezier(.3,1.5,.5,1)", fill: "forwards" }).onfinish = go;
 });
 $("clearFilter").onclick = () => { filterCat = null; filterAcc = null; render(); };
 $("segVar").onclick = () => { catMode = "var"; $("segVar").setAttribute("aria-pressed", "true"); $("segFixed").setAttribute("aria-pressed", "false"); render(); };
@@ -3749,6 +5133,146 @@ $("startDay").addEventListener("change", async e => {
   try { await writeRange("'הגדרות'!V2", [[v]]); sdMsg(""); } catch (err) { sdMsg(writeError(err)); }
 });
 const sdMsg = t => { const m = $("startDayMsg"); if (m) m.textContent = t; };
+
+{
+  const u = new URL(location.href); u.search = "?add"; u.hash = "";
+  const el = $("quickAddUrl"); if (el) el.textContent = u.href;
+  const c = $("quickAddCopy"); if (c) c.onclick = async () => { try { await navigator.clipboard.writeText(u.href); c.textContent = "הועתק ✓"; } catch (e) { c.textContent = "סמנו והעתיקו"; } setTimeout(() => { c.textContent = "העתקה"; }, 1800); };
+  // the quick-add link is for a site opened at its own address; inside another page it does not apply
+  if (location.protocol !== "https:" || /claude|googleusercontent/.test(location.hostname)) { const qa = $("quickAddCard"); if (qa) qa.hidden = true; }
+}
+
+/* 7: light / dark / follow the phone; kept in the settings (V3) and on this device */
+function applyTheme(t) {
+  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  document.querySelectorAll("[data-theme-set]").forEach(b => b.setAttribute("aria-pressed", b.dataset.themeSet === (t || "auto")));
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = (t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)) ? "#121117" : "#5b4cf0";
+}
+let themePref = "auto";
+try { themePref = localStorage.getItem("theme") || "auto"; } catch (e) {}
+applyTheme(themePref);
+document.querySelectorAll("[data-theme-set]").forEach(b => b.onclick = async () => {
+  themePref = b.dataset.themeSet; applyTheme(themePref);
+  try { localStorage.setItem("theme", themePref); } catch (e) {}
+  try { await writeRange("'הגדרות'!V3", [[themePref]]); } catch (e) {}
+});
+
+// 8: show the slim bar once the gauge has scrolled away (home screen only)
+{
+  const gw = document.querySelector(".ring-wrap.gauge"), mb = $("miniBar");
+  if (gw && mb && "IntersectionObserver" in window) {
+    let gone = false;
+    const upd = () => mb.classList.toggle("show", gone && !$("flowView").hidden); window.miniUpd = upd;
+    new IntersectionObserver(es => { es.forEach(e => { gone = !e.isIntersecting && e.boundingClientRect.top < 80; }); upd(); }, { rootMargin: "-90px 0px 0px 0px", threshold: 0 }).observe(gw);
+    ["navHome", "navTx", "tabYear", "tabAdmin"].forEach(id => { const b = $(id); if (b) b.addEventListener("click", () => setTimeout(upd, 30)); });
+    mb.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+}
+
+/* 1: arrange the home and analysis screens: order, which screen, hide. Kept on this device and in the settings (V5) */
+const ARR_NAMES = { ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "לפי אמצעי תשלום", fix: "חיובים קבועים", cal: "לוח החודש", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
+const ARR_DEFAULT = { flow: ["ins", "cats", "pay", "inst"], ana: ["week", "cal", "cmp", "merch", "fc", "fix", "burn", "up"], hidden: [] };
+var layout = null, arranging = false;
+function normLayout(l) {
+  if (!l) l = ARR_DEFAULT;
+  const out = { flow: [], ana: [], hidden: [] }, seen = new Set();
+  ["flow", "ana", "hidden"].forEach(k => ((l && l[k]) || []).forEach(x => { if (ARR_NAMES[x] && !seen.has(x)) { out[k].push(x); seen.add(x); } }));
+  Object.keys(ARR_NAMES).forEach(x => { if (!seen.has(x)) (ARR_DEFAULT.flow.includes(x) ? out.flow : out.ana).push(x); });
+  return out;
+}
+try { layout = normLayout(JSON.parse(localStorage.getItem("layout4") || "null")); } catch (e) { layout = normLayout(null); }
+const arrEl = k => document.querySelector(`[data-k="${k}"]`);
+function applyLayout() {
+  ["flow", "ana"].forEach(v => {
+    const view = $(v + "View"), end = view.querySelector(":scope > .arr-open");
+    layout[v].forEach(k => { const el = arrEl(k); if (el) end.before(el); });
+  });
+  layout.hidden.forEach(k => { const el = arrEl(k); if (el) { el.dataset.off = 1; $("anaView").append(el); } });
+  Object.keys(ARR_NAMES).forEach(k => { const el = arrEl(k); if (el && !layout.hidden.includes(k)) delete el.dataset.off; });
+  if (arranging) drawArrange();
+}
+function saveLayout() {
+  try { localStorage.setItem("layout4", JSON.stringify(layout)); } catch (e) {}
+  writeRange("'הגדרות'!V5", [[JSON.stringify(layout)]]).catch(() => {});
+}
+function drawArrange() {
+  document.querySelectorAll(".arr-bar, .arr-tray").forEach(x => x.remove());
+  const ic = { up: '<svg viewBox="0 0 24 24"><path d="M12 19V5 M6 11l6-6 6 6"/></svg>', dn: '<svg viewBox="0 0 24 24"><path d="M12 5v14 M6 13l6 6 6-6"/></svg>', hide: '<svg viewBox="0 0 24 24"><path d="M3 3l18 18 M10.6 6.1A9.8 9.8 0 0112 6c5 0 9 6 9 6a17 17 0 01-3.2 3.7 M6.6 6.6C4.3 8.2 3 12 3 12s4 6 9 6a9 9 0 004.4-1.1"/></svg>' };
+  ["flow", "ana"].forEach(v => layout[v].forEach((k, i) => {
+    const el = arrEl(k); if (!el) return;
+    const bar = document.createElement("div"); bar.className = "arr-bar";
+    bar.innerHTML = `<span class="nm">${ARR_NAMES[k]}</span><button type="button" data-arr="up" aria-label="למעלה" ${i === 0 ? "disabled" : ""}>${ic.up}</button><button type="button" data-arr="dn" aria-label="למטה" ${i === layout[v].length - 1 ? "disabled" : ""}>${ic.dn}</button>
+      <button type="button" data-arr="mv" aria-label="${v === "flow" ? "העברה לחודשי" : "העברה לבית"}" title="${v === "flow" ? "לחודשי" : "לבית"}">${v === "flow" ? "📊" : "🏠"}</button><button type="button" data-arr="hide" aria-label="הסתרה">${ic.hide}</button>`;
+    bar.dataset.key = k; bar.dataset.v = v; el.append(bar);
+  }));
+  const cur = !$("anaView").hidden ? "ana" : "flow", view = $(cur + "View");
+  if (layout.hidden.length) {
+    const tray = document.createElement("div"); tray.className = "arr-tray";
+    tray.innerHTML = `<b>מוסתרים · לחיצה מחזירה ל${cur === "flow" ? "בית" : "״חודשי״"}</b>` + layout.hidden.map(k => `<button type="button" data-unhide="${k}">+ ${ARR_NAMES[k]}</button>`).join("");
+    view.querySelector(":scope > .arr-open").before(tray);
+  }
+}
+function startArrange() {
+  if (arranging) return; arranging = true; document.body.classList.add("arrange");
+  const d = document.createElement("button"); d.className = "arr-done"; d.type = "button"; d.textContent = "סיום"; d.onclick = endArrange; document.body.append(d);
+  drawArrange();
+  try { navigator.vibrate && navigator.vibrate(15); } catch (e) {}
+}
+function endArrange() {
+  if (!arranging) return; arranging = false; document.body.classList.remove("arrange");
+  document.querySelectorAll(".arr-bar, .arr-tray, .arr-done").forEach(x => x.remove());
+  saveLayout(); try { render(); } catch (e) {}
+}
+document.addEventListener("click", e => {
+  const op = e.target.closest && e.target.closest("[data-arrange]"); if (op) { startArrange(); return; }
+  const b = e.target.closest && e.target.closest(".arr-bar [data-arr]");
+  if (b) {
+    const bar = b.closest(".arr-bar"), k = bar.dataset.key, v = bar.dataset.v, list = layout[v], i = list.indexOf(k), act = b.dataset.arr;
+    if (act === "up" && i > 0) [list[i - 1], list[i]] = [list[i], list[i - 1]];
+    if (act === "dn" && i < list.length - 1) [list[i + 1], list[i]] = [list[i], list[i + 1]];
+    if (act === "mv") { list.splice(i, 1); layout[v === "flow" ? "ana" : "flow"].push(k); toast(ARR_NAMES[k] + (v === "flow" ? " עבר ל״חודשי״ 📊" : " עבר לבית 🏠"), 1800); }
+    if (act === "hide") { list.splice(i, 1); layout.hidden.push(k); }
+    applyLayout(); return;
+  }
+  const u = e.target.closest && e.target.closest("[data-unhide]");
+  if (u) { const k = u.dataset.unhide; layout.hidden = layout.hidden.filter(x => x !== k); layout[!$("anaView").hidden ? "ana" : "flow"].push(k); applyLayout(); }
+}, true);
+// a long press on a card also starts arranging
+{
+  let lp = null, lx = 0, ly = 0;
+  document.addEventListener("touchstart", e => {
+    const c = e.target.closest && e.target.closest("[data-k]"); if (!c || arranging || e.touches.length !== 1 || e.target.closest("button, a, input, .bub, .insight")) return;
+    lx = e.touches[0].clientX; ly = e.touches[0].clientY; lp = setTimeout(() => { lp = null; startArrange(); }, 600);
+  }, { passive: true });
+  const stop = () => { if (lp) { clearTimeout(lp); lp = null; } };
+  document.addEventListener("touchmove", e => { if (lp && Math.hypot(e.touches[0].clientX - lx, e.touches[0].clientY - ly) > 10) stop(); }, { passive: true });
+  document.addEventListener("touchend", stop); document.addEventListener("touchcancel", stop);
+}
+applyLayout();
+
+/* 4: slide between the tabs (RTL: the next tab is to the left, so a slide to the right moves forward) */
+{
+  const ORDER = ["flow", "tx", "ana", "year", "admin"];
+  let sx = null, sy = 0, st = 0;
+  const blocked = t => {
+    if (arranging || !$("sheetBg").hidden || !$("salBg").hidden || !$("mvBg").hidden || !$("capBg").hidden || !$("catSheetBg").hidden || !$("wrapped").hidden || !$("recap").hidden || document.querySelector(".tour")) return true;
+    for (let n = t; n && n !== document.body; n = n.parentElement) {
+      if (n.matches && n.matches(".tx-sw, .up-strip, input, textarea, select, .burn, .nav, .theme-seg, .seg, .mini, .insights")) return true;
+      if (n.scrollWidth > n.clientWidth + 4 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return true;
+    }
+    return false;
+  };
+  document.addEventListener("touchstart", e => { if (e.touches.length !== 1 || blocked(e.target)) { sx = null; return; } sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now(); }, { passive: true });
+  document.addEventListener("touchend", e => {
+    if (sx == null) return; const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy, dt = Date.now() - st; sx = null;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8 || dt > 650) return;
+    const i = ORDER.indexOf(currentView === "home" ? "flow" : currentView), j = i + (dx > 0 ? 1 : -1);
+    if (i < 0 || j < 0 || j >= ORDER.length) return;
+    showView.noAnim = true; showView(ORDER[j]); showView.noAnim = false;
+    const el = $({ flow: "flowView", tx: "txView", ana: "anaView", year: "yearView", admin: "adminView" }[ORDER[j]]);
+    if (el && !matchMedia("(prefers-reduced-motion: reduce)").matches) [...el.children].forEach((c, n) => c.animate([{ opacity: 0, transform: `translateX(${dx > 0 ? -60 : 60}px)` }, { opacity: 1, transform: "none" }], { duration: 380, delay: Math.min(n, 6) * 25, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" }));
+  });
+}
 
 /* every card can be folded; the choice is remembered on this device */
 const FOLDED_BY_DEFAULT = ["חודש מול חודש", "לוח ההוצאות של השנה", "מה אם הייתי מוציא פחות"];
@@ -3778,16 +5302,19 @@ boot();
 <script>
 /* first-visit guided tour: one highlight at a time, then straight to entering this month's salary */
 const TOUR = [
-  { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולהתחיל לחסוך. בואו נעשה סיור קצר, פחות מדקה." },
-  { t: "#status .ring-wrap", h: "כמה נשאר לך החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. אפשר גם לקבוע כמה לחסוך החודש: סגול אומר שאתם בדרך ליעד, כתום שחרגתם מהיעד אבל עדיין בפלוס, ואדום שחרגתם מההכנסה החודשית." },
-  { t: "#fab", h: "הוספת הוצאה", b: "בכפתור הזה מוסיפים כל הוצאה, או כסף שקיבלתם. בוחרים קטגוריה, כרטיס, ואם צריך גם מספר תשלומים." },
-  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. ככל שהוצאתם בה יותר, הוא גדול יותר. לחיצה עליו מציגה את כל ההוצאות שלה." },
-  { t: "#navTx", h: "כל התנועות", b: "כאן כל ההוצאות וההכנסות, עם חיפוש וסינון. מחליקים תנועה ימינה כדי לערוך או למחוק אותה." },
-  { t: "#tabYear", h: "התמונה השנתית", b: "גרפים של כל השנה, השוואה בין חודשים, ו\"מה אם הייתי מוציא פחות\" שמראה כמה אפשר לחסוך." },
-  { t: "#tabAdmin", h: "הגדרות", b: "קטגוריות ואמצעי תשלום משלכם, משכורת לכל חודש, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
+  { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
+  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. מעליו מופיע בכל כניסה הדבר הכי חשוב עכשיו, ומתחת שעון חול של כמה אפשר להוציא היום." },
+  { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או כסף שקיבלתם, גם בתשלומים. לחיצה ארוכה מקשיבה: אומרים ״45 שקל שווארמה במקס״ והטופס מתמלא לבד. בלי קליטה? ההוצאה נשמרת ונשלחת כשהחיבור חוזר." },
+  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. בכפתור ״תקרות״ קובעים כמה מותר להוציא על כל קטגוריה, וטבעת סביב העיגול מתמלאת." },
+  { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
+  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: תקציב שבועי, לוח של ימים, השוואה לחודש הקודם לפי קטגוריות, תחזית לסוף החודש, החיובים הקבועים ומה שצפוי לרדת בחודש הבא." },
+  { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות. חיפוש חכם כמו ״סופר מעל 200״ או ״מקס ספטמבר״. מחליקים תנועה ימינה כדי לערוך או למחוק, ומחיקה בטעות מבטלים בלחיצה." },
+  { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה, השוואה בין חודשים, וסיכום שנתי. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
+  { t: "#tabAdmin", h: "הגדרות", b: "משכורת לכל חודש, קטגוריות ואמצעי תשלום משלכם, יום החיוב בכרטיס, מצב כהה, קישור להוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
+  { t: null, e: "👆", h: "עוד שני טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
 ];
-let tourEl = null, tourI = 0;
+let tourEl = null, tourI = 0, tourRestore = null;
 function startTour() {
   if (tourEl) tourEl.remove();
   showView("flow"); window.scrollTo(0, 0);
@@ -3796,13 +5323,22 @@ function startTour() {
   document.body.appendChild(tourEl); tourI = 0; tourStep();
 }
 function endTour() {
+  if (tourRestore) { try { tourRestore(); } catch (e) {} tourRestore = null; }
   try { localStorage.setItem("tourDone-" + USER_ID, "1"); } catch (e) {}
   if (tourEl) { tourEl.remove(); tourEl = null; }
   window.scrollTo(0, 0);
   if (TOUR_PENDING) { TOUR_PENDING = false; salAsked = false; askSalary(); }
 }
 function tourStep() {
-  const s = TOUR[tourI], spot = tourEl.querySelector(".tour-spot"), tip = tourEl.querySelector(".tour-tip"), dim = tourEl.querySelector(".tour-dim");
+  let s = TOUR[tourI];
+  // a step whose place is not on screen (no data for it yet) is skipped
+  const vis = x => { const el = x && document.querySelector(x); return !!(el && el.getClientRects().length && !el.closest("[hidden]")); };
+  if (tourRestore) { tourRestore(); tourRestore = null; }
+  if (currentView !== (s.view || "flow")) showView(s.view || "flow");
+  if (s.demo && !vis(s.t)) tourRestore = s.demo(); // nothing real yet: show an example for this step
+  while (s && s.opt && !vis(s.t) && tourI < TOUR.length - 1) s = TOUR[++tourI];
+  if (currentView !== (s.view || "flow")) showView(s.view || "flow");
+  const spot = tourEl.querySelector(".tour-spot"), tip = tourEl.querySelector(".tour-tip"), dim = tourEl.querySelector(".tour-dim");
   let el = s.t ? document.querySelector(s.t) : null; if (el && s.card) el = el.closest(".card") || el;
   const fixed = el && getComputedStyle(el.closest(".nav") || el).position === "fixed";
   if (el && !fixed) el.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -3828,13 +5364,13 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261024183524";
+const BUILD_ID = "20261025000804";
 let updToast = null;
 async function checkUpdate() {
   try {
     const r = await fetch(location.pathname + "?u=" + Date.now(), { cache: "no-store" }); if (!r.ok) return;
     const m = (await r.text()).match(/BUILD_ID = "(\d+)"/); if (!m || m[1] === BUILD_ID) return;
-    const busy = [..."sheetBg salBg mvBg catSheetBg wrapped".split(" ")].some(id => { const el = document.getElementById(id); return el && !el.hidden; }) || (document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName));
+    const busy = [..."sheetBg salBg mvBg capBg catSheetBg wrapped recap".split(" ")].some(id => { const el = document.getElementById(id); return el && !el.hidden; }) || (document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName));
     if (!busy) { location.reload(); return; }
     if (updToast) return;
     updToast = document.createElement("button");
