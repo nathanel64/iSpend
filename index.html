@@ -1448,7 +1448,7 @@ body { margin: 0; }
         <label for="startMonth">החודש הראשון באתר</label>
         <input type="month" id="startMonth" style="width:auto">
       </div>
-      <p class="note" style="margin:0">אפשר לחזור אחורה עד החודש הזה, גם אם עוד אין בו תנועות, ולהזין לו משכורת והוצאות.</p>
+      <p class="note" style="margin:0">האתר מתחיל מהחודש הזה. אפשר לחזור אחורה, גם לחודש שעוד אין בו תנועות. קידום קדימה מוחק את החודשים שלפניו, אחרי שתאשרו.</p>
       <div class="row">
         <label for="startDay">יום החיוב בכרטיסי האשראי</label>
         <input type="number" id="startDay" min="1" max="28" value="1" style="width:5em">
@@ -1894,7 +1894,10 @@ function makeSupaAdapter(uid) {
   let txRows = [];
   const loadTx = async () => {
     const { data, error } = await sb.from("tx").select("id,vals").order("id"); if (error) fail(error);
-    txRows = data || [];
+    // rows emptied by a month deletion are removed for good here (emptying keeps rows in place while the writes run)
+    const empty = (data || []).filter(r => !(r.vals || []).some(x => String(x == null ? "" : x).trim()));
+    if (empty.length) { await Promise.all(empty.map(r => sb.from("tx").delete().eq("id", r.id))); }
+    txRows = (data || []).filter(r => !empty.includes(r));
     // the year starts at the first transaction
     txRows.forEach(r => { const d = String((r.vals || [])[0] || ""); const m = d.match(/^(\d{4})-(\d{2})/); if (m) FIRST_MONTH = Math.min(FIRST_MONTH, +m[1] * 12 + +m[2] - 1); });
     return txRows;
@@ -4077,7 +4080,11 @@ function afterData() {
   if (data.manual !== null || data.apple !== null || data.bank !== null) hideBanner();
   build();
   // a transaction dated before the first month opens that month right away (no refresh needed)
-  tx.forEach(t => { const k = t.date.getFullYear() * 12 + t.date.getMonth() - (t.date.getDate() < startDay ? 1 : 0); if (k < FIRST_MONTH) FIRST_MONTH = k; });
+  // the start month chosen in the settings is exact; without one, the site starts at the first transaction
+  if (startMonthPref != null) FIRST_MONTH = startMonthPref;
+  else tx.forEach(t => { const k = mIdxOf(t.date); if (k < FIRST_MONTH) FIRST_MONTH = k; });
+  if (viewIdx() < FIRST_MONTH) view = { y: Math.floor(FIRST_MONTH / 12), m: FIRST_MONTH % 12 };
+  try { applyStartMonth(); } catch (e) {} // the start month box always shows where the site starts
   render(); renderBankStatus(); renderCardMap();
   try { maybeWeekRecap(); } catch (e) { console.error(e); }
   try { renderYear(); renderCatSheet(); } catch (e) { console.error(e); }
@@ -5505,7 +5512,7 @@ $("addForm").addEventListener("submit", async e => {
   const keepLocal = () => {
     writePending([...readPending(), row]); data.apple = [...(data.apple || []), row];
     try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
-    const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
+    const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1); if (startMonthPref != null && mIdxOf(d) < startMonthPref) setStartMonth(mIdxOf(d));
     closeAdd(); afterData(); btn.disabled = false; btn.textContent = "שמירה";
     toast("אין חיבור. ההוצאה נשמרה בטלפון ותישלח לבד כשהאינטרנט יחזור ☁");
   };
@@ -5514,7 +5521,7 @@ $("addForm").addEventListener("submit", async e => {
     await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: [row] });
     data.apple = [...(data.apple || []), row];
     try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
-    const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
+    const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1); if (startMonthPref != null && mIdxOf(d) < startMonthPref) setStartMonth(mIdxOf(d));
     const fr = $("fab").getBoundingClientRect();
     closeAdd(); afterData();
     if (addKind === "exp") requestAnimationFrame(() => flyCoin({ x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 }));
@@ -5590,11 +5597,13 @@ $("segFixed").onclick = () => { catMode = "fixed"; $("segFixed").setAttribute("a
 /* 1–2: going back to earlier months: a start month chosen in the settings (V7) or when signing up */
 let startMonthPref = null;
 function applyStartMonth() {
-  if (startMonthPref != null && startMonthPref < FIRST_MONTH) FIRST_MONTH = startMonthPref;
+  if (startMonthPref != null) FIRST_MONTH = startMonthPref;
   const el = $("startMonth"); if (el) { const k = FIRST_MONTH; el.value = Math.floor(k / 12) + "-" + String(k % 12 + 1).padStart(2, "0"); el.max = mkey(now.getFullYear(), now.getMonth()); }
 }
 async function setStartMonth(k) {
-  startMonthPref = k; FIRST_MONTH = Math.min(FIRST_MONTH, k); applyStartMonth();
+  startMonthPref = k; FIRST_MONTH = k; applyStartMonth();
+  if (viewIdx() < k) view = { y: Math.floor(k / 12), m: k % 12 };
+  try { renderMonths(); renderSal(); renderYear(); } catch (e) {}
   try { await writeRange("'הגדרות'!V7", [[Math.floor(k / 12) + "-" + String(k % 12 + 1).padStart(2, "0")]]); } catch (e) {}
   render();
 }
@@ -5674,11 +5683,14 @@ $("monthsList").addEventListener("click", async e => {
   if (sure !== "yes") return;
   await deleteMonth(k, name);
 });
-async function deleteMonth(k, name) {
-  if (!mcp) return;
-  monthBusy = true; renderMonths(); const msg = $("monthsMsg"); msg.textContent = "מוחק את " + name + "…";
+async function deleteMonth(k, name) { return deleteMonths([k], name); }
+// deletes everything in the given months; opts.startAt: the new first month of the site (else it moves on by itself)
+async function deleteMonths(ks, name, opts = {}) {
+  if (!mcp) return false;
+  const kset = new Set(ks), k = ks.length === 1 ? ks[0] : null;
+  monthBusy = true; renderMonths(); const msg = opts.msgEl || $("monthsMsg"); msg.textContent = "מוחק את " + name + "…";
   try {
-    const own = monthInfo(k).own;
+    const seenD = new Set(), own = []; ks.forEach(x => monthInfo(x).own.forEach(t => { if (!seenD.has(t.del)) { seenD.add(t.del); own.push(t); } }));
     // every row must still hold what is shown here (rows move when the sheet changes)
     const srcRange = key => key === "bank" ? R_BANK : key === "apple" ? R_APPLE : R_MANUAL;
     const groups = new Map();
@@ -5687,28 +5699,66 @@ async function deleteMonth(k, name) {
       const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: g.file, range: srcRange(g.key) }, { cache: false });
       const rows = (res.payload && res.payload.values) || [];
       if (g.list.some(t => JSON.stringify(trimRow(rows[t.del.index])) !== JSON.stringify(trimRow(t.del.raw)))) throw { soft: "הגיליון השתנה בינתיים. רעננו ונסו שוב." };
+      g.fresh = rows;
     }
+    // rows are emptied in place (not removed), so no row moves and the writes can go out together.
+    // Rows next to each other go in one write.
+    const jobs = [];
+    const runs = idx => { const out = []; idx.sort((a, b) => a - b).forEach(i => { const r = out[out.length - 1]; if (r && i === r[1] + 1) r[1] = i; else out.push([i, i]); }); return out; };
     for (const g of groups.values()) {
-      const marks = g.list.filter(t => t.del.mode === "mark"), rows = g.list.filter(t => t.del.mode !== "mark");
-      for (const t of marks) await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: t.del.mark, values: [["מחוק"]] });
-      if (rows.length) {
-        // bottom row first, so the rows above keep their place
-        const reqs = rows.sort((a, b) => b.del.row - a.del.row).map(t => ({ deleteDimension: { range: { sheetId: t.del.sheetId, dimension: "ROWS", startIndex: t.del.row - 1, endIndex: t.del.row } } }));
-        await mcp.callTool(SERVER, "update_spreadsheet", { spreadsheetId: g.file, requests: reqs });
+      if (g.key === "bank") {
+        // bank rows stay, marked as deleted, so the next scrape will not bring them back
+        runs(g.list.map(t => t.del.index)).forEach(([a, b]) => jobs.push(() => mcp.callTool(SERVER, "update_values", { spreadsheetId: g.file, range: "'_moneyman'!H" + (a + 2) + ":H" + (b + 2), values: Array.from({ length: b - a + 1 }, () => ["מחוק"]) })));
+        continue;
       }
+      const idx = new Set(g.list.map(t => t.del.index));
+      // in an old monthly file, the date rows of the month's days go too
+      if (g.key.startsWith("hist-")) g.fresh.forEach((v, i) => { const d = parseDate((v || [])[0]); if (d && !String((v || [])[1] || "").trim() && kset.has(mIdxOf(d))) idx.add(i); });
+      const apple = g.key === "apple", w = apple ? 9 : 6, off = apple ? 2 : 4;
+      runs([...idx]).forEach(([a, b]) => jobs.push(() => mcp.callTool(SERVER, "update_values", { spreadsheetId: g.file,
+        range: (apple ? "'עסקאות'!A" : "'הוצאות יומיות'!D") + (a + off) + ":" + (apple ? "I" : "I") + (b + off), values: Array.from({ length: b - a + 1 }, () => Array(w).fill("")) })));
     }
-    const sk = keyOfIdx(k);
-    if (salaries[sk] != null) { const n = { ...salaries }; delete n[sk]; await writeSalaries(n); }
-    if (hiddenMonths.has(k)) { const n = new Set(hiddenMonths); n.delete(k); await saveHidden(n); }
+    let done = 0;
+    const tick = () => { msg.textContent = "מוחק את " + name + "… " + Math.round(done / jobs.length * 100) + "%"; };
+    for (let i = 0; i < jobs.length; i += 6) { await Promise.all(jobs.slice(i, i + 6).map(j => j().then(() => { done++; tick(); }))); }
+    if (ks.some(x => salaries[keyOfIdx(x)] != null)) { const n = { ...salaries }; ks.forEach(x => delete n[keyOfIdx(x)]); await writeSalaries(n); }
+    if (ks.some(x => hiddenMonths.has(x))) { const n = new Set(hiddenMonths); ks.forEach(x => n.delete(x)); await saveHidden(n); }
     try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+    if (opts.startAt != null) await setStartMonth(opts.startAt);
+    else { // the oldest month is gone for good: the site now starts at the month after it (past any hidden ones)
+      const [cy, cm] = curYM(), last = cy * 12 + cm;
+      if (k === FIRST_MONTH && k < last) { let nk = k + 1; while (nk < last && hiddenMonths.has(nk) && !txAll.some(t => mIdxOf(t.date) === nk)) nk++; await setStartMonth(nk); }
+    }
     msg.textContent = "";
     monthBusy = false;
     await refresh();
-    toast(name + " נמחק");
+    toast(name + (ks.length > 1 ? " נמחקו" : " נמחק"));
+    monthBusy = false; renderMonths(); return true;
   } catch (err) { msg.textContent = err && err.soft ? err.soft : writeError(err); try { await refresh(); } catch (e) {} }
-  monthBusy = false; renderMonths();
+  monthBusy = false; renderMonths(); return false;
 }
-$("startMonth").addEventListener("change", e => { const m = e.target.value.match(/^(\d{4})-(\d{2})$/); if (m) { const k = +m[1] * 12 + +m[2] - 1; if (k <= now.getFullYear() * 12 + now.getMonth()) setStartMonth(k); } });
+$("startMonth").addEventListener("change", async e => {
+  const el = e.target, m = el.value.match(/^(\d{4})-(\d{2})$/), back = () => applyStartMonth();
+  if (!m) return back();
+  const k = +m[1] * 12 + +m[2] - 1, [cy, cm] = curYM();
+  if (k > cy * 12 + cm) return back();
+  // a later start: the months before it that have transactions are deleted, after asking
+  const gone = []; for (let x = Math.min(FIRST_MONTH, ...txAll.map(t => mIdxOf(t.date))); x < k; x++) { const inf = monthInfo(x); if (inf.n || salaries[keyOfIdx(x)] != null) gone.push([x, inf]); }
+  if (!gone.length) return setStartMonth(k);
+  const nm = x => MONTHS[x % 12] + " " + Math.floor(x / 12), total = gone.reduce((a, [, i]) => a + i.n, 0);
+  const lines = gone.length <= 5
+    ? gone.map(([x, i]) => `<b>${nm(x)}</b> · ${i.n ? (i.n === 1 ? "תנועה אחת" : i.n + " תנועות") : "משכורת בלבד"}`).join("<br>")
+    : `<b>${nm(gone[0][0])} – ${nm(gone[gone.length - 1][0])}</b> · ${gone.length} חודשים${total ? ", " + total + " תנועות" : ""}, כולל המשכורות שלהם`;
+  const ok = await askDialog({
+    kick: "החודש הראשון: " + nm(k), title: gone.length === 1 ? `למחוק את ${nm(gone[0][0])}?` : `למחוק ${gone.length} חודשים?`,
+    text: `כדי להתחיל מ${nm(k)}, ${gone.length === 1 ? "החודש שלפניו נמחק לצמיתות עם כל מה שבו" : "החודשים שלפניו נמחקים לצמיתות עם כל מה שבהם"}:<br>${lines}<br><b>אי אפשר לבטל את זה.</b>`,
+    buttons: [{ label: total ? `כן, למחוק ${total === 1 ? "תנועה אחת" : total + " תנועות"}`: "כן, למחוק", sub: "ולהתחיל מ" + nm(k), value: "yes", cls: "danger" }, { label: "לא, ביטול", value: null, cls: "ghost" }]
+  });
+  if (ok !== "yes") return back();
+  el.disabled = true;
+  await deleteMonths(gone.map(([x]) => x), gone.length === 1 ? nm(gone[0][0]) : gone.length + " חודשים", { startAt: k, msgEl: $("startDayMsg") });
+  el.disabled = false; applyStartMonth();
+});
 function useStartDay(v) {
   startDay = v; $("startDay").value = v;
   try { localStorage.setItem("startDay", v); } catch (err) {}
@@ -5919,7 +5969,7 @@ const TOUR = [
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות, מסודרות לפי ימים. אפשר לסנן להוצאות, הכנסות או תשלומים, ולחפש חכם: ״סופר מעל 200״, ״מקס ספטמבר״, ״קפה פחות מ-30״." },
   { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה או <b>החלקה ימינה</b>: עריכה או מחיקה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה, השוואה בין חודשים, וסיכום שנתי. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
-  { t: "#tabAdmin", h: "הגדרות", b: "משכורת לכל חודש, קטגוריות ואמצעי תשלום משלכם, מאיזה חודש להתחיל, הסתרה או מחיקה של חודש שלם, יום החיוב בכרטיס, מצב כהה, קישור להוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
+  { t: "#tabAdmin", h: "הגדרות", b: "למעלה: יום החיוב בכרטיס ומאיזה חודש האתר מתחיל (קידום קדימה מוחק את החודשים שלפניו, רק אחרי אישור). אחר כך: משכורת לכל חודש, קטגוריות עם תקרה קבועה לכל אחת, אמצעי תשלום, ו״חודשים״, שבו מסתירים חודש (ומחזירים אותו) או מוחקים אותו לצמיתות. בסוף: מצב כהה, הוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
   { t: null, e: "👆", h: "עוד שני טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
 ];
@@ -5975,7 +6025,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025011739";
+const BUILD_ID = "20261025013638";
 let updToast = null;
 async function checkUpdate() {
   try {
