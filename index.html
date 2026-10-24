@@ -886,6 +886,29 @@ body.dragging .day-grp { transition: background .2s, box-shadow .2s; border-radi
 .ns-back .ns-chips button { white-space: nowrap; padding: 7px 13px; font-size: .82rem; flex: none; }
 .ns-back-q { font-size: .82rem !important; }
 .ns-back .ns-chips button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
+#addCat.auto-hit { animation: autoHit .7s ease; }
+@keyframes autoHit { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 45%, transparent); } 40% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 25%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.date-reset { border: 0; background: none; padding: 4px 2px 0; font-size: .74rem; color: var(--muted); text-align: start; }
+.date-reset u { color: var(--brand); text-underline-offset: 2px; }
+.date-reset[hidden] { display: none; }
+/* desktop date picker (the browser's own one moves months the other way in Hebrew) */
+.dp-wrap { position: relative; }
+@media (hover: hover) and (pointer: fine) { .field input[type=date] { cursor: pointer; } .field input[type=date]::-webkit-calendar-picker-indicator { display: none; } }
+.dp { position: fixed; z-index: 400; width: 272px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 14px 34px rgba(20,16,40,.16); padding: 10px 10px 8px; }
+.dp[hidden] { display: none; }
+.dp-head { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.dp-title { flex: 1; font-weight: 700; font-size: .95rem; padding-inline-start: 4px; }
+.dp-nav { border: 0; background: none; width: 32px; height: 32px; border-radius: 10px; font-size: 1.05rem; color: var(--ink); cursor: pointer; }
+.dp-nav:hover { background: var(--brand-soft); }
+.dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.dp-wd { font-size: .72rem; color: var(--muted); padding: 2px 0 4px; }
+.dp-d { border: 0; background: none; height: 34px; border-radius: 10px; font-size: .86rem; color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums; }
+.dp-d:hover { background: var(--brand-soft); }
+.dp-d.out { color: var(--muted); opacity: .55; }
+.dp-d.today { box-shadow: inset 0 0 0 1.5px var(--brand); }
+.dp-d.sel { background: var(--brand); color: var(--brand-ink); font-weight: 700; }
+.dp-foot { display: flex; justify-content: space-between; margin-top: 6px; }
+.dp-foot button { border: 0; background: none; color: var(--brand); font-size: .8rem; padding: 4px 6px; cursor: pointer; }
 .inst-empty { margin: 0; font-size: .86rem; color: var(--muted); text-align: center; padding: 6px 0; }
 /* the area under the gauge, tidied: one line, then the chips side by side; salary and goal live in the money card */
 .g-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
@@ -1548,7 +1571,7 @@ body { margin: 0; }
       <div class="field"><label for="addCard" id="addCardLbl">אמצעי תשלום</label><select id="addCard"></select></div>
     </div>
     <div class="two">
-      <div class="field"><label for="addDate">תאריך</label><input id="addDate" type="date"></div>
+      <div class="field"><label for="addDate">תאריך</label><input id="addDate" type="date"><button type="button" class="date-reset" id="dateReset" hidden>כמו בהוספה הקודמת · <u>להיום</u></button></div>
       <div class="field" id="instField"><label for="addInst">תשלומים</label><select id="addInst"></select></div>
     </div>
     <p class="note" id="instHint" style="margin:0" hidden></p>
@@ -1845,6 +1868,7 @@ function makeSupaAdapter(uid) {
     const { data, error } = await sb.from("profiles").select("settings").eq("id", uid).single(); if (error) fail(error);
     return Array.isArray(data.settings) ? data.settings : [];
   };
+  let setQ = Promise.resolve();
   const run = async (tool, input) => {
     if (tool === "update_spreadsheet") {
       const r = input.requests[0].deleteDimension.range;
@@ -1874,6 +1898,11 @@ function makeSupaAdapter(uid) {
         return { payload: { ok: true } };
       }
       if (p.tab === "הגדרות") {
+        // one settings save at a time: each save reads the list, changes its cells and writes it all back,
+        // so two at once (e.g. the billing day and the order of the day) used to undo each other
+        const prev = setQ; let done; setQ = new Promise(r => done = r);
+        try { await prev; } catch (e) {}
+        try {
         const g = await loadSettings();
         input.values.forEach((rowVals, i) => {
           const ri = p.r0 - 2 + i; while (g.length <= ri) g.push([]);
@@ -1881,6 +1910,7 @@ function makeSupaAdapter(uid) {
         });
         const { error } = await sb.from("profiles").update({ settings: trim(g) }).eq("id", uid); if (error) fail(error);
         return { payload: { ok: true } };
+        } finally { done(); }
       }
       return { payload: { ok: true } };
     }
@@ -2557,7 +2587,7 @@ function render() {
       plus.hidden = false;
       plus.textContent = "חרגת מיעד החיסכון ב-" + fmt(spent - allow);
       $("statusSub").textContent = "היעד היה לחסוך " + fmt(goal) + " · הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected);
-      pill.textContent = isCurrent ? daysTxt : "החודש לא עמד ביעד";
+      pill.textContent = isCurrent ? daysTxt : "החודש לא עמדת ביעד";
     } else {
       $("statusLabel").textContent = "חרגת מההכנסה החודשית ב-";
       countTo($("statusBig"), spent - incomeExpected, fmt);
@@ -3987,7 +4017,10 @@ function maybeWeekRecap() {
 function afterData() {
   maybeQuickAdd();
   if (data.manual !== null || data.apple !== null || data.bank !== null) hideBanner();
-  build(); render(); renderBankStatus(); renderCardMap();
+  build();
+  // a transaction dated before the first month opens that month right away (no refresh needed)
+  tx.forEach(t => { const k = t.date.getFullYear() * 12 + t.date.getMonth() - (t.date.getDate() < startDay ? 1 : 0); if (k < FIRST_MONTH) FIRST_MONTH = k; });
+  render(); renderBankStatus(); renderCardMap();
   try { maybeWeekRecap(); } catch (e) { console.error(e); }
   try { renderYear(); renderCatSheet(); } catch (e) { console.error(e); }
 }
@@ -5145,7 +5178,12 @@ function openAdd() {
   $("addAmount").value = ""; $("addDesc").value = ""; $("addMsg").textContent = "";
   // the date when the form opens; while looking at another month, a date inside that month
   { const { start, end } = period(view.y, view.m), t0 = new Date(); $("addDate").value = iso(t0 < start ? start : t0 > end ? end : t0); }
-  $("addInst").value = "1";
+  // adding a few in a row: the date of the last one is kept while the site stays open, so a whole day or month is quick to fill
+  { let last = null; try { last = JSON.parse(sessionStorage.getItem("lastAddDate") || "null"); } catch (e) {}
+    const fresh = last && Date.now() - last.at < 3 * 3600 * 1000 && /^\d{4}-\d{2}-\d{2}$/.test(last.d);
+    $("dateReset").hidden = !(fresh && last.d !== iso(new Date()));
+    if (fresh) $("addDate").value = last.d; }
+  $("addInst").value = "1"; catTouched = false;
   setKind("exp");
   $("addSave").disabled = false; $("addSave").textContent = "שמירה";
   $("sheetBg").hidden = false;
@@ -5188,7 +5226,69 @@ $("quickChips").addEventListener("click", e => {
   $("addMsg").textContent = ""; instShown();
   if (!$("addAmount").value) $("addAmount").focus();
 });
-function closeAdd() { $("sheetBg").hidden = true; editTx = null; stopVoice(); $("voiceBox").hidden = true; }
+/* sticky date lives only while the site is open: cleared on leave (close / app switch over 2 min) */
+try { localStorage.removeItem("lastAddDate"); } catch (e) {}
+{ let hidAt = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { hidAt = Date.now(); return; }
+    if (hidAt && Date.now() - hidAt > 120000) { try { sessionStorage.removeItem("lastAddDate"); } catch (e) {} }
+    hidAt = 0;
+  });
+  window.addEventListener("pagehide", e => { if (!e.persisted) { try { sessionStorage.removeItem("lastAddDate"); } catch (x) {} } });
+}
+/* desktop: our own month calendar for the date field. Up = the month before, down = the month after */
+(function datePicker() {
+  if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return; // phones keep their own picker
+  const inp = $("addDate"); if (!inp) return;
+  const field = inp.closest(".field"); field.classList.add("dp-wrap");
+  const box = document.createElement("div"); box.className = "dp"; box.hidden = true; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "בחירת תאריך");
+  field.appendChild(box);
+  const MN = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+  let vy, vm;
+  const pick = () => { const m = (inp.value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(); };
+  function draw() {
+    const sel = inp.value, td = iso(new Date());
+    const first = new Date(vy, vm, 1), lead = first.getDay();
+    let h = '<div class="dp-head"><span class="dp-title">' + MN[vm] + " " + vy + '</span>' +
+      '<button type="button" class="dp-nav" data-mv="-1" aria-label="החודש הקודם">↑</button>' +
+      '<button type="button" class="dp-nav" data-mv="1" aria-label="החודש הבא">↓</button></div><div class="dp-grid">';
+    "אבגדהוש".split("").forEach(c => h += '<span class="dp-wd">' + c + "</span>");
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(vy, vm, 1 - lead + i), k = iso(d);
+      if (i >= 35 && d.getMonth() !== vm) break;
+      h += '<button type="button" class="dp-d' + (d.getMonth() !== vm ? " out" : "") + (k === td ? " today" : "") + (k === sel ? " sel" : "") + '" data-d="' + k + '">' + d.getDate() + "</button>";
+    }
+    h += '</div><div class="dp-foot"><button type="button" data-today>היום</button><button type="button" data-close>סגירה</button></div>';
+    box.innerHTML = h;
+  }
+  function place() {
+    const r = inp.getBoundingClientRect(), h = box.offsetHeight || 330, w = box.offsetWidth || 272;
+    const below = r.bottom + 6 + h <= innerHeight - 8;
+    box.style.top = Math.max(8, below ? r.bottom + 6 : r.top - 6 - h) + "px";
+    box.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + "px";
+  }
+  function open() { const d = pick(); vy = d.getFullYear(); vm = d.getMonth(); draw(); box.hidden = false; place(); }
+  function close() { box.hidden = true; }
+  function setVal(k) { inp.value = k; inp.dispatchEvent(new Event("input", { bubbles: true })); inp.dispatchEvent(new Event("change", { bubbles: true })); close(); }
+  inp.addEventListener("click", e => { e.preventDefault(); box.hidden ? open() : close(); });
+  inp.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) { e.stopPropagation(); close(); } });
+  box.addEventListener("click", e => {
+    e.stopPropagation();
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.mv) { vm += +b.dataset.mv; if (vm < 0) { vm = 11; vy--; } if (vm > 11) { vm = 0; vy++; } draw(); return; }
+    if (b.dataset.d) return setVal(b.dataset.d);
+    if (b.hasAttribute("data-today")) return setVal(iso(new Date()));
+    if (b.hasAttribute("data-close")) close();
+  });
+  box.addEventListener("wheel", e => { e.preventDefault(); vm += e.deltaY > 0 ? 1 : -1; if (vm < 0) { vm = 11; vy--; } if (vm > 11) { vm = 0; vy++; } draw(); }, { passive: false });
+  document.addEventListener("mousedown", e => { if (!box.hidden && !field.contains(e.target)) close(); });
+  window.datePickerClose = close;
+  addEventListener("resize", () => { if (!box.hidden) place(); });
+  document.addEventListener("scroll", () => { if (!box.hidden) place(); }, true);
+})();
+$("dateReset").onclick = () => { $("addDate").value = iso(new Date()); $("dateReset").hidden = true; try { sessionStorage.removeItem("lastAddDate"); } catch (e) {} };
+$("addDate").addEventListener("change", () => { $("dateReset").hidden = $("addDate").value === iso(new Date()); });
+function closeAdd() { if (window.datePickerClose) datePickerClose(); $("sheetBg").hidden = true; editTx = null; stopVoice(); $("voiceBox").hidden = true; }
 function openEdit(t) {
   openAdd();
   editTx = t; renderQuick();
@@ -5206,7 +5306,7 @@ function openEdit(t) {
   const src = t.del.key === "apple" ? t.del.raw : null;
   $("addInst").value = String(src ? Math.max(1, parseInt(src[8], 10) || 1) : 1);
   // a purchase in payments is edited as the whole purchase: full price and the first payment's date
-  $("addAmount").value = t.gen ? t.total : t.amount; $("addDesc").value = t.merchant; $("addDate").value = iso(t.gen ? parseDate(src[0]) : t.date);
+  $("addAmount").value = t.gen ? t.total : t.amount; $("addDesc").value = t.merchant; $("addDate").value = iso(t.gen ? parseDate(src[0]) : t.date); $("dateReset").hidden = true;
   instShown();
   $("addSave").textContent = "שמירת שינויים";
 }
@@ -5238,10 +5338,73 @@ $("sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") clo
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("capBg").hidden) closeCap(); if (e.key === "Escape" && !$("sheetBg").hidden) closeAdd(); if (e.key === "Escape" && !$("salBg").hidden) salLater(); if (e.key === "Escape" && !$("mvBg").hidden) closeMove(); });
 $("kExp").onclick = () => setKind("exp");
 $("kInc").onclick = () => setKind("inc");
+/* the description picks the category, as smart as we can: what you chose before for the same words, known businesses,
+   the names of your own categories, everyday Hebrew words, and the old keyword rules. A category you pick by hand wins. */
+const HEB_STOP = new Set(["על", "של", "עם", "את", "גם", "או", "זה", "לי", "לו", "לה", "אל", "מן", "עד", "כל", "העברה", "העברת", "תשלום", "החזר", "קנייה", "קניה", "חלק", "בשביל", "מאת", "שקל", "שקלים"]);
+// a light Hebrew stem: plural / feminine endings off ("מתנות", "מתנה" → "מתנ"); a word with a one-letter prefix also counts without it ("למתנה")
+const stem = w => { w = w.replace(/[^\u0590-\u05FFa-z0-9]/gi, "").toLowerCase(); return w.length > 3 ? w.replace(/(יות|ות|ים|ה|ת)$/, "") : w; };
+const words2 = txt => String(txt || "").split(/[\s,.\-–/()]+/).filter(w => w && !HEB_STOP.has(w.replace(/[^\u0590-\u05FFa-z0-9]/gi, "")));
+const catToks = txt => words2(txt).map(stem).filter(w => w.length >= 2);
+const toks2 = txt => { const out = []; words2(txt).forEach(w => { const a = stem(w); if (a.length >= 2) out.push(a); if (/^[הבלומשכ][\u0590-\u05FF]{3,}/.test(w)) { const b = stem(w.slice(1)); if (b.length >= 2) out.push(b); } }); return out; };
+const HEB_SYN = [
+  ["מתנות", ["מתנ", "יומולדת", "הולדת", "זר", "פרח", "שובר", "גיפט", "gift", "ברית", "לידה"]],
+  ["אוכל ושתיה", ["מסעד", "קפה", "פיצ", "המבורגר", "שווארמ", "פלאפל", "סושי", "ארוח", "וולט", "wolt", "תן ביס", "משלוח אוכל", "גלידה", "מאפ", "קוראסון", "בורקס", "בירה", "שתיי", "טייק"]],
+  ["סופר", ["סופר", "מכולת", "ירקות", "פירות", "לחם", "חלב", "קניות לבית", "מרכול"]],
+  ["בילויים", ["סרט", "קולנוע", "הופע", "פאב", "בר", "מסיב", "פוקר", "באולינג", "חדר בריחה", "כרטיס", "יציא", "על האש", "מנגל"]],
+  ["טיפוח ופארם", ["סופר פארם", "סופר-פארם", "גוד פארם", "ניו פארם", "תספורת", "ספר", "מספרה", "קוסמטיק", "מניקור", "פדיקור", "בושם", "פארם", "שמפו", "קרם", "דאודורנט"]],
+  ["הוצאות שוטפות", ["חשמל", "מים", "ארנונה", "גז", "ועד בית", "אינטרנט", "סלולר", "טלפון", "רופא", "תרופ", "דלק", "חניה", "חניון", "כביש 6", "רכבת", "אוטובוס", "רב קו", "מונית", "גט", "עמל"]],
+  ["ביטוח", ["ביטוח", "פוליס"]],
+  ["מנוי חודשי", ["מנוי", "נטפליקס", "netflix", "ספוטיפיי", "spotify", "יוטיוב", "youtube", "אפל", "icloud", "דיסני", "חדר כושר"]],
+  ["כושר", ["כושר", "אימון", "פילאטיס", "יוגה", "מאמן", "ריצה"]],
+  ["חופשות", ["טיסה", "מלון", "צימר", "חופש", "נופש", "airbnb", "בוקינג"]],
+  ["שופינג", ["בגד", "חולצ", "מכנס", "נעל", "שמלה", "ג׳ינס", "גינס", "אופנה", "זארה", "קסטרו"]],
+  ["קניות לבית", ["רהיט", "ספה", "מיטה", "שולחן", "כלי", "מצעים", "איקאה", "ikea", "הום סנטר", "ace", "מקרר", "מכונת"]],
+  ["רכישות בדיגיטל", ["אפליקצי", "משחק", "app store", "גוגל פליי", "קלאש", "steam", "סטים"]],
+  ["אירועים", ["אירוע", "חתונה", "בר מצווה", "בת מצווה", "שמחה", "צ׳ק לחתונה"]]
+];
+function smartCategory(desc) {
+  const d = String(desc || "").trim(); if (d.length < 2) return null;
+  const low = d.toLowerCase(), has = c => c && CATS.includes(c) && c !== "לא מסווג";
+  // the exact same description you used before decides on its own
+  const same = new Map(); tx.forEach(t => { if (String(t.merchant || "").trim().toLowerCase() === low && has(t.category)) same.set(t.category, (same.get(t.category) || 0) + 1); });
+  if (same.size) return [...same.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  // otherwise every word of the description votes; a word later in the sentence ("קניות בסופר למתנה") breaks a tie
+  const score = new Map(), pos = new Map(), mine = toks2(d), words = words2(d);
+  const vote = (c, w, at) => { if (!has(c)) return; score.set(c, (score.get(c) || 0) + w); pos.set(c, Math.max(pos.get(c) || -1, at)); };
+  const at = frag => { const i = low.indexOf(String(frag).toLowerCase()); return i < 0 ? 0 : i; };
+  // a business we know (by any part of the text)
+  const hit = recognizeMerchant(d); if (hit) vote(hit.cat, 3, 0);
+  words.forEach(w => { if (w.length >= 3) { const h = recognizeMerchant(w); if (h && !h.kind) vote(h.cat, 2, at(w)); } });
+  // the names of your categories
+  CATS.forEach(c => { const cs = catToks(c); if (!cs.length) return; const n = cs.filter(w => w.length >= 3 && mine.includes(w)).length;
+    if (!n) return;
+    // "למתנה", "כמתנה", "על מתנה": the purpose of the purchase names this category, so it weighs more
+    const hitW = words.filter(w => cs.some(x => toks2(w).includes(x))), purpose = hitW.some(w => /^[לכ]/.test(w) && !cs.includes(stem(w)) || words[words.indexOf(w) - 1] === "על" || words[words.indexOf(w) - 1] === "בשביל");
+    vote(c, (n === cs.length ? 4 : 2) + (purpose ? 5 : 0), Math.max(...hitW.map(at), 0)); });
+  // everyday words, every one that appears
+  // (a phrase of a few words, like "סופר פארם", is more telling than any single word in it)
+  HEB_SYN.forEach(([c, ws]) => ws.forEach(w => { const i = low.indexOf(w.toLowerCase()); if (i >= 0) vote(c, /\s|-/.test(w) ? 7 : w.length >= 5 ? 2.5 : 2, i); }));
+  // what your earlier descriptions with the same words were filed under
+  if (mine.length) {
+    const hist = new Map(), since = addDays(today, -400);
+    tx.forEach(t => { if (t.date < since || !has(t.category)) return; const tt = new Set(toks2(t.merchant)); mine.forEach(w => { if (w.length >= 3 && tt.has(w)) { const k = t.category + "|" + w; hist.set(k, (hist.get(k) || 0) + 1); } }); });
+    const per = new Map(); // each word adds a little, a category gets at most 3 from history
+    hist.forEach((n, k) => { const [c, w] = k.split("|"); const add = Math.min(1.5, .5 + n * .25), was = per.get(c) || 0, take = Math.min(add, 3 - was); if (take > 0) { per.set(c, was + take); vote(c, take, Math.max(...words.filter(x => toks2(x).includes(w)).map(at), 0)); } });
+  }
+  // the old keyword rules, a light vote
+  const g = guessCategory(d, ""); if (has(g)) vote(g, 1, 0);
+  const best = [...score.entries()].sort((a, b) => b[1] - a[1] || (pos.get(b[0]) || 0) - (pos.get(a[0]) || 0));
+  smartCategory.last = best;
+  return best.length && best[0][1] >= 1.5 ? best[0][0] : null;
+}
+let catTouched = false;
+$("addCat").addEventListener("change", () => { catTouched = true; });
 $("addDesc").addEventListener("input", () => {
-  if (addKind !== "exp") return;
-  const g = guessCategory($("addDesc").value, "");
-  if (CATS.includes(g)) $("addCat").value = g;
+  if (catTouched || editTx) return;
+  const g = smartCategory($("addDesc").value);
+  if (g && [...$("addCat").options].some(o => o.value === g) && $("addCat").value !== g) {
+    $("addCat").value = g; const el = $("addCat"); el.classList.remove("auto-hit"); void el.offsetWidth; el.classList.add("auto-hit");
+  }
 });
 $("addForm").addEventListener("submit", async e => {
   e.preventDefault();
@@ -5270,6 +5433,7 @@ $("addForm").addEventListener("submit", async e => {
   // no connection: keep it on the phone and send it when the connection is back
   const keepLocal = () => {
     writePending([...readPending(), row]); data.apple = [...(data.apple || []), row];
+    try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
     const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
     closeAdd(); afterData(); btn.disabled = false; btn.textContent = "שמירה";
     toast("אין חיבור. ההוצאה נשמרה בטלפון ותישלח לבד כשהאינטרנט יחזור ☁");
@@ -5278,6 +5442,7 @@ $("addForm").addEventListener("submit", async e => {
   try {
     await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: [row] });
     data.apple = [...(data.apple || []), row];
+    try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
     const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
     const fr = $("fab").getBoundingClientRect();
     closeAdd(); afterData();
@@ -5537,14 +5702,34 @@ boot();
 
 <script>
 /* first-visit guided tour: one highlight at a time, then straight to entering this month's salary */
+function tourTxDemo() {
+  // no transactions yet: a sample day so the step has something to show
+  const box = document.getElementById("days"), old = box.innerHTML;
+  const row = (c, m, a, acc) => `<div class="tx-sw"><div class="tx">${catIcon(c)}<div class="m"><bdi>${m}</bdi></div><div class="a num">${fmt2(a)}</div><div class="meta"><span>${c}</span> · ${acc}</div></div></div>`;
+  const c = n => CATS.includes(n) ? n : CATS[0] || n;
+  box.innerHTML = `<div class="day-grp"><div class="day-head"><span class="dl"><b>היום</b> <small>לדוגמה</small></span><span class="num">${fmt(213)}</span></div>` +
+    row(c("סופר"), "קניות בסופר", 158, "אשראי") + row(c("אוכל ושתיה"), "קפה ומאפה", 27, "אשראי") + row(CATS.includes("תחבורה ודלק") ? "תחבורה ודלק" : c("הוצאות שוטפות"), "רב-קו", 28, "חשבון בנק") + `</div>`;
+  return () => { box.innerHTML = old; try { render(); } catch (e) {} };
+}
+function tourLift(el) {
+  // shows the long press: the first row lifts, glides down past the next one and back
+  const r = el && el.querySelector(".tx-sw"); if (!r) return null;
+  if (!document.getElementById("tourLiftCss")) { const st = document.createElement("style"); st.id = "tourLiftCss";
+    st.textContent = "@keyframes tourLift{0%,12%{transform:none;box-shadow:none}22%{transform:scale(1.03);box-shadow:0 10px 26px rgba(30,20,70,.22)}48%,62%{transform:translateY(calc(100% + 4px)) scale(1.03);box-shadow:0 10px 26px rgba(30,20,70,.22)}86%{transform:scale(1.03);box-shadow:0 10px 26px rgba(30,20,70,.22)}100%{transform:none;box-shadow:none}}.tour-lift{position:relative;z-index:3;border-radius:14px;background:var(--surface);animation:tourLift 2.6s ease-in-out infinite}";
+    document.head.appendChild(st); }
+  r.classList.add("tour-lift");
+  return () => r.classList.remove("tour-lift");
+}
 const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. מעליו מופיע בכל כניסה הדבר הכי חשוב עכשיו, ומתחת שעון חול של כמה אפשר להוציא היום." },
-  { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או כסף שקיבלתם, גם בתשלומים. לחיצה ארוכה מקשיבה: אומרים ״45 שקל שווארמה במקס״ והטופס מתמלא לבד. בלי קליטה? ההוצאה נשמרת ונשלחת כשהחיבור חוזר." },
+  { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או כסף שקיבלתם, גם בתשלומים. כותבים תיאור והקטגוריה נבחרת לבד לפי כל המשפט. לחיצה ארוכה מקשיבה: אומרים ״45 שקל שווארמה במקס״ והטופס מתמלא לבד. בלי קליטה? ההוצאה נשמרת ונשלחת כשהחיבור חוזר." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. בכפתור ״תקרות״ קובעים כמה מותר להוציא על כל קטגוריה, וטבעת סביב העיגול מתמלאת." },
+  { t: "#payCard", card: true, soft: true, e: "💳", h: "לפי אמצעי תשלום", b: "כמה יצא מכל כרטיס ומהבנק. לחיצה על כרטיס מציגה רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: תקציב שבועי, לוח של ימים, השוואה לחודש הקודם לפי קטגוריות, תחזית לסוף החודש, החיובים הקבועים ומה שצפוי לרדת בחודש הבא." },
-  { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות. חיפוש חכם כמו ״סופר מעל 200״ או ״מקס ספטמבר״. מחליקים תנועה ימינה כדי לערוך או למחוק, ולחיצה ארוכה מאפשרת לגרור אותה לכל מקום, באותו יום או ליום אחר." },
+  { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות, מסודרות לפי ימים. אפשר לסנן להוצאות, הכנסות או תשלומים, ולחפש חכם: ״סופר מעל 200״, ״מקס ספטמבר״, ״קפה פחות מ-30״." },
+  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה או <b>החלקה ימינה</b>: עריכה או מחיקה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה, השוואה בין חודשים, וסיכום שנתי. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
   { t: "#tabAdmin", h: "הגדרות", b: "משכורת לכל חודש, קטגוריות ואמצעי תשלום משלכם, מאיזה חודש להתחיל, יום החיוב בכרטיס, מצב כהה, קישור להוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
   { t: null, e: "👆", h: "עוד שני טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן." },
@@ -5576,9 +5761,11 @@ function tourStep() {
   if (currentView !== (s.view || "flow")) showView(s.view || "flow");
   const spot = tourEl.querySelector(".tour-spot"), tip = tourEl.querySelector(".tour-tip"), dim = tourEl.querySelector(".tour-dim");
   let el = s.t ? document.querySelector(s.t) : null; if (el && s.card) el = el.closest(".card") || el;
+  if (el && s.soft && !vis(s.t)) el = null; // not on screen yet: the tip alone, in the middle
+  if (s.enter && el) { const undo = s.enter(el), prevR = tourRestore; if (undo) tourRestore = () => { undo(); if (prevR) prevR(); }; }
   const fixed = el && getComputedStyle(el.closest(".nav") || el).position === "fixed";
   if (el && !fixed) el.scrollIntoView({ block: "center", behavior: "smooth" });
-  tip.innerHTML = (s.e ? `<div class="tour-emoji">${s.e}</div>` : "") + `<h3>${typeof s.h === "function" ? s.h() : s.h}</h3><p>${s.b}</p>
+  tip.innerHTML = (s.e && !el ? `<div class="tour-emoji">${s.e}</div>` : "") + `<h3>${typeof s.h === "function" ? s.h() : s.h}</h3><p>${s.b}</p>
     <div class="tour-foot"><div class="tour-dots">${TOUR.map((_, i) => `<i class="${i === tourI ? "on" : ""}"></i>`).join("")}</div>
     ${s.last ? "" : `<button class="tour-skip" type="button" data-skip>דלג</button>`}<button class="btn" type="button" data-next>${s.last ? "יאללה" : tourI === 0 ? "בואו נתחיל" : "הבא"}</button></div>`;
   tip.querySelector("[data-next]").onclick = () => { if (s.last) endTour(); else { tourI++; tourStep(); } };
@@ -5600,7 +5787,7 @@ document.getElementById("tourAgain").onclick = () => startTour();
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025011246";
+const BUILD_ID = "20261025015124";
 let updToast = null;
 async function checkUpdate() {
   try {
