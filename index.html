@@ -1410,6 +1410,41 @@ body.arrange .arr-open { display: none !important; }
 .wrapped.paused .w-bars i.on::after { animation-play-state: paused; }
 @keyframes wBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @media (prefers-reduced-motion: reduce) { .w-bars i.on::after { animation: none; } #ringTip { transition: none; } }
+
+/* ===== wallet: payment methods as a stack of cards ===== */
+.wl{position:relative;perspective:1000px;transition:height .5s cubic-bezier(.2,.8,.2,1);margin-top:4px;clip-path:inset(-30px -12px 0 -12px)}
+.wl-c{position:absolute;inset-inline:0;top:0;height:188px;transition:top .5s cubic-bezier(.2,.8,.2,1),transform .5s cubic-bezier(.2,.8,.2,1),filter .4s;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.wl-c:focus-visible{outline:none}.wl-c:focus-visible .wl-f{outline:3px solid var(--brand);outline-offset:2px}
+.wl-t{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .25s ease-out}
+.wl-i{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,.7,.2,1)}
+.wl-c.flip .wl-i{transform:rotateY(180deg)}
+.wl-f{position:absolute;inset:0;border-radius:18px;padding:14px 16px;color:#fff;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  box-shadow:0 -1px 0 rgba(255,255,255,.18) inset,0 12px 26px -14px rgba(15,10,40,.55);display:flex;flex-direction:column}
+.wl-f::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at var(--sx,25%) var(--sy,10%),rgba(255,255,255,.32),transparent 50%);pointer-events:none}
+.wl-f::after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;border:30px solid rgba(255,255,255,.06);left:-70px;bottom:-120px;pointer-events:none}
+.wl-b{transform:rotateY(180deg)}
+.wl-top{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:28px}
+.wl-n{font-weight:700;font-size:1.02rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.wl-amt{font-weight:700;font-size:1.02rem;white-space:nowrap}
+.wl-chip{width:36px;height:26px;border-radius:6px;background:linear-gradient(135deg,#f3d98a,#c49a3c);opacity:.85;margin-top:14px;position:relative}
+.wl-chip::after{content:"";position:absolute;inset:6px 10px;border:1.5px solid rgba(90,60,10,.35);border-radius:3px}
+.wl-bot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;font-size:.82rem;opacity:.92;gap:8px}
+.wl-big{font-size:1.6rem;font-weight:700;line-height:1.1}
+.wl-io{display:flex;gap:16px}.wl-io small{display:block;opacity:.8;font-size:.72rem}.wl-io b{font-size:1.05rem}
+.wl-rows{display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:.84rem}
+.wl-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px}
+.wl-r span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl-r em{grid-column:1/-1;height:4px;border-radius:3px;background:rgba(255,255,255,.22);font-style:normal;overflow:hidden}
+.wl-r em i{display:block;height:100%;border-radius:3px;background:#fff}
+.wl-go{margin-top:auto;align-self:flex-start;font:inherit;font-size:.82rem;font-weight:600;color:#fff;background:rgba(255,255,255,.18);border:0;border-radius:10px;padding:6px 12px;cursor:pointer;position:relative;z-index:1}
+.wl-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:6px;font-size:.8rem}
+.wl-col{display:flex;flex-direction:column;gap:3px;min-width:0}
+.wl-ch{display:flex;justify-content:space-between;gap:6px;padding-bottom:4px;margin-bottom:2px;border-bottom:1px solid rgba(255,255,255,.25)}
+.wl-ch span{opacity:.85}.wl-ch b{font-size:.95rem}
+.wl-cr{display:flex;justify-content:space-between;gap:6px;opacity:.92}
+.wl-cr bdi{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.wl-hint{font-size:.8rem;color:var(--muted);text-align:center;margin-top:6px;min-height:1.2em}
+@media (prefers-reduced-motion:reduce){.wl,.wl-c,.wl-t,.wl-i{transition-duration:.01s}}
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -1889,7 +1924,7 @@ function makeSupaAdapter(uid) {
     <div id="instList"></div>
   </section>
   <section class="card" id="payCard" data-k="pay">
-    <h2>לפי אמצעי תשלום <span class="side num" id="payTotal"></span></h2>
+    <h2>הארנק שלך <span class="side num" id="payTotal"></span></h2>
     <div class="cats" id="payMethods"></div>
   </section>
   <button type="button" class="arr-open" data-arrange>עריכת המסך</button>
@@ -3088,24 +3123,88 @@ function renderPayMethods(f) {
   $("payCard").hidden = !rows.length;
   const max = Math.max(1, ...rows.map(r => Math.max(r.out, r.in)));
   $("payTotal").textContent = "";
-  $("payMethods").innerHTML = rows.map(r => {
+  // top merchants per method for the back of each card
+  const tops = new Map();
+  f.inP.forEach(t => { const a = isBankAcc(t) ? bankName() : (t.account || "לא צוין");
+    if (!tops.has(a)) tops.set(a, { n: 0, m: new Map(), inM: new Map() }); const o = tops.get(a); o.n++;
+    const k = t.merchant || t.category || "ללא שם", mm = (t.income || t.refund) ? o.inM : o.m; mm.set(k, (mm.get(k) || 0) + t.amount); });
+  walletRows = rows;
+  if (walletSel && !rows.some(r => r.name === walletSel)) { walletSel = null; walletFlip = false; }
+  $("payMethods").className = "";
+  $("payMethods").innerHTML = `<div class="wl" id="wl">` + rows.map((r, i) => {
     let h = 0; for (const ch of r.name) h = (h * 31 + ch.charCodeAt(0)) % 360;
-    const ic = r.bank ? glyph("bank", 148, 45, true) : glyph("card", h, 55, true);
-    if (r.bank) return `<button class="cat" data-acc="${esc(bankName())}" aria-label="התנועות בחשבון הבנק"><span class="name">${ic}<span>${esc(bankName())}</span></span>
-      <span class="amt bank-io"><span><small>נכנס</small><b class="num" style="color:var(--good)">${fmt(r.in)}</b></span><span><small>יצא</small><b class="num">${fmt(r.out)}</b></span></span></button>`;
-    return `<button class="cat" data-acc="${esc(r.name)}" aria-label="החיובים ב${esc(r.name)}"><span class="name">${ic}<span style="overflow:hidden;text-overflow:ellipsis"><bdi>${esc(r.name)}</bdi></span></span>
-      <span class="amt num"><span>${fmt(r.spent)}</span><span class="pct" aria-hidden="true">›</span></span>
-      <span class="bar"><i style="width:${(Math.max(0, r.spent) / max * 100).toFixed(1)}%"></i></span></button>`;
-  }).join("");
+    const bg = r.bank ? "linear-gradient(135deg,#0d6e52,#27a77f)" : r.name === "מזומן" ? "linear-gradient(135deg,#a85a14,#e09a3a)"
+      : `linear-gradient(135deg,hsl(${h} 45% 28%),hsl(${(h + 35) % 360} 55% 48%))`;
+    const o = tops.get(r.name) || { n: 0, m: new Map(), inM: new Map() };
+    const top = [...o.m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3), tmax = top.length ? top[0][1] : 1;
+    const topIn = [...o.inM.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const bars = (L, mx) => L.map(([m, v]) => `<div class="wl-r"><span><bdi>${esc(m)}</bdi></span><span class="num">${fmt(v)}</span><em><i style="width:${(v / mx * 100).toFixed(0)}%"></i></em></div>`).join("");
+    const col = (title, sum, L) => `<div class="wl-col"><div class="wl-ch"><span>${title}</span><b class="num">${fmt(sum)}</b></div>${L.map(([m, v]) => `<div class="wl-cr"><bdi>${esc(m)}</bdi><span class="num">${fmt(v)}</span></div>`).join("") || `<div class="wl-cr">—</div>`}</div>`;
+    const front = r.bank
+      ? `<div class="wl-top"><span class="wl-n"><bdi>${esc(r.name)}</bdi></span><span class="wl-amt num">${r.out ? fmt(r.out) : "+" + fmt(r.in)}</span></div><div class="wl-chip"></div>
+         <div class="wl-bot"><span class="wl-io"><span><small>נכנס</small><b class="num">${fmt(r.in)}</b></span><span><small>יצא</small><b class="num">${fmt(r.out)}</b></span></span><span>${o.n} תנועות</span></div>`
+      : `<div class="wl-top"><span class="wl-n"><bdi>${esc(r.name)}</bdi></span><span class="wl-amt num">${fmt(r.spent)}</span></div>${r.name === "מזומן" ? "" : `<div class="wl-chip"></div>`}
+         <div class="wl-bot"><span>${o.n} תנועות החודש</span><span class="wl-big num">${fmt(r.spent)}</span></div>`;
+    // the bank shows what came in; with spending too, both side by side
+    const back = r.bank && r.out && (r.in || topIn.length)
+      ? `<div class="wl-top"><span class="wl-n">החודש בחשבון</span></div><div class="wl-cols">${col("נכנס", r.in, topIn)}${col("יצא", r.out, top)}</div>`
+      : r.bank && !r.out
+      ? `<div class="wl-top"><span class="wl-n">מה נכנס</span><span class="wl-amt num">${fmt(r.in)}</span></div>
+      <div class="wl-rows">${topIn.length ? bars(topIn, topIn[0][1]) : `<div>אין תנועות החודש</div>`}</div>`
+      : `<div class="wl-top"><span class="wl-n">על מה הוצאת</span><span class="wl-amt num">${fmt(r.bank ? r.out : r.spent)}</span></div>
+      <div class="wl-rows">${top.length ? bars(top, tmax) : `<div>אין הוצאות החודש</div>`}</div>`;
+    const backAll = back + `<button type="button" class="wl-go" data-acc="${esc(r.name)}">כל התנועות ‹</button>`;
+    return `<div class="wl-c" data-wi="${i}" tabindex="0" role="button" aria-label="${esc(r.name)}"><div class="wl-t"><div class="wl-i">
+      <div class="wl-f" style="background:${bg}">${front}</div><div class="wl-f wl-b" style="background:${bg}">${backAll}</div></div></div></div>`;
+  }).join("") + `</div><div class="wl-hint" id="wlHint"></div>`;
+  placeWallet();
+}
+let walletRows = [], walletSel = null, walletFlip = false;
+function placeWallet() {
+  const wl = $("wl"); if (!wl) return;
+  const cs = [...wl.children], n = cs.length, STRIP = 54, CH = 188;
+  const si = walletSel == null ? -1 : walletRows.findIndex(r => r.name === walletSel);
+  cs.forEach((c, i) => {
+    c.classList.toggle("flip", i === si && walletFlip);
+    if (si < 0) { c.style.top = (i * STRIP) + "px"; c.style.zIndex = i; c.style.transform = ""; c.style.filter = ""; }
+    else if (i === si) { c.style.top = "0px"; c.style.zIndex = 50; c.style.transform = "translateZ(20px)"; c.style.filter = ""; }
+    else { const k = i < si ? i : i - 1; c.style.top = (CH + 12 + k * 14) + "px"; c.style.zIndex = k; c.style.transform = `scale(${(0.92 + k * 0.015).toFixed(3)})`; c.style.filter = "brightness(.82)"; }
+  });
+  wl.style.height = (si < 0 ? (n - 1) * STRIP + CH : CH + 12 + Math.max(0, n - 2) * 14 + 44) + "px";
+  if (n === 1 && si < 0) wl.style.height = CH + "px";
+  const hint = $("wlHint"); if (hint) hint.textContent = si < 0 ? (n > 1 ? "לחיצה על כרטיס שולפת אותו" : "לחיצה על הכרטיס הופכת אותו") : walletFlip ? "לחיצה נוספת מחזירה · לחיצה על כרטיס אחר מחליפה" : "לחיצה נוספת הופכת את הכרטיס";
+}
+function walletTap(i) {
+  const r = walletRows[i]; if (!r) return;
+  if (walletRows.length === 1) { walletSel = r.name; walletFlip = !walletFlip; }
+  else if (walletSel === r.name) { if (walletFlip) { walletFlip = false; walletSel = null; } else walletFlip = true; }
+  else { walletSel = r.name; walletFlip = false; }
+  placeWallet();
 }
 const accOf = t => isBankAcc(t) ? bankName() : (t.account || "לא צוין");
 let filterAcc = null;
 let selMode = false, selSet = new Set();
 let fltRange = { min: null, max: null, from: "", to: "" };
 $("payMethods").addEventListener("click", e => {
-  const b = e.target.closest("[data-acc]"); if (!b) return;
-  filterAcc = b.dataset.acc; filterCat = null; txKind = "all"; showAll = false; openTx = null; render(); showView("tx");
+  const b = e.target.closest("[data-acc]");
+  if (b) { e.stopPropagation(); walletSel = null; walletFlip = false; filterAcc = b.dataset.acc; filterCat = null; txKind = "all"; showAll = false; openTx = null; render(); showView("tx"); return; }
+  const c = e.target.closest("[data-wi]"); if (c) walletTap(+c.dataset.wi);
 });
+$("payMethods").addEventListener("keydown", e => {
+  const c = e.target.closest("[data-wi]"); if (!c || e.target.closest("[data-acc]")) return;
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); walletTap(+c.dataset.wi); }
+  else if (e.key === "Escape" && walletSel) { walletSel = null; walletFlip = false; placeWallet(); }
+});
+// a light tilt and moving shine under the finger or mouse
+$("payMethods").addEventListener("pointermove", e => {
+  const c = e.target.closest("[data-wi]"); if (!c) return;
+  const r = c.getBoundingClientRect(), px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / Math.min(r.height, 188);
+  c.querySelector(".wl-t").style.transform = `rotateX(${((0.5 - py) * 10).toFixed(1)}deg) rotateY(${((px - 0.5) * 12).toFixed(1)}deg)`;
+  c.querySelectorAll(".wl-f").forEach(x => { x.style.setProperty("--sx", (px * 100).toFixed(0) + "%"); x.style.setProperty("--sy", (py * 100).toFixed(0) + "%"); });
+});
+["pointerleave", "pointerup", "pointercancel"].forEach(ev => $("payMethods").addEventListener(ev, e => {
+  $("payMethods").querySelectorAll(".wl-t").forEach(t => t.style.transform = "");
+}, true));
 
 /* purchases still being paid off */
 function renderInstallments() {
@@ -6174,7 +6273,7 @@ document.querySelectorAll("[data-theme-set]").forEach(b => b.onclick = async () 
 }
 
 /* 1: arrange the home and analysis screens: order, which screen, hide. Kept on this device and in the settings (V5) */
-const ARR_NAMES = { ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "לפי אמצעי תשלום", fix: "חיובים קבועים", cal: "לוח החודש", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
+const ARR_NAMES = { ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "הארנק שלך", fix: "חיובים קבועים", cal: "לוח החודש", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
 const ARR_DEFAULT = { flow: ["ins", "cats", "pay", "inst"], ana: ["week", "cal", "cmp", "merch", "fc", "fix", "burn", "up"], hidden: [] };
 var layout = null, arranging = false;
 function normLayout(l) {
@@ -6945,7 +7044,7 @@ const TOUR = [
   { t: "#addForm .two:has(#addDate)", demo: tourAddDemo, h: "תאריך ותשלומים", b: "כשמוסיפים כמה ברצף, נשאר התאריך של הקודמת. בעסקה בתשלומים בוחרים כמה, וכל תשלום יורד ביום החיוב של החודש שלו. ״שמירה והוספת עוד״ שומר ופותח את החלון שוב, עם אותו כרטיס ותאריך." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "לוחצים על המיקרופון ואומרים הכול במשפט אחד: סכום, על מה ובמה שילמתם. למשל ״45 שקל שווארמה במקס״, או ״קיבלתי 300 מאבא״. הסכום, התיאור, הקטגוריה ואמצעי התשלום מתמלאים לבד, ואתם רק בודקים ולוחצים שמירה." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. תקרה לכל קטגוריה (כמה מותר להוציא בחודש) קובעים בהגדרות, ליד הקטגוריה, וטבעת סביב העיגול מתמלאת. בכפתור ״תקרות״ משנים אותה רק לחודש מסוים." },
-  { t: "#payCard", card: true, soft: true, e: "💳", h: "לפי אמצעי תשלום", b: "כמה יצא מכל כרטיס ומהבנק. לחיצה על כרטיס מציגה רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
+  { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כל אמצעי תשלום הוא כרטיס בארנק, עם הסכום שיצא ממנו החודש. לחיצה שולפת כרטיס, לחיצה נוספת הופכת אותו ומראה על מה הוצאת בו, ו'כל התנועות' מציג רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, לוח, השוואה, תחזית, קבועות ועוד." },
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות לפי ימים, וליד כל יום סימון אם היה יקר או חסכוני מיום רגיל. <b>חיפוש</b> חכם כמו ״סופר מעל 200״, <b>סינון</b> לפי סוג, קטגוריה, כרטיס, סכום ותאריכים, ו<b>בחירה</b> של כמה תנועות כדי לשנות להן קטגוריה או למחוק יחד." },
@@ -7035,7 +7134,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025213822";
+const BUILD_ID = "20261025223702";
 let updToast = null;
 async function checkUpdate() {
   try {
