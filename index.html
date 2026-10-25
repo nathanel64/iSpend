@@ -184,7 +184,8 @@ header.top {
 @keyframes setIn { from { opacity: 0; transform: translateX(-28px); } }
 @keyframes setBack { from { opacity: 0; transform: translateX(28px); } }
 @media (prefers-reduced-motion: reduce) { .set-page.in, #setMenu.in { animation: none; } }
-.set-back { align-self: flex-start; border: 0; background: none; color: var(--brand); font: 600 .95rem var(--font-body); padding: 4px 0; cursor: pointer; }
+.set-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: var(--brand); font: 600 .95rem var(--font-body); padding: 4px 0; cursor: pointer; }
+.set-back svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .set-ph { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: -4px; }
 .set-ph h2 { margin: 0; font-size: 1.45rem; font-weight: 700; font-family: var(--font-display); }
 .set-info-btn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 700 .85rem/1 var(--font-body); flex: none; cursor: pointer; }
@@ -6164,7 +6165,7 @@ boot();
   const pages = {};
   PAGES.forEach(P => {
     const parts = P.parts.filter(Boolean); if (!parts.length) return;
-    const pg = el(`<div class="set-page" data-page="${P.id}" hidden><button type="button" class="set-back">› הגדרות</button>
+    const pg = el(`<div class="set-page" data-page="${P.id}" hidden><button type="button" class="set-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>הגדרות</button>
       <div class="set-ph"><h2>${P.title}</h2>${P.info ? `<button type="button" class="set-info-btn" aria-pressed="false" aria-label="הסבר">i</button>` : ""}</div></div>`);
     av.appendChild(pg);
     parts.forEach(p => {
@@ -6508,7 +6509,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025201139";
+const BUILD_ID = "20261025202619";
 let updToast = null;
 async function checkUpdate() {
   try {
