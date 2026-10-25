@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%235b4cf0%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239a52d6%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2218%22%20fill%3D%22url%28%23bg%29%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2218%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-opacity%3D%22.22%22%20stroke-width%3D%226%22/%3E%3Cpath%20d%3D%22M32%2014%20A18%2018%200%201%201%2014.6%2036.6%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2214.6%22%20cy%3D%2236.6%22%20r%3D%223%22%20fill%3D%22%23ffd36e%22/%3E%3Cpath%20d%3D%22M24%2037%20L29.5%2031.5%20L33.5%2035%20L40%2027.5%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3Cpath%20d%3D%22M35.5%2027%20H40.5%20V32%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#5b4cf0">
@@ -147,6 +147,15 @@ header.top {
 .edit-row.cat-edit { grid-template-columns: auto minmax(0, 1fr) auto auto auto; }
 .cap-in { display: flex; align-items: center; gap: 2px; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 0 8px; width: 84px; box-sizing: border-box; }
 .cap-in span { color: var(--muted); font-size: .8rem; }
+.cap-total { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 2px; padding: 9px 12px; border-radius: 14px; background: var(--brand-soft); font-size: .84rem; color: var(--ink); }
+.cap-total[hidden] { display: none; }
+/* iPhone zooms into any field with text under 16px when it gets focus, and stays zoomed: fields get 16px there */
+@supports (-webkit-touch-callout: none) { .edit-row input[type="text"], .cap-in input, .field input, .field select, #startDay, #startMonth, .money-in input, .search input, #capAmt { font-size: 16px; } }
+.cap-total b { font-size: 1.02rem; color: var(--brand); font-variant-numeric: tabular-nums; }
+.cap-total small { color: var(--muted); font-size: .76rem; white-space: nowrap; }
+.cap-total .ct-bar { flex: 1; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--brand) 14%, transparent); overflow: hidden; min-width: 40px; }
+.cap-total .ct-bar i { display: block; height: 100%; border-radius: 3px; background: var(--brand); transition: width .3s; }
+.cap-total.over .ct-bar i { background: var(--bad); } .cap-total.over b { color: var(--bad); }
 .cap-in input { border: 0; background: none; width: 100%; min-width: 0; padding: 8px 0; font: inherit; font-size: .88rem; color: var(--ink); text-align: start; outline: none; font-variant-numeric: tabular-nums; }
 .cap-in:focus-within { border-color: var(--brand); }
 .edit-row .cap-in input[type="text"] { border: 0; background: none; border-radius: 0; padding: 8px 0; }
@@ -1486,6 +1495,7 @@ body { margin: 0; }
     <section class="card">
       <h2>קטגוריות</h2>
       <p class="note" style="margin:0">סמנו "קבועה" להוצאות שחוזרות כל חודש באותו סכום, כמו מנויים וביטוח. <b>תקרה</b>: כמה מותר להוציא בחודש על הקטגוריה, לכל חודש. רוצים תקרה אחרת רק לחודש מסוים? במסך הבית, בכפתור ״תקרות״, וזה לא משנה את התקרה כאן. שינוי שם מעדכן גם את כל התנועות שכבר נרשמו בקטגוריה.</p>
+      <div class="cap-total" id="capTotal" aria-live="polite"></div>
       <div class="edit-list" id="catList"></div>
       <button class="add-row" id="addCatRow">+ קטגוריה חדשה</button>
       <div class="save-row"><button class="btn" id="saveCats">שמירת קטגוריות</button><span id="catMsg"></span></div>
@@ -4314,8 +4324,21 @@ function drawCatList() {
       <button class="del" data-del="${i}" aria-label="מחיקת ${esc(c.name)}">✕</button>${picker}</div>`;
   }).join("");
 }
+// the sum of the category caps, against this month's salary: a quick sense of scale while typing them
+function renderCapTotal() {
+  const el = $("capTotal"); if (!el) return;
+  const sum = draftCats.reduce((a, c) => a + (+(c.cap != null ? c.cap : capsDef()[c.orig || c.name]) || 0), 0);
+  if (!sum) { el.hidden = true; return; }
+  // the average of the last three salaries entered (up to this month), so one odd month does not move it
+  const [cy, cm] = curYM(), cur = mkey(cy, cm);
+  const last3 = Object.keys(salaries).filter(k => k <= cur && +salaries[k] > 0 && !hiddenMonths.has(+k.slice(0, 4) * 12 + +k.slice(5) - 1)).sort().slice(-3);
+  const sal = last3.length ? Math.round(last3.reduce((a, k) => a + +salaries[k], 0) / last3.length) : 0, pct = sal ? sum / sal * 100 : 0;
+  el.hidden = false; el.classList.toggle("over", sal > 0 && sum > sal);
+  el.innerHTML = `<span>סך התקרות <b class="num">${fmt(sum)}</b></span>` + (sal ? `<span class="ct-bar"><i style="width:${Math.min(100, pct).toFixed(1)}%"></i></span><small title="ממוצע ${last3.length} החודשים האחרונים שהוזנה בהם משכורת">${Math.round(pct)}% מ${last3.length > 1 ? "המשכורת הממוצעת" : "המשכורת"} (${fmt(sal)})</small>` : "");
+}
 function renderAdminLists() {
   if (!adminDirty.cats) drawCatList();
+  renderCapTotal();
   if (!adminDirty.pay) {
     $("payList").innerHTML = draftPay.map((p, i) => i === 0 ? `<div class="edit-row pay bank-row">
       <input type="text" id="pay-0" value="${esc(p)}" aria-label="שם חשבון הבנק" data-i="0">
@@ -4345,7 +4368,7 @@ $("catList").addEventListener("input", e => {
   const i = +e.target.dataset.i; if (isNaN(i)) return;
   adminDirty.cats = true;
   if (e.target.dataset.f === "fixed") draftCats[i].fixed = e.target.checked;
-  else if (e.target.dataset.f === "cap") { const d = e.target.value.replace(/[^\d]/g, ""); draftCats[i].cap = d ? +d : 0; e.target.value = d ? withCommas(d) : ""; }
+  else if (e.target.dataset.f === "cap") { const d = e.target.value.replace(/[^\d]/g, ""); draftCats[i].cap = d ? +d : 0; e.target.value = d ? withCommas(d) : ""; renderCapTotal(); }
   else draftCats[i].name = e.target.value;
   $("catMsg").textContent = "";
 });
@@ -6104,7 +6127,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025144332";
+const BUILD_ID = "20261025163715";
 let updToast = null;
 async function checkUpdate() {
   try {
