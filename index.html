@@ -1574,22 +1574,42 @@ body { margin: 0; }
 .auth-note { margin: 0; font-size: .78rem; color: var(--muted); text-align: center; }
 /* guided tour */
 .tour { position: fixed; inset: 0; z-index: 70; }
-.tour-dim { position: absolute; inset: 0; background: rgba(18, 17, 23, .6); }
-.tour-spot { position: fixed; border-radius: 20px; box-shadow: 0 0 0 9999px rgba(18, 17, 23, .62), 0 0 0 3px #fff; transition: all .35s cubic-bezier(.3, .8, .3, 1); pointer-events: none; }
-.tour-tip { position: fixed; inset-inline: 16px; margin: 0 auto; max-width: 360px; max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; background: var(--surface); color: var(--ink); border-radius: 22px; padding: 18px; box-shadow: 0 18px 44px rgba(0,0,0,.3); display: flex; flex-direction: column; gap: 8px; transition: top .35s, bottom .35s; }
-.tour-tip h3 { margin: 0; font-size: 1.15rem; }
-.tour-tip p { margin: 0; font-size: .92rem; line-height: 1.55; color: var(--muted); }
-.tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-.tour-prog { flex: 1; min-width: 30px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
-.tour-prog i { display: block; height: 100%; border-radius: 3px; background: var(--brand); transition: width .35s; }
-.tour-n { font-size: .74rem; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
-.tour-dots { display: flex; gap: 5px; flex: 1; }
-.tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
-.tour-dots i.on { background: var(--brand); width: 18px; border-radius: 4px; }
-.tour-skip { border: 0; background: none; color: var(--muted); font-size: .85rem; padding: 6px; }
-.tour-emoji { font-size: 2rem; line-height: 1; }
-@media (prefers-reduced-motion: no-preference) { .tour-tip { animation: tourIn .3s ease; } }
-@keyframes tourIn { from { opacity: 0; transform: translateY(10px); } }
+.tour-dim { position: absolute; inset: 0; background: rgba(18, 17, 23, .6); transition: opacity .35s ease; }
+.tour-dim.off { opacity: 0; pointer-events: none; }
+.tour-spot { position: fixed; border-radius: 20px; box-shadow: 0 0 0 9999px rgba(18, 17, 23, .62), 0 0 0 3px #fff, 0 0 0 9px rgba(124, 112, 240, .35); pointer-events: none;
+  transition: top .45s cubic-bezier(.22, .9, .26, 1), left .45s cubic-bezier(.22, .9, .26, 1), width .45s cubic-bezier(.22, .9, .26, 1), height .45s cubic-bezier(.22, .9, .26, 1), opacity .3s ease; }
+.tour-spot.hide { opacity: 0; }
+.tour-spot::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; box-shadow: 0 0 0 3px rgba(255, 255, 255, .9); animation: tourPulse 2.2s ease-out infinite; }
+@keyframes tourPulse { 0% { opacity: .9; transform: scale(1); } 70%, 100% { opacity: 0; transform: scale(1.04); } }
+.tour.still .tour-spot, .tour.still .tour-tip { transition: none !important; }
+.tour-tip { position: fixed; inset-inline: 16px; margin: 0 auto; max-width: 360px; max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; background: var(--surface); color: var(--ink);
+  border-radius: 24px; padding: 14px 18px 16px; box-shadow: 0 24px 60px -18px rgba(10, 6, 30, .55), 0 0 0 1px color-mix(in srgb, var(--ink) 6%, transparent); display: flex; flex-direction: column; gap: 10px;
+  transition: top .45s cubic-bezier(.22, .9, .26, 1), opacity .25s ease, transform .45s cubic-bezier(.22, .9, .26, 1); }
+.tour-tip.enter { opacity: 0; transform: translateY(14px) scale(.98); }
+.tt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tt-n { font-size: .74rem; font-weight: 700; color: var(--brand); background: var(--brand-soft); padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.tt-x { border: 0; background: none; color: var(--muted); font: 600 .82rem/1 var(--font-body); padding: 6px 4px; cursor: pointer; }
+.tt-in { display: flex; flex-direction: column; gap: 6px; transition: opacity .18s ease, transform .22s ease; }
+.tour-tip.out .tt-in { opacity: 0; transform: translateX(calc(var(--dx, 1) * -16px)); }
+.tour-tip.in .tt-in { animation: ttIn .32s cubic-bezier(.22, .9, .26, 1); }
+@keyframes ttIn { from { opacity: 0; transform: translateX(calc(var(--dx, 1) * 16px)); } }
+.tour-tip h3 { margin: 0; font-size: 1.15rem; text-wrap: balance; }
+.tour-tip p { margin: 0; font-size: .92rem; line-height: 1.6; color: var(--muted); }
+.tour-tip p b { color: var(--ink); }
+.tour-prog { height: 4px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.tour-prog i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--brand), var(--brand2, var(--brand))); transition: width .45s cubic-bezier(.22, .9, .26, 1); margin-inline-start: 0; }
+.tour-foot { display: flex; align-items: center; gap: 8px; }
+.tt-back { border: 0; background: var(--bg); color: var(--ink); font: 700 .9rem/1 var(--font-body); padding: 12px 14px; border-radius: 14px; cursor: pointer; transition: opacity .2s, transform .15s; }
+.tt-back[disabled] { display: none; }
+.tour.moving .tour-dim { opacity: 1 !important; }
+.tour.moving .tour-spot { opacity: 0; }
+.tour.moving .tour-tip { opacity: 0; transform: translateY(12px) scale(.985); }
+.tt-next { flex: 1; border: 0; background: var(--brand); color: #fff; font: 700 .95rem/1 var(--font-body); padding: 12px 16px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--brand) 70%, transparent); transition: transform .15s; }
+.tt-back:active, .tt-next:active { transform: scale(.96); }
+.tt-next:focus-visible, .tt-back:focus-visible, .tt-x:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.tour-emoji { font-size: 2.2rem; line-height: 1; }
+@media (prefers-reduced-motion: reduce) { .tour-spot, .tour-tip, .tt-in, .tour-prog i { transition: none !important; animation: none !important; } .tour-spot::after { display: none; } }
 .admin-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .admin-head .admin-title { margin-bottom: 0; }
 .tour-chip { display: inline-flex; align-items: center; gap: 5px; flex: none; border: 0; cursor: pointer; padding: 7px 13px 7px 11px; border-radius: 999px; font: 700 .82rem/1.2 var(--font-body); color: var(--brand); background: var(--brand-soft); position: relative; overflow: hidden; transition: transform .15s; -webkit-tap-highlight-color: transparent; }
@@ -7301,65 +7321,142 @@ const TOUR = [
   { t: null, e: "👆", h: "עוד כמה טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן. בתוך עמוד בהגדרות, החלקה ימינה מחזירה לתפריט." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
 ];
-let tourEl = null, tourI = 0, tourRestore = null, tourPlace = null;
+let tourEl = null, tourI = 0, tourRestore = null, tourPlace = null, tourHist = [], tourBusy = false, tourEl0 = null, tourSeq = 0;
+const tourReduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const tourWait = ms => new Promise(r => setTimeout(r, ms));
 function startTour() {
   if (tourEl) tourEl.remove();
   showView("flow"); window.scrollTo(0, 0);
   tourEl = document.createElement("div"); tourEl.className = "tour"; tourEl.dir = "rtl"; tourEl.lang = "he";
-  tourEl.innerHTML = '<div class="tour-dim"></div><div class="tour-spot" hidden></div><div class="tour-tip" role="dialog" aria-modal="true" aria-live="polite"></div>';
-  document.body.appendChild(tourEl); tourI = 0; tourStep();
+  tourEl.innerHTML = '<div class="tour-dim"></div><div class="tour-spot hide"></div><div class="tour-tip enter" role="dialog" aria-modal="true" aria-live="polite">'
+    + '<div class="tt-head"><span class="tt-n num"></span><button class="tt-x" type="button" data-skip>דלג על הסיור</button></div>'
+    + '<div class="tt-in"></div><div class="tour-prog" aria-hidden="true"><i></i></div>'
+    + '<div class="tour-foot"><button class="tt-back" type="button" data-back aria-label="הצעד הקודם">→ חזרה</button><button class="tt-next" type="button" data-next></button></div></div>';
+  document.body.appendChild(tourEl); tourI = 0; tourHist = []; tourBusy = false;
+  const tip = tourEl.querySelector(".tour-tip");
+  tip.querySelector("[data-next]").onclick = () => tourGo(1);
+  tip.querySelector("[data-back]").onclick = () => tourGo(-1);
+  tip.querySelector("[data-skip]").onclick = endTour;
+  tourStep(1);
+}
+function tourGo(dir) {
+  if (!tourEl || tourBusy) return;
+  if (dir > 0) { if (TOUR[tourI].last) return endTour(); tourHist.push(tourI); tourI++; }
+  else { if (!tourHist.length) return; tourI = tourHist.pop(); }
+  tourStep(dir);
 }
 function endTour() {
   if (tourRestore) { try { tourRestore(); } catch (e) {} tourRestore = null; }
   try { localStorage.setItem("tourDone-" + USER_ID, "1"); } catch (e) {}
-  if (tourEl) { tourEl.remove(); tourEl = null; }
+  if (tourEl) { const t = tourEl; tourEl = null; t.style.transition = "opacity .25s"; t.style.opacity = "0"; t.style.pointerEvents = "none"; setTimeout(() => t.remove(), tourReduce() ? 0 : 260); }
   if (tourPlace) { removeEventListener("scroll", tourPlace, true); tourPlace = null; }
+  tourEl0 = null; tourBusy = false;
   window.scrollTo(0, 0);
   if (TOUR_PENDING) { TOUR_PENDING = false; salAsked = false; askSalary(); }
 }
-function tourStep() {
+// wait until a smooth scroll has come to rest (the card stops moving), at most ~1s
+function tourSettle(el) {
+  return new Promise(res => {
+    let last = null, same = 0, n = 0;
+    const tick = () => {
+      const t = el ? Math.round(el.getBoundingClientRect().top) : 0;
+      same = t === last ? same + 1 : 0; last = t; n++;
+      if (same >= 4 || n > 70) res(); else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+function tourPlaceNow(animate) {
+  if (!tourEl) return;
+  const el = tourEl0, spot = tourEl.querySelector(".tour-spot"), tip = tourEl.querySelector(".tour-tip"), dim = tourEl.querySelector(".tour-dim");
+  if (!animate) tourEl.classList.add("still");
+  const vh = Math.min(innerHeight, (window.visualViewport && visualViewport.height) || innerHeight), th = tip.offsetHeight;
+  if (!el) {
+    dim.classList.remove("off"); spot.classList.add("hide");
+    tip.style.top = Math.max(12, (vh - th) / 2) + "px";
+  } else {
+    dim.classList.add("off"); spot.classList.remove("hide");
+    const r0 = el.getBoundingClientRect(), pad = 8;
+    // the highlight stays on screen, even for a card taller than the screen
+    const t0 = Math.max(6, r0.top - pad), b0 = Math.min(vh - 6, r0.bottom + pad);
+    Object.assign(spot.style, { top: t0 + "px", left: r0.left - pad + "px", width: r0.width + pad * 2 + "px", height: Math.max(0, b0 - t0) + "px" });
+    // the tip goes where it fits whole: below, above, or (a tall card) over the bottom of the screen
+    const gap = 14, below = vh - (b0 + gap) - 12, above = t0 - gap - 12, prefAbove = r0.top + r0.height / 2 > vh / 2;
+    let top;
+    if (prefAbove ? above >= th : below < th && above >= th) top = t0 - gap - th;
+    else if (below >= th) top = b0 + gap;
+    else top = Math.max(12, vh - th - 12);
+    tip.style.top = top + "px";
+  }
+  tip.style.bottom = "auto";
+  if (!animate) requestAnimationFrame(() => requestAnimationFrame(() => tourEl && tourEl.classList.remove("still")));
+}
+async function tourStep(dir) {
+  if (!tourEl) return;
+  const seq = ++tourSeq; tourBusy = true;
+  const tip = tourEl.querySelector(".tour-tip"), first = tip.classList.contains("enter");
+  tip.style.setProperty("--dx", dir < 0 ? -1 : 1);
+  // 1. the old text slides away
+  if (!first && !tourReduce()) { tip.classList.remove("in"); tip.classList.add("out"); await tourWait(170); if (seq !== tourSeq || !tourEl) return; }
   let s = TOUR[tourI];
-  // a step whose place is not on screen (no data for it yet) is skipped
+  // a step whose place is not on screen (no data for it yet) is skipped, in the direction we are moving
   const vis = x => { const el = x && document.querySelector(x); return !!(el && el.getClientRects().length && !el.closest("[hidden]")); };
   if (tourRestore && !(tourRestore.keep && tourRestore.keep === s.demo)) { tourRestore(); tourRestore = null; }
   if (currentView !== (s.view || "flow")) showView(s.view || "flow");
   if (s.demo && !vis(s.t) && !(tourRestore && tourRestore.keep === s.demo)) tourRestore = s.demo(); // nothing real yet: show an example for this step
-  while (s && s.opt && !vis(s.t) && tourI < TOUR.length - 1) s = TOUR[++tourI];
+  while (s && s.opt && !vis(s.t)) {
+    if (dir < 0 && tourHist.length) tourI = tourHist.pop(); else if (tourI < TOUR.length - 1) tourI++; else break;
+    s = TOUR[tourI];
+    if (tourRestore && !(tourRestore.keep && tourRestore.keep === s.demo)) { tourRestore(); tourRestore = null; }
+    if (s.demo && !vis(s.t) && !(tourRestore && tourRestore.keep === s.demo)) tourRestore = s.demo();
+  }
   if (currentView !== (s.view || "flow")) showView(s.view || "flow");
-  const spot = tourEl.querySelector(".tour-spot"), tip = tourEl.querySelector(".tour-tip"), dim = tourEl.querySelector(".tour-dim");
   let el = s.t ? document.querySelector(s.t) : null; if (el && s.card) el = el.closest(".card") || el;
   if (el && s.soft && !vis(s.t)) el = null; // not on screen yet: the tip alone, in the middle
   if (s.enter && el) { const undo = s.enter(el), prevR = tourRestore; if (undo) tourRestore = () => { undo(); if (prevR) prevR(); }; }
+  // 2. the page moves to the place (the highlight waits, then glides there)
   const fixed = el && getComputedStyle(el.closest(".nav") || el).position === "fixed";
-  if (el && !fixed) el.scrollIntoView({ block: el.offsetHeight > innerHeight * .45 ? "start" : "center", behavior: "smooth" });
-  tip.innerHTML = (s.e && !el ? `<div class="tour-emoji">${s.e}</div>` : "") + `<h3>${typeof s.h === "function" ? s.h() : s.h}</h3><p>${s.b}</p>
-    <div class="tour-foot"><div class="tour-prog" aria-hidden="true"><i style="width:${((tourI + 1) / TOUR.length * 100).toFixed(1)}%"></i></div><span class="tour-n num">${tourI + 1}/${TOUR.length}</span>
-    ${s.last ? "" : `<button class="tour-skip" type="button" data-skip>דלג</button>`}<button class="btn" type="button" data-next>${s.last ? "יאללה" : tourI === 0 ? "בואו נתחיל" : "הבא"}</button></div>`;
-  tip.querySelector("[data-next]").onclick = () => { if (s.last) endTour(); else { tourI++; tourStep(); } };
-  const sk = tip.querySelector("[data-skip]"); if (sk) sk.onclick = endTour;
-  const place = () => {
-    if (!el) { spot.hidden = true; dim.hidden = false; tip.style.top = "50%"; tip.style.bottom = "auto"; tip.style.transform = "translateY(-50%)"; return; }
-    dim.hidden = true; spot.hidden = false; tip.style.transform = "none";
-    // the phone's visible height (the address bar and the keyboard take part of the window)
-    const vh = Math.min(innerHeight, (window.visualViewport && visualViewport.height) || innerHeight);
-    const r0 = el.getBoundingClientRect(), pad = 8;
-    // the highlight is kept on screen, even for a card taller than the screen
-    const t0 = Math.max(6, r0.top - pad), b0 = Math.min(vh - 6, r0.bottom + pad);
-    Object.assign(spot.style, { top: t0 + "px", left: r0.left - pad + "px", width: r0.width + pad * 2 + "px", height: Math.max(0, b0 - t0) + "px" });
-    // the tip goes where it fits whole: below, above, or (a tall card) over the bottom of the screen
-    const th = tip.offsetHeight, gap = 14, below = vh - (b0 + gap) - 12, above = t0 - gap - 12;
-    const prefAbove = r0.top + r0.height / 2 > vh / 2;
-    if (prefAbove ? above >= th : below < th && above >= th) { tip.style.top = "auto"; tip.style.bottom = (innerHeight - t0 + gap) + "px"; }
-    else if (below >= th) { tip.style.bottom = "auto"; tip.style.top = (b0 + gap) + "px"; }
-    else { tip.style.bottom = "auto"; tip.style.top = Math.max(12, vh - th - 12) + "px"; }
-  };
-  // the page may still be scrolling to the card: follow it until it settles
+  if (el && !fixed) {
+    const r = el.getBoundingClientRect(), vh = innerHeight;
+    const fits = r.top >= 70 && r.bottom <= vh - 220;
+    if (!fits) {
+      // a longer move: the screen stays dimmed while the page scrolls, then the highlight fades in at the new place
+      tourEl.classList.add("moving"); if (!tourReduce()) await tourWait(140);
+      el.scrollIntoView({ block: el.offsetHeight > vh * .45 ? "start" : "center", behavior: tourReduce() ? "auto" : "smooth" }); await tourSettle(el);
+      if (seq !== tourSeq || !tourEl) return;
+      tourEl0 = el; tourPlaceNow(false); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    }
+  } else await tourWait(first ? 60 : 30);
+  if (seq !== tourSeq || !tourEl) return;
+  tourEl0 = el;
+  // 3. new text in, then the tip and the highlight glide into place together
+  const n = tourI + 1, N = TOUR.length;
+  tip.querySelector(".tt-n").textContent = n + " מתוך " + N;
+  tip.querySelector(".tt-in").innerHTML = (s.e && !el ? `<div class="tour-emoji">${s.e}</div>` : "") + `<h3>${typeof s.h === "function" ? s.h() : s.h}</h3><p>${s.b}</p>`;
+  tip.querySelector(".tour-prog i").style.width = (n / N * 100).toFixed(1) + "%";
+  const nx = tip.querySelector("[data-next]"), bk = tip.querySelector("[data-back]"), sk = tip.querySelector("[data-skip]");
+  nx.innerHTML = s.last ? "יאללה, מתחילים" : tourI === 0 ? "בואו נתחיל ←" : "הבא ←";
+  bk.disabled = !tourHist.length; sk.hidden = !!s.last;
+  const wasMoving = tourEl.classList.contains("moving");
+  tourPlaceNow(!first && !wasMoving);
+  if (wasMoving) await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  tourEl.classList.remove("moving");
+  tip.classList.remove("out", "enter"); if (!tourReduce()) { void tip.offsetWidth; tip.classList.add("in"); }
   if (tourPlace) removeEventListener("scroll", tourPlace, true);
-  tourPlace = () => requestAnimationFrame(place); addEventListener("scroll", tourPlace, { passive: true, capture: true });
-  place(); setTimeout(place, 450); setTimeout(place, 1000);
-  tip.querySelector("[data-next]").focus();
+  tourPlace = () => requestAnimationFrame(() => tourPlaceNow(false)); addEventListener("scroll", tourPlace, { passive: true, capture: true });
+  setTimeout(() => { if (seq === tourSeq) tourPlaceNow(true); }, 480);
+  tourBusy = false;
+  try { nx.focus({ preventScroll: true }); } catch (e) {}
 }
-addEventListener("resize", () => { if (tourEl) tourStep(); });
+// the phone's bars come and go while scrolling: only re-place, never redo the step
+addEventListener("resize", () => { if (tourEl) tourPlaceNow(false); });
+if (window.visualViewport) visualViewport.addEventListener("resize", () => { if (tourEl) tourPlaceNow(false); });
+document.addEventListener("keydown", e => {
+  if (!tourEl) return;
+  if (e.key === "Escape") { e.preventDefault(); endTour(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); tourGo(1); }   // right-to-left: forward is to the left
+  else if (e.key === "ArrowRight") { e.preventDefault(); tourGo(-1); }
+});
 // the tour button sits at the top of the settings, on the left
 (function tourChip() {
   const title = document.querySelector("#adminView .admin-title"); if (!title) return;
@@ -7375,7 +7472,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025234356";
+const BUILD_ID = "20261026000221";
 let updToast = null;
 async function checkUpdate() {
   try {
