@@ -304,6 +304,8 @@ body.arrange .auto-empty { display: block !important; }
 .set-rt b { font-weight: 600; font-size: .95rem; }
 .set-rt small { color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .set-chev { color: color-mix(in srgb, var(--muted) 60%, transparent); font-size: 1.25rem; line-height: 1; }
+/* chevrons point left (forward in Hebrew): kept out of the right-to-left mirroring */
+.set-chev, .chev, .chv { display: inline-block; direction: ltr; unicode-bidi: isolate; }
 .set-pill { font-size: .7rem; font-weight: 700; border-radius: 999px; padding: 2px 8px; flex: none; }
 .set-pill.on { color: var(--good); background: var(--good-soft); } .set-pill.off { color: var(--muted); background: var(--bg); }
 .set-row .theme-seg { flex: none; }
@@ -1966,7 +1968,7 @@ function makeSupaAdapter(uid) {
         <div class="mc"><i class="md in"><svg viewBox="0 0 24 24"><path d="M12 4v13 M6 11l6 6 6-6 M5 20h14"/></svg></i><div><div class="k">נכנס</div><div class="v num" id="fIncome">—</div></div></div>
         <div class="mc"><i class="md vr"><svg viewBox="0 0 24 24"><path d="M12 17V4 M6 10l6-6 6 6 M5 20h14"/></svg></i><div><div class="k">יצא</div><div class="v num" id="fOut">—</div></div></div>
       </div>
-      <button type="button" class="slip-btn" id="slipBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3"/></svg>התלוש של החודש<span aria-hidden="true">‹</span></button>
+      <button type="button" class="slip-btn" id="slipBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3"/></svg>התלוש של החודש<span class="chv" aria-hidden="true">‹</span></button>
       <div id="incomeArea"></div>
     </div>
   </section>
@@ -3282,7 +3284,7 @@ function renderPayMethods(f) {
       <div class="wl-rows">${topIn.length ? bars(topIn, topIn[0][1]) : `<div>אין תנועות החודש</div>`}</div>`
       : `<div class="wl-top"><span class="wl-n">על מה הוצאת</span><span class="wl-amt num">${fmt(r.bank ? r.out : r.spent)}</span></div>
       <div class="wl-rows">${top.length ? bars(top, tmax) : `<div>אין הוצאות החודש</div>`}</div>`;
-    const backAll = back + `<button type="button" class="wl-go" data-acc="${esc(r.name)}">כל התנועות ‹</button>`;
+    const backAll = back + `<button type="button" class="wl-go" data-acc="${esc(r.name)}">כל התנועות <span class="chv" aria-hidden="true">‹</span></button>`;
     return `<div class="wl-c" data-wi="${i}" tabindex="0" role="button" aria-label="${esc(r.name)}"><div class="wl-t"><div class="wl-i">
       <div class="wl-f" style="background:${bg}">${front}</div><div class="wl-f wl-b" style="background:${bg}">${backAll}</div></div></div></div>`;
   }).join("") + `</div><div class="wl-hint" id="wlHint"></div>`;
@@ -7472,7 +7474,7 @@ document.addEventListener("keydown", e => {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261026000221";
+const BUILD_ID = "20261026005220";
 let updToast = null;
 async function checkUpdate() {
   try {
