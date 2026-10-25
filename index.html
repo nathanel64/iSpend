@@ -499,13 +499,17 @@ body { overflow-x: clip; padding-bottom: calc(env(safe-area-inset-bottom, 0px) +
 .up-note { margin: 0; font-size: .74rem; color: var(--muted); line-height: 1.5; }
 @keyframes upIn { from { opacity: 0; transform: translateX(-14px); } }
 /* a new expense: a coin flies from the + button into the gauge */
-.fly-coin { position: fixed; z-index: 80; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle at 35% 30%, #ffe7a3, #ffcf5c 55%, #e3a429); box-shadow: 0 0 0 2px rgba(255, 255, 255, .7), 0 6px 14px rgba(160, 110, 0, .35); }
-.ring-wrap.gauge.landing #ringTip .coin { opacity: 0; }
-.ring-wrap.gauge.bump #ringTip .coin { animation: coinBump .55s cubic-bezier(.3, 1.6, .5, 1); transform-box: fill-box; transform-origin: center; }
-.ring-wrap.gauge.bump > svg { animation: gaugePulse .55s ease-out; }
-@keyframes coinBump { 0% { transform: scale(1); } 40% { transform: scale(1.8); } 100% { transform: scale(1); } }
-@keyframes gaugePulse { 0% { transform: scale(1); } 35% { transform: scale(1.025); } 100% { transform: scale(1); } }
+.fly-coin { position: fixed; z-index: 80; left: 0; top: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; pointer-events: none; will-change: transform, opacity;
+  display: grid; place-items: center; font: 800 10px/1 var(--font-body); color: #a8700c;
+  background: radial-gradient(circle at 35% 30%, #fff0c2, #ffd36e 55%, #e9ac34); box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .8), 0 3px 8px rgba(160, 110, 0, .25); }
+.coin-ripple { position: fixed; z-index: 79; left: 0; top: 0; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; pointer-events: none; border: 2px solid #ffcf5c; }
+
+.ring-wrap.gauge.bump #ringTip .coin { animation: coinBump .7s cubic-bezier(.25, 1.4, .5, 1); transform-box: fill-box; transform-origin: center; }
+.ring-wrap.gauge.bump > svg { animation: gaugePulse .7s ease-out; }
+.ring-wrap.gauge.take #ringTip .coin { animation: coinTake .28s ease-out; transform-box: fill-box; transform-origin: center; }
+@keyframes coinBump { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@keyframes coinTake { 0% { transform: scale(1); } 45% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes gaugePulse { 0% { transform: scale(1); } 35% { transform: scale(1.012); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .up-i { animation: none; } }
 .card h2 { font-size: 1.05rem; }
 .month h1, .admin-title, .yhero .big, .status .big, .week-now .left, .w-slide .w-big, .w-slide .w-mid, .whatif-total .big, .streak-n, .amount-in input, .amount-in span, .sal-hero h3, .sal-amount input { font-weight: 700; letter-spacing: -.01em; }
@@ -3649,22 +3653,43 @@ function flyCoin(from, tries = 0) {
   try {
     if ($("flowView").hidden) return;
     const tip = $("ringTip"), svg = tip.ownerSVGElement, wrap = svg.closest(".ring-wrap");
-    const bump = () => { wrap.classList.remove("bump"); void wrap.offsetWidth; wrap.classList.add("bump"); try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} setTimeout(() => wrap.classList.remove("bump"), 600); };
+    const pulse = (cls, ms) => { wrap.classList.remove(cls); void wrap.offsetWidth; wrap.classList.add(cls); setTimeout(() => wrap.classList.remove(cls), ms); };
     const m = (tip.style.transform || "").match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/); if (!m) return;
-    // the gauge is out of sight (scrolled down): bring it into view first, then the coin flies
+    // the gauge is out of sight (scrolled down): bring it into view first, then the coins come
     const wr = wrap.getBoundingClientRect();
     if ((wr.bottom < 60 || wr.top > innerHeight - 60) && tries < 1) { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => flyCoin(from, tries + 1), 450); return; }
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { tip.style.opacity = "1"; bump(); return; }
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { tip.style.opacity = "1"; pulse("bump", 700); return; }
     const pt = svg.createSVGPoint(); pt.x = +m[1]; pt.y = +m[2]; const to = pt.matrixTransform(svg.getScreenCTM());
     if (to.y < 0 || to.y > innerHeight) return;
-    const c = document.createElement("div"); c.className = "fly-coin"; document.body.appendChild(c);
-    const dx = to.x - from.x, dy = to.y - from.y, lift = Math.min(160, Math.abs(dy) * .45 + 60), frames = [];
-    for (let i = 0; i <= 24; i++) { const t = i / 24; frames.push({ transform: `translate(${from.x + dx * t - 12}px,${from.y + dy * t - Math.sin(Math.PI * t) * lift - 12}px) scale(${1.15 - .55 * t}) rotate(${t * 540}deg)` }); }
-    wrap.classList.add("landing");
-    c.animate(frames, { duration: 900, easing: "cubic-bezier(.45,0,.25,1)" }).onfinish = () => {
-      // the first, tiny expense of a month: the gauge's coin shows up where this one lands
-      c.remove(); wrap.classList.remove("landing"); tip.style.opacity = "1"; bump();
-    };
+    tip.style.opacity = "1";
+    // a small stream of coins: each one leaves the + a moment after the other, flows on a soft curve and melts into the gauge's coin
+    const N = 6, ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const dx = to.x - from.x, dy = to.y - from.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+    let landed = 0;
+    for (let k = 0; k < N; k++) {
+      const c = document.createElement("div"); c.className = "fly-coin"; c.textContent = "₪"; c.style.opacity = "0"; document.body.appendChild(c);
+      const sx = from.x + (Math.random() - .5) * 18, sy = from.y + (Math.random() - .5) * 18;
+      // the curve bends to one side, a little differently for each coin
+      const bend = (k % 2 ? 1 : -1) * (40 + Math.random() * 50) + 60, lift = 70 + Math.random() * 40;
+      const c1x = sx + dx * .25 + nx * bend, c1y = sy + dy * .25 + ny * bend - lift, c2x = to.x - dx * .2 + nx * bend * .4, c2y = to.y - dy * .2 + ny * bend * .4 - lift * .3;
+      const frames = [];
+      for (let i = 0; i <= 36; i++) {
+        const t = ease(i / 36), u = 1 - t;
+        const x = u * u * u * sx + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * to.x;
+        const y = u * u * u * sy + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * to.y;
+        const sc = i / 36 < .15 ? .4 + i / 36 / .15 * .6 : 1 - (i / 36 - .15) * .45;
+        frames.push({ transform: `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sc.toFixed(3)})`, opacity: i === 0 ? 0 : i / 36 > .9 ? (1 - i / 36) * 10 : 1 });
+      }
+      c.animate(frames, { duration: 1050 + k * 40, delay: k * 85, easing: "linear", fill: "both" }).onfinish = () => {
+        c.remove(); landed++;
+        if (landed < N) { pulse("take", 280); return; }
+        // the last one: the gauge takes it all in, with a soft ripple
+        pulse("bump", 700);
+        const r = document.createElement("div"); r.className = "coin-ripple"; document.body.appendChild(r);
+        r.animate([{ transform: `translate(${to.x}px,${to.y}px) scale(.6)`, opacity: .9 }, { transform: `translate(${to.x}px,${to.y}px) scale(3.2)`, opacity: 0 }], { duration: 650, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => r.remove();
+        try { navigator.vibrate && navigator.vibrate(10); } catch (e) {}
+      };
+    }
   } catch (e) {}
 }
 
@@ -6076,7 +6101,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025084525";
+const BUILD_ID = "20261025141856";
 let updToast = null;
 async function checkUpdate() {
   try {
