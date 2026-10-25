@@ -1466,6 +1466,91 @@ body.arrange .arr-open { display: none !important; }
 @keyframes svIn{from{transform:translateY(30px) scale(.96);opacity:0}to{transform:none;opacity:1}}
 @keyframes svOut{to{transform:translateY(24px);opacity:0}}
 @media (prefers-reduced-motion:reduce){.saved-card,.saved-card.out{animation-duration:.01s}}
+
+/* ===================== six "objects" ===================== */
+/* 2: punch cards for installments */
+.pc { border-radius: 16px; padding: 12px 14px; margin-top: 10px; background: color-mix(in srgb, hsl(var(--h) calc(var(--s) * .6) 50%) 14%, var(--surface)); border: 1px solid color-mix(in srgb, hsl(var(--h) var(--s) 45%) 22%, var(--line)); position: relative; }
+.pc:first-child { margin-top: 2px; }
+.pc::before, .pc::after { content: ""; position: absolute; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: var(--surface); border: 1px solid color-mix(in srgb, hsl(var(--h) var(--s) 45%) 22%, var(--line)); }
+.pc::before { inset-inline-start: -8px; clip-path: inset(0 0 0 50%); } .pc::after { inset-inline-end: -8px; clip-path: inset(0 50% 0 0); }
+[dir="rtl"] .pc::before, .pc::before { clip-path: inset(0 50% 0 0); } .pc::after { clip-path: inset(0 0 0 50%); }
+.pc-h { display: flex; align-items: center; gap: 10px; }
+.pc-h .ic { width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto; }
+.pc-n { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-a { font-weight: 700; white-space: nowrap; } .pc-a small { font-weight: 400; color: var(--muted); font-size: .74rem; }
+.pc-holes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 10px; }
+.pc-hole { width: 20px; height: 20px; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--ink) 28%, transparent); display: grid; place-items: center; font-size: .62rem; color: var(--muted); font-weight: 700; }
+.pc-hole.on { border: 0; background: color-mix(in srgb, #050408 80%, var(--surface)); box-shadow: inset 0 3px 5px rgba(0, 0, 0, .55), 0 1px 0 rgba(255, 255, 255, .5); color: transparent; }
+.pc-hole.next { border-style: solid; border-color: var(--brand); color: var(--brand); }
+.pc-hole.punch { animation: pcPunch .6s .3s cubic-bezier(.3, 1.6, .5, 1) backwards; }
+@keyframes pcPunch { 0% { transform: scale(1.5); box-shadow: inset 0 0 0 rgba(0,0,0,0), 0 0 0 6px color-mix(in srgb, var(--brand) 30%, transparent); background: var(--brand); } 100% { transform: scale(1); } }
+.pc.small .pc-hole { width: 15px; height: 15px; font-size: 0; } .pc.small .pc-holes { gap: 5px; }
+.pc-f { display: flex; justify-content: space-between; gap: 8px; font-size: .78rem; color: var(--muted); }
+.pc-f b { color: var(--ink); }
+/* 3: ticket stubs for fixed charges */
+.fx-list.tk { gap: 10px; }
+.tkt { display: grid; grid-template-columns: minmax(0, 1fr) 96px; border-radius: 14px; background: var(--bg); position: relative; min-height: 64px;
+  -webkit-mask: radial-gradient(circle 9px at calc(100% - 96px) 0, #0000 98%, #000) top/100% 51% no-repeat, radial-gradient(circle 9px at calc(100% - 96px) 100%, #0000 98%, #000) bottom/100% 51% no-repeat;
+          mask: radial-gradient(circle 9px at calc(100% - 96px) 0, #0000 98%, #000) top/100% 51% no-repeat, radial-gradient(circle 9px at calc(100% - 96px) 100%, #0000 98%, #000) bottom/100% 51% no-repeat; }
+[dir="rtl"] .tkt, .tkt { -webkit-mask: radial-gradient(circle 9px at 96px 0, #0000 98%, #000) top/100% 51% no-repeat, radial-gradient(circle 9px at 96px 100%, #0000 98%, #000) bottom/100% 51% no-repeat;
+          mask: radial-gradient(circle 9px at 96px 0, #0000 98%, #000) top/100% 51% no-repeat, radial-gradient(circle 9px at 96px 100%, #0000 98%, #000) bottom/100% 51% no-repeat; }
+.tk-main { display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-width: 0; }
+.tk-main .ic { width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto; }
+.tk-m { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tk-m bdi { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-m small { font-size: .74rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-tag { font-size: .66rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--muted); margin-inline-start: 4px; }
+.tk-stub { border-inline-start: 2px dashed color-mix(in srgb, var(--ink) 18%, transparent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px; position: relative; overflow: hidden; }
+.tk-stub b { font-size: .98rem; white-space: nowrap; }
+.tk-stamp { font-size: .66rem; font-weight: 800; letter-spacing: .04em; padding: 2px 7px; border: 2px solid currentColor; border-radius: 6px; transform: rotate(-12deg); white-space: nowrap; }
+.tkt.ok .tk-stamp { color: var(--good); } .tkt.warn .tk-stamp { color: var(--warn); } .tkt.bad .tk-stamp { color: var(--bad); }
+.tkt.late .tk-stamp { color: var(--bad); border-style: dashed; transform: none; }
+.tkt.wait .tk-stamp { color: var(--muted); border-style: dashed; transform: none; }
+.tkt.ok .tk-stamp, .tkt.warn .tk-stamp, .tkt.bad .tk-stamp { animation: tkStamp .45s cubic-bezier(.3, 1.7, .5, 1) backwards; }
+@keyframes tkStamp { from { transform: rotate(-12deg) scale(1.8); opacity: 0; } }
+.tkt.wait, .tkt.late { opacity: .92; }
+/* 5 + 6: paper objects in a sheet: payslip and receipt */
+.obj-bg { align-items: center; padding: 16px; }
+.obj-wrap { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; animation: objIn .4s cubic-bezier(.2, .9, .3, 1.15) both; max-height: 100%; overflow-y: auto; }
+@keyframes objIn { from { transform: translateY(40px) rotate(-2deg); opacity: 0; } }
+.paper { background: #fffdf8; color: #24222b; padding: 22px 20px 30px; position: relative; font-variant-numeric: tabular-nums; box-shadow: 0 24px 50px -20px rgba(0, 0, 0, .5);
+  --z: 9px; -webkit-mask: linear-gradient(#000 0 0) top/100% calc(100% - var(--z)) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/calc(2 * var(--z)) var(--z) repeat-x;
+  mask: linear-gradient(#000 0 0) top/100% calc(100% - var(--z)) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/calc(2 * var(--z)) var(--z) repeat-x; border-radius: 4px 4px 0 0; }
+.paper.both { -webkit-mask: conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top/calc(2 * var(--z)) var(--z) repeat-x, linear-gradient(#000 0 0) center/100% calc(100% - 2 * var(--z)) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/calc(2 * var(--z)) var(--z) repeat-x;
+  mask: conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top/calc(2 * var(--z)) var(--z) repeat-x, linear-gradient(#000 0 0) center/100% calc(100% - 2 * var(--z)) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/calc(2 * var(--z)) var(--z) repeat-x; border-radius: 0; padding-top: 30px; }
+.pp-head { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.pp-logo { font-weight: 800; letter-spacing: .06em; font-size: .8rem; color: #6c5fe0; }
+.pp-head h4 { margin: 2px 0 0; font-size: 1.15rem; }
+.pp-head small { color: #7d7987; font-size: .8rem; }
+.pp-rule { border: 0; border-top: 1.5px dashed #cfc9bd; margin: 14px 0; }
+.pp-row { display: flex; align-items: baseline; gap: 6px; font-size: .92rem; padding: 4px 0; }
+.pp-row span:first-child { white-space: nowrap; }
+.pp-row i { flex: 1; border-bottom: 1.5px dotted #cfc9bd; transform: translateY(-4px); min-width: 12px; }
+.pp-row b { white-space: nowrap; font-weight: 600; }
+.pp-row.minus b { color: #b33a32; } .pp-row.plus b { color: #13784f; }
+.pp-row.sub { font-size: .8rem; color: #7d7987; padding: 1px 0 1px 0; padding-inline-start: 14px; }
+.pp-row.sub i { border-bottom-style: dotted; opacity: .6; }
+.pp-total { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0 2px; border-top: 1.5px solid #24222b; border-bottom: 4px double #24222b; margin-top: 8px; }
+.pp-total span { font-weight: 700; } .pp-total b { font-size: 1.5rem; } .pp-total.neg b { color: #b33a32; }
+.pp-note { font-size: .78rem; color: #7d7987; margin-top: 12px; text-align: center; line-height: 1.5; }
+.pp-stamp { position: absolute; inset-inline-start: 18px; top: 16px; transform: rotate(-14deg); border: 2px solid currentColor; border-radius: 8px; padding: 2px 8px; font-size: .7rem; font-weight: 800; color: #13784f; opacity: .85; }
+.pp-stamp.neg { color: #b33a32; }
+.rc-big { text-align: center; padding: 6px 0 2px; } .rc-big b { font-size: 2rem; } .rc-big.in b { color: #13784f; }
+.rc-merch { text-align: center; font-size: 1.1rem; font-weight: 700; margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+.rc-merch .ic { width: 30px; height: 30px; border-radius: 9px; }
+.rc-code { height: 34px; margin: 16px 18px 0; background: repeating-linear-gradient(90deg, #24222b 0 2px, #0000 2px 4px, #24222b 4px 5px, #0000 5px 8px, #24222b 8px 11px, #0000 11px 13px); opacity: .85; }
+.rc-id { text-align: center; font-size: .66rem; letter-spacing: .3em; color: #7d7987; margin-top: 4px; direction: ltr; }
+.obj-btns { display: flex; gap: 8px; }
+.obj-btns button { flex: 1; border: 0; font: inherit; font-weight: 700; font-size: .92rem; padding: 12px; border-radius: 14px; cursor: pointer; background: var(--surface); color: var(--ink); }
+.obj-btns .ob-del { color: var(--bad); } .obj-btns .ob-del.sure { background: var(--bad); color: #fff; }
+.obj-btns .ob-main { background: var(--brand); color: #fff; }
+.money-cols.slip { cursor: pointer; position: relative; }
+.slip-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; border: 1px dashed color-mix(in srgb, var(--brand) 45%, transparent); background: color-mix(in srgb, var(--brand) 7%, transparent);
+  color: var(--brand); font: inherit; font-weight: 700; font-size: .86rem; padding: 9px 12px; border-radius: 12px; cursor: pointer; }
+.slip-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.slip-btn span { margin-inline-start: auto; font-size: 1.1rem; line-height: 1; }
+.slip-hint { font-size: .72rem; color: var(--brand); font-weight: 600; text-align: center; margin-top: 2px; }
+@media (prefers-reduced-motion: reduce) { .obj-wrap, .pc-hole.punch, .tk-stamp { animation: none !important; transition: none !important; } }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -1857,10 +1942,11 @@ function makeSupaAdapter(uid) {
     </div>
     <div class="today" id="todayBox" hidden></div>
     <div class="money" aria-label="לאן הולכת ההכנסה">
-      <div class="money-cols">
+      <div class="money-cols slip" id="slipOpen" role="button" tabindex="0" aria-label="פתיחת תלוש החודש">
         <div class="mc"><i class="md in"><svg viewBox="0 0 24 24"><path d="M12 4v13 M6 11l6 6 6-6 M5 20h14"/></svg></i><div><div class="k">נכנס</div><div class="v num" id="fIncome">—</div></div></div>
         <div class="mc"><i class="md vr"><svg viewBox="0 0 24 24"><path d="M12 17V4 M6 10l6-6 6 6 M5 20h14"/></svg></i><div><div class="k">יצא</div><div class="v num" id="fOut">—</div></div></div>
       </div>
+      <button type="button" class="slip-btn" id="slipBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3"/></svg>התלוש של החודש<span aria-hidden="true">‹</span></button>
       <div id="incomeArea"></div>
     </div>
   </section>
@@ -2135,6 +2221,7 @@ function makeSupaAdapter(uid) {
 </div>
 
 <div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcf5c" stroke="#e0a22a" stroke-width="1.5"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="800" fill="#8a5a00">₪</text></svg></div>
+<div class="sheet-bg obj-bg" id="objBg" hidden dir="rtl" lang="he" style="z-index:44"><div class="obj-wrap" id="objWrap"></div></div>
 <div class="saved-card" id="savedCard" dir="rtl" lang="he" role="status" hidden></div>
 <div class="undo-bar" id="undoBar" dir="rtl" lang="he" role="status" hidden><span id="undoTxt">התנועה נמחקה</span><button type="button" id="undoBtn">ביטול</button><i></i></div>
 <nav class="nav" dir="rtl" lang="he" aria-label="ניווט">
@@ -3255,11 +3342,7 @@ function renderInstallments() {
   card.classList.toggle("is-empty", empty);
   if (empty) { $("instLeft").textContent = ""; $("instList").innerHTML = `<p class="inst-empty">אין כרגע עסקאות בתשלומים. כשתוסיפו קנייה בתשלומים היא תופיע כאן, ובמסך הבית.</p>`; return; }
   $("instLeft").textContent = "נשאר " + fmt(rows.reduce((s, r) => s + r.left, 0));
-  $("instList").innerHTML = rows.map(r => `<div class="tx inst-row">${catIcon(r.t.category)}
-    <div class="m"><bdi dir="ltr" class="inst">(${r.cur}/${r.n})</bdi> <bdi>${esc(r.t.merchant)}</bdi></div>
-    <div class="a num">${fmt(r.per)}<small>נשארו ${fmt(r.left)}</small></div>
-    <div class="meta">${r.n - r.cur === 1 ? "תשלום אחרון ב" : "עוד " + (r.n - r.cur) + " תשלומים, אחרון ב"}${MONTHS[r.end.getMonth()]} ${r.end.getFullYear()}</div>
-    <div class="inst-bar"><i style="width:${(r.cur / r.n * 100).toFixed(1)}%"></i></div></div>`).join("");
+  $("instList").innerHTML = punchCards(rows);
 }
 
 function prevYM(y, m) { return m === 0 ? [y - 1, 11] : [y, m - 1]; }
@@ -3868,8 +3951,7 @@ function renderFixed(f, isCurrent) {
   const paid = items.filter(i => i.st === "ok" || i.st === "warn" || i.st === "bad").length;
   $("fixSide").textContent = paid + " מתוך " + items.length + " ירדו";
   const ic = { ok: "✓", warn: "!", bad: "!!", late: "⏰", wait: "⏳" };
-  $("fixList").innerHTML = items.map(i => `<div class="fxr ${i.st}"><span class="fx-ic" aria-hidden="true">${ic[i.st]}</span>${catIcon(i.cat, true)}
-    <div class="fx-m"><bdi>${esc(i.name)}</bdi> <span class="fx-tag">${esc(i.tag)}</span><small>${i.note}</small></div><span class="fx-a num">${fmt(i.done.length ? i.done.reduce((a, t) => a + t.amount, 0) : i.exp)}</span></div>`).join("");
+  $("fixList").classList.add("tk"); $("fixList").innerHTML = ticketRows(items);
 }
 
 /* 2: where the month is heading, and a slider to try a daily budget for the days left */
@@ -5007,7 +5089,7 @@ function showView(v) {
 }
 function setHeadH() { const h = $("monthBar"); if (h && !h.hidden) document.documentElement.style.setProperty("--head-h", h.offsetHeight + "px"); }
 window.addEventListener("resize", setHeadH);
-$("navHome").onclick = () => showView("flow");
+$("navHome").onclick = () => { homeTap = true; showView("flow"); };
 $("navTx").onclick = () => { if (filterCat || filterAcc) { filterCat = null; filterAcc = null; render(); } showView("tx"); };
 $("tabYear").onclick = () => showView("year");
 $("tabAna").onclick = () => showView("ana");
@@ -5368,7 +5450,10 @@ async function onTxListClick(e) {
   if (e.target.closest(".tx-acts")) return;
   if (swipeJustHappened) return;
   const row = e.target.closest(".tx-sw[data-k]"); if (!row) return;
-  openTx = openTx === row.dataset.k ? null : row.dataset.k; confirmTx = null; redrawLists();
+  // a tap opens the receipt; a row already slid open closes
+  if (openTx === row.dataset.k) { openTx = null; confirmTx = null; redrawLists(); return; }
+  if (openTx) { openTx = null; confirmTx = null; redrawLists(); }
+  openReceipt(row.dataset.k, row);
 }
 $("days").addEventListener("click", onTxListClick);
 /* swipe a row to the right to show edit / delete, to the left to close it */
@@ -5967,6 +6052,98 @@ function againAfterSave() {
   if (!addAgain) return; addAgain = false;
   setTimeout(() => { openAdd(); if (addAgainCard && PAY.includes(addAgainCard)) $("addCard").value = addAgainCard; toast("נשמר ✓ אפשר להוסיף את הבאה", 1800); setTimeout(() => $("addAmount").focus(), 80); }, 420);
 }
+/* ===================== six "objects" ===================== */
+const objBg = () => $("objBg");
+function openObj(html, cls) {
+  const w = $("objWrap"); w.innerHTML = html; w.className = "obj-wrap " + (cls || ""); objBg().hidden = false;
+  const f = w.querySelector("button"); if (f) setTimeout(() => f.focus({ preventScroll: true }), 50);
+}
+function closeObj() { objBg().hidden = true; $("objWrap").innerHTML = ""; }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !objBg().hidden) closeObj(); });
+objBg().addEventListener("click", e => { if (e.target === objBg() || e.target.closest("[data-oclose]")) closeObj(); });
+
+
+/* 2: punch cards for purchases still being paid off */
+const punched = new Set();
+function punchCards(rows) {
+  return rows.map(r => {
+    const [, hue, sat] = iconFor(r.t.category), key = r.t.merchant + "|" + r.n, fresh = !punched.has(key); punched.add(key);
+    const holes = Array.from({ length: r.n }, (_, i) => `<span class="pc-hole ${i < r.cur ? "on" : ""} ${i === r.cur ? "next" : ""} ${fresh && i === r.cur - 1 ? "punch" : ""}">${i + 1}</span>`).join("");
+    return `<div class="pc ${r.n > 12 ? "small" : ""}" style="--h:${hue};--s:${sat}%">
+      <div class="pc-h">${catIcon(r.t.category)}<span class="pc-n"><bdi>${esc(r.t.merchant)}</bdi></span><span class="pc-a num">${fmt(r.per)} <small>לחודש</small></span></div>
+      <div class="pc-holes" role="img" aria-label="שולמו ${r.cur} מתוך ${r.n} תשלומים">${holes}</div>
+      <div class="pc-f"><span>שולמו <b class="num">${r.cur}/${r.n}</b> · ${r.n - r.cur === 1 ? "אחרון ב" : "אחרון ב"}${MONTHS[r.end.getMonth()]} ${r.end.getFullYear()}</span><span>נשאר <b class="num">${fmt(r.left)}</b></span></div></div>`;
+  }).join("");
+}
+
+/* 3: fixed charges as tickets, stamped once they came off */
+function ticketRows(items) {
+  const stamp = { ok: "שולם", warn: "שולם", bad: "כפול", late: "באיחור", wait: "" };
+  return items.map(i => `<div class="tkt ${i.st}">
+    <div class="tk-main">${catIcon(i.cat, true)}<div class="tk-m"><span><bdi>${esc(i.name)}</bdi><span class="tk-tag">${esc(i.tag)}</span></span><small>${i.note}</small></div></div>
+    <div class="tk-stub"><b class="num">${fmt(i.done.length ? i.done.reduce((a, t) => a + t.amount, 0) : i.exp)}</b><span class="tk-stamp">${i.st === "wait" ? "צפוי " + dd(i.due) : stamp[i.st]}</span></div></div>`).join("");
+}
+
+
+/* 5: a payslip: what came in, what went out by kind, and what is left */
+function openPayslip() {
+  const c = vibeCtx; if (!c) return;
+  const f = c.f, sal = salaryFor(view.y, view.m, true), sum = a => a.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+  const inst = f.spend.filter(t => t.inst || t.gen), fix = f.spend.filter(t => !(t.inst || t.gen) && FIXED.has(t.category)), vr = f.spend.filter(t => !(t.inst || t.gen) && !FIXED.has(t.category));
+  const incomeTotal = (sal.missing ? 0 : sal.amount) + f.income, out = sum(f.spend), left = incomeTotal - out;
+  const top = list => { const m = new Map(); list.forEach(t => m.set(t.category, (m.get(t.category) || 0) + (t.refund ? -t.amount : t.amount))); return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3); };
+  const row = (k, v, cls) => `<div class="pp-row ${cls || ""}"><span>${k}</span><i></i><b class="num">${cls === "minus" ? "−" : ""}${fmt(Math.abs(v))}</b></div>`;
+  const subs = list => top(list).map(([k, v]) => `<div class="pp-row sub"><span>${esc(k)}</span><i></i><span class="num">${fmt(v)}</span></div>`).join("");
+  const others = f.inP.filter(t => t.income);
+  openObj(`<div class="paper" role="dialog" aria-modal="true" aria-label="תלוש החודש">
+    <span class="pp-stamp ${left < 0 ? "neg" : ""}">${left < 0 ? "במינוס" : c.isCurrent ? "בתוקף" : "סגור"}</span>
+    <div class="pp-head"><span class="pp-logo">iSpend</span><h4>תלוש ${MONTHS[view.m]} ${view.y}</h4><small>${typeof USER_NAME !== "undefined" && USER_NAME ? esc(USER_NAME) + " · " : ""}${dd(f.start)}–${dd(f.end)}</small></div>
+    <hr class="pp-rule">
+    ${row("משכורת" + (sal.est ? " (הערכה)" : ""), sal.missing ? 0 : sal.amount, "plus")}
+    ${others.length ? row("הכנסות נוספות", f.income, "plus") : ""}
+    <hr class="pp-rule">
+    ${fix.length ? row("חיובים קבועים", sum(fix), "minus") + subs(fix) : ""}
+    ${inst.length ? row("תשלומים", sum(inst), "minus") : ""}
+    ${vr.length ? row("הוצאות משתנות", sum(vr), "minus") + subs(vr) : ""}
+    <div class="pp-total ${left < 0 ? "neg" : ""}"><span>${left < 0 ? "חסר" : "נשאר לך"}</span><b class="num">${fmt(Math.abs(left))}</b></div>
+    ${c.goal ? `<div class="pp-note">יעד החיסכון: ${fmt(c.goal)} · ${left >= c.goal ? "בדרך ליעד ✓" : "חסרים " + fmt(c.goal - left) + " ליעד"}</div>` : ""}
+    <div class="pp-note">${c.isCurrent ? "התלוש מתעדכן עם כל הוצאה עד סוף החודש" : "סיכום סופי של החודש"}</div>
+  </div><div class="obj-btns"><button type="button" class="ob-main" data-oclose>סגירה</button></div>`);
+}
+
+/* 6: a transaction as a receipt */
+function openReceipt(k, sw) {
+  const t = txByKey(k); if (!t) return;
+  const pos = t.income || t.refund, id = (t.del && t.del.raw && t.del.raw[7]) || "";
+  const code = (id || (t.merchant + t.amount)).replace(/\D/g, "").slice(-10).padStart(10, "0");
+  openObj(`<div class="paper both" role="dialog" aria-modal="true" aria-label="קבלה: ${esc(t.merchant)}">
+    <div class="pp-head"><span class="pp-logo">iSpend</span><small>יום ${WEEKDAYS[t.date.getDay()]}, ${t.date.getDate()} ב${MONTHS[t.date.getMonth()]} ${t.date.getFullYear()}</small></div>
+    <div class="rc-merch">${catIcon(t.category)}<bdi>${esc(t.merchant)}</bdi></div>
+    <hr class="pp-rule">
+    <div class="pp-row"><span>קטגוריה</span><i></i><b>${esc(t.category)}</b></div>
+    <div class="pp-row"><span>${pos ? "נכנס ל" : "שולם ב"}</span><i></i><b><bdi>${esc(accOf(t))}</bdi></b></div>
+    ${t.inst ? `<div class="pp-row"><span>תשלום</span><i></i><b class="num">${t.inst.k} מתוך ${t.inst.n}</b></div>` : ""}
+    ${t.gen && t.total ? `<div class="pp-row"><span>סך העסקה</span><i></i><b class="num">${fmt(t.total)}</b></div>` : ""}
+    ${t.rawMerchant && t.rawMerchant !== t.merchant ? `<div class="pp-row sub"><span>כפי שהופיע</span><i></i><span><bdi>${esc(t.rawMerchant)}</bdi></span></div>` : ""}
+    ${isPendingTx(t) ? `<div class="pp-row sub"><span>ממתין לשליחה</span><i></i><span>☁</span></div>` : ""}
+    <hr class="pp-rule">
+    <div class="rc-big ${pos ? "in" : ""}"><small>${t.refund ? "זיכוי" : t.income ? "הכנסה" : "סה״כ"}</small><br><b class="num">${pos ? ltr("+" + fmt2(t.amount)) : fmt2(t.amount)}</b></div>
+    <div class="rc-code" aria-hidden="true"></div><div class="rc-id" aria-hidden="true">${code}</div>
+  </div>
+  <div class="obj-btns"><button type="button" class="ob-main" data-oedit>עריכה</button><button type="button" class="ob-del" data-odel>מחיקה</button><button type="button" data-oclose>סגירה</button></div>`);
+  const w = $("objWrap");
+  w.querySelector("[data-oedit]").onclick = () => { closeObj(); if (isPendingTx(t)) { toast("אפשר לערוך אחרי שההוצאה תישלח. אפשר למחוק ולהוסיף מחדש."); return; } openEdit(t); };
+  w.querySelector("[data-odel]").onclick = e => {
+    const b = e.currentTarget;
+    if (t.gen && !b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "למחוק הכול?"; return; }
+    closeObj(); const row = document.querySelector(`.tx-sw[data-k="${CSS.escape(k)}"]`) || sw; if (row) softDelete(k, row);
+  };
+}
+
+$("slipOpen").addEventListener("click", openPayslip);
+$("slipBtn").addEventListener("click", openPayslip);
+$("slipOpen").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPayslip(); } });
+
 // 8: after adding, a small card shows what was saved, with a few seconds to undo it
 let savedT = null;
 function hideSaved(now) {
@@ -6761,7 +6938,7 @@ async function openGaugeInfo(Y, M, fromYear) {
     })() : ""}`;
   const go = await askDialog({ kick: MONTHS[M] + " " + Y, title: fromYear ? "סיכום החודש" : "פירוט החודש", text: html,
     buttons: fromYear ? [{ label: "סגירה", value: null, cls: "ghost" }, { label: "לכל הפרטים של החודש", value: "go", cls: "plain" }] : [{ label: "סגירה", value: null, cls: "ghost" }] });
-  if (go === "go") { view = { y: Y, m: M }; showAll = false; showView("flow"); render(); }
+  if (go === "go") { view = { y: Y, m: M }; showAll = false; keepMonth = true; showView("flow"); render(); }
 }
 $("gaugeTap").addEventListener("click", openGaugeInfo);
 $("gaugeTap").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGaugeInfo(); } });
@@ -6872,6 +7049,20 @@ $("selBtn").onclick = () => setSelMode(!selMode);
 $("selOff").onclick = () => setSelMode(false);
 { const r3 = render; render = function () { const o = r3.apply(this, arguments); try { if (selMode) { document.querySelectorAll("#days .tx-sw[data-k]").forEach(r => r.classList.toggle("sel-on", selSet.has(r.dataset.k))); updSelBar(); } } catch (e) {} return o; }; }
 { const sv = showView; showView = function (v) { if (selMode && v !== "tx") setSelMode(false); return sv.apply(this, arguments); }; }
+// coming back to the home screen (from another screen, or tapping "בית" again) shows the current month,
+// unless the move itself asked for a month ("לכל הפרטים של החודש")
+let keepMonth = false, homeTap = false;
+{ const sv = showView; showView = function (v) {
+  let moved = false;
+  if ((v === "flow" || v === "home") && !keepMonth && (currentView !== "flow" || homeTap)) {
+    const [y, m] = curYM();
+    if (view.y !== y || view.m !== m) { view = { y, m }; showAll = false; moved = true; }
+  }
+  keepMonth = false; homeTap = false;
+  const r = sv.apply(this, arguments);
+  if (moved) { render(); try { scrollTo({ top: 0 }); } catch (e) {} }
+  return r;
+}; }
 const pickOne = (kick, title, items) => { $("askBtns").classList.add("chips"); return askDialog({ kick, title, text: "", buttons: [...items.map(c => ({ label: esc(c), value: c, cls: "ghost chip" })), { label: "ביטול", value: null, cls: "plain" }] }).finally(() => $("askBtns").classList.remove("chips")); };
 async function selApply(field) {
   const ts = selTxs(); if (!ts.length || !mcp) return;
@@ -7086,7 +7277,7 @@ function tourLift(el) {
 }
 const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
-  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. <b>לחיצה עליו</b> פותחת פירוט: משכורת, קבועות, משתנות והחזרים. מתחתיו: כמה אפשר להוציא היום." },
+  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. <b>לחיצה עליו</b> פותחת פירוט: משכורת, קבועות, משתנות והחזרים. מתחתיו: כמה אפשר להוציא היום. הכפתור <b>״התלוש של החודש״</b> מתחת פותח תלוש: מה נכנס, מה ירד לפי סוג, וכמה נשאר." },
   { t: "#fab", h: "הוספת הוצאה", b: "הכפתור הזה פותח את חלון ההוספה. לחיצה ארוכה עליו פותחת אותו ישר בהקשבה, כדי להוסיף בקול. בלי קליטה? ההוצאה נשמרת בטלפון ונשלחת כשהחיבור חוזר. ככה נראה החלון:" },
   { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים כאן, ומתחת מקלידים את הסכום. בטלפון יש מקשים גדולים משלנו, וכפתורים כמו ״+50״ שמוסיפים לסכום בלחיצה." },
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "לחיצה על הוצאה שכבר הוספתם ממלאת את כל הטופס בבת אחת." },
@@ -7096,9 +7287,9 @@ const TOUR = [
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. תקרה לכל קטגוריה (כמה מותר להוציא בחודש) קובעים בהגדרות, ליד הקטגוריה, וטבעת סביב העיגול מתמלאת. בכפתור ״תקרות״ משנים אותה רק לחודש מסוים." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כל אמצעי תשלום הוא כרטיס בארנק, עם הסכום שיצא ממנו החודש. לחיצה שולפת כרטיס, לחיצה נוספת הופכת אותו ומראה על מה הוצאת בו, ו'כל התנועות' מציג רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
-  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, לוח, השוואה, תחזית, קבועות ועוד." },
+  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, לוח, השוואה, תחזית, קבועות ועוד. חיובים קבועים מוצגים כ<b>כרטיסים</b> שמקבלים חותמת ״שולם״ כשהם יורדים, ועסקאות בתשלומים כ<b>כרטיסיית ניקובים</b>: חור לכל תשלום ששולם." },
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות לפי ימים, וליד כל יום סימון אם היה יקר או חסכוני מיום רגיל. <b>חיפוש</b> חכם כמו ״סופר מעל 200״, <b>סינון</b> לפי סוג, קטגוריה, כרטיס, סכום ותאריכים, ו<b>בחירה</b> של כמה תנועות כדי לשנות להן קטגוריה או למחוק יחד." },
-  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה או <b>החלקה ימינה</b>: עריכה או מחיקה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
+  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה פותחת את ה<b>קבלה</b> שלה, עם עריכה ומחיקה. <b>החלקה ימינה</b> מראה את הכפתורים ישר מהרשימה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה. לחיצה על חודש בגרף פותחת חלון עם הסיכום שלו. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
   { t: "#tabAdmin", h: "הגדרות", b: "כל ההגדרות מסודרות בקבוצות קצרות, וכל נושא נפתח במסך משלו. בואו נציץ." },
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "מאיזה חודש אתם באתר, כמה חודשים וכמה תנועות. למעלה משמאל, ״סיור באתר״ מראה את הסיור הזה שוב. מתחתיו חיפוש בהגדרות: ״תקרה״, ״כהה״, ״יום חיוב״." },
@@ -7184,7 +7375,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025230111";
+const BUILD_ID = "20261025234356";
 let updToast = null;
 async function checkUpdate() {
   try {
