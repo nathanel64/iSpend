@@ -5160,8 +5160,10 @@ function softDelete(k, sw) {
 async function commitDel() {
   const p = pendingDel; if (!p) return;
   pendingDel = null; clearTimeout(p.timer); $("undoBar").hidden = true;
-  await deleteTx(p.k, document.createElement("button"));
-  if (txByKey(p.k)) { redrawLists(); const bar = $("undoBar"); $("undoTxt").textContent = "המחיקה נכשלה: " + (txMsgText || "נסו שוב"); bar.classList.remove("run"); bar.hidden = false; setTimeout(() => { bar.hidden = true; }, 4000); }
+  // after a row is removed the next one takes its place (and its key), so the answer comes from the delete itself
+  txMsgText = "";
+  const ok = await deleteTx(p.k, document.createElement("button"));
+  if (!ok) { redrawLists(); const bar = $("undoBar"); $("undoTxt").textContent = "המחיקה נכשלה: " + (txMsgText || "נסו שוב"); bar.classList.remove("run"); bar.hidden = false; setTimeout(() => { bar.hidden = true; }, 4000); }
 }
 $("undoBtn").onclick = () => {
   const p = pendingDel; if (!p) return;
@@ -5173,14 +5175,14 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) commi
 window.addEventListener("pagehide", () => commitDel());
 
 async function deleteTx(k, btn) {
-  const t = txByKey(k); if (!t || !mcp) return;
+  const t = txByKey(k); if (!t || !mcp) return false;
   btn.disabled = true; btn.textContent = "מוחק…";
   const msg = text => { txMsgText = esc(text); btn.disabled = false; btn.textContent = "מחיקה"; document.querySelectorAll(".tx-msg").forEach(m => m.textContent = text); };
   try {
     // check the row still holds this transaction before deleting it (rows shift when the sheet changes)
     const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
     const now = trimRow(((res.payload && res.payload.values) || [[]])[0]);
-    if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) { msg("הגיליון השתנה. רעננו ונסו שוב."); return; }
+    if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) { msg("הגיליון השתנה. רעננו ונסו שוב."); return false; }
     const arr = arrOf(t.del.key);
     if (t.del.mode === "mark") {
       await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: t.del.mark, values: [["מחוק"]] });
@@ -5191,7 +5193,8 @@ async function deleteTx(k, btn) {
     }
     openTx = null; confirmTx = null; afterData();
     try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
-  } catch (err) { msg(writeError(err)); }
+    return true;
+  } catch (err) { msg(writeError(err)); return false; }
 }
 
 /* ---------- add entry ---------- */
@@ -6101,7 +6104,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025141856";
+const BUILD_ID = "20261025144332";
 let updToast = null;
 async function checkUpdate() {
   try {
