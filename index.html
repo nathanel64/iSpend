@@ -4364,14 +4364,29 @@ function renderSal() {
 }
 function flash(id, ok, text) { $(id).className = ok ? "ok" : "err"; $(id).textContent = text; }
 
+// a cap is saved by itself a moment after typing (no need for the save button)
+let capSaveT = null;
+async function saveCapDefaults() {
+  clearTimeout(capSaveT); capSaveT = null;
+  const def = { ...capsDef() }; let changed = false;
+  draftCats.forEach(c => { const n = c.orig; if (!n || c.cap == null) return; const v = +c.cap || 0, was = +def[n] || 0; if (v !== was) { changed = true; if (v > 0) def[n] = v; else delete def[n]; } });
+  if (!changed) return;
+  const next = JSON.parse(JSON.stringify(capsBy)); next[""] = def;
+  try { await saveCapsBy(next); flash("catMsg", true, "התקרות נשמרו ✓"); bubKey = ""; try { render(); } catch (e) {} }
+  catch (err) { flash("catMsg", false, writeError(err)); }
+}
 $("catList").addEventListener("input", e => {
   const i = +e.target.dataset.i; if (isNaN(i)) return;
+  if (e.target.dataset.f === "cap") {
+    const d = e.target.value.replace(/[^\d]/g, ""); draftCats[i].cap = d ? +d : 0; e.target.value = d ? withCommas(d) : ""; renderCapTotal();
+    clearTimeout(capSaveT); capSaveT = setTimeout(saveCapDefaults, 1200); $("catMsg").textContent = ""; return;
+  }
   adminDirty.cats = true;
   if (e.target.dataset.f === "fixed") draftCats[i].fixed = e.target.checked;
-  else if (e.target.dataset.f === "cap") { const d = e.target.value.replace(/[^\d]/g, ""); draftCats[i].cap = d ? +d : 0; e.target.value = d ? withCommas(d) : ""; renderCapTotal(); }
   else draftCats[i].name = e.target.value;
   $("catMsg").textContent = "";
 });
+$("catList").addEventListener("focusout", e => { if (e.target.dataset && e.target.dataset.f === "cap" && capSaveT) saveCapDefaults(); });
 $("catList").addEventListener("click", e => {
   const op = e.target.closest("[data-pick-open]"), pi = e.target.closest("[data-pick-icon]"), ph = e.target.closest("[data-pick-hue]"),
         pa = e.target.closest("[data-pick-auto]"), pc = e.target.closest("[data-pick-close]");
@@ -4947,6 +4962,15 @@ function scheduleBuild() { clearTimeout(buildTimer); buildTimer = setTimeout(aft
 let openTx = null, confirmTx = null;
 const arrOf = key => key === "manual" ? data.manual : key === "apple" ? data.apple : key === "bank" ? data.bank : data.hist[key.slice(5)];
 const txByKey = k => tx.find(t => txKey(t) === k);
+// the row of a transaction, as the sheet holds it now. An old monthly file is read whole: the server keeps
+// a copy of each read of those files for hours, and only the whole-file copy is renewed after a change.
+async function readRowOf(t) {
+  const whole = t.del.file !== SHEET_ID;
+  const range = whole ? (t.del.key === "bank" ? R_BANK : t.del.key === "apple" ? R_APPLE : R_MANUAL) : t.del.range;
+  const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range }, { cache: false });
+  const vals = (res.payload && res.payload.values) || [];
+  return (whole ? vals[t.del.index] : vals[0]) || [];
+}
 const trimRow = r => { const a = (r || []).map(x => String(x)); while (a.length && a[a.length - 1] === "") a.pop(); return a; };
 function redrawLists() { txMsgText = ""; render(); renderCatSheet(); }
 async function onTxListClick(e) {
@@ -5080,12 +5104,10 @@ async function moveTxDate(t, to) {
   else if (t.del.key === "bank") { range = "'_moneyman'!A" + (t.del.index + 2); values = [[String(nd.getDate()).padStart(2, "0") + "/" + String(nd.getMonth() + 1).padStart(2, "0") + "/" + nd.getFullYear()]]; }
   else { range = "'הוצאות יומיות'!D" + t.del.row; values = [["=DATE(" + nd.getFullYear() + "," + (nd.getMonth() + 1) + "," + nd.getDate() + ")"]]; }
   try {
-    const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
-    const now = trimRow(((res.payload && res.payload.values) || [[]])[0]);
+    const now = trimRow(await readRowOf(t));
     if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) { toast("הגיליון השתנה. רעננו ונסו שוב."); return false; }
     await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range, values });
-    const back = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
-    arrOf(t.del.key)[t.del.index] = ((back.payload && back.payload.values) || [[]])[0] || [];
+    arrOf(t.del.key)[t.del.index] = await readRowOf(t);
     afterData(); toast("הועבר ל" + dragDayLabel(to) + " ✓", 2200);
     try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
     return true;
@@ -5186,7 +5208,7 @@ async function commitDel() {
   // after a row is removed the next one takes its place (and its key), so the answer comes from the delete itself
   txMsgText = "";
   const ok = await deleteTx(p.k, document.createElement("button"));
-  if (!ok) { redrawLists(); const bar = $("undoBar"); $("undoTxt").textContent = "המחיקה נכשלה: " + (txMsgText || "נסו שוב"); bar.classList.remove("run"); bar.hidden = false; setTimeout(() => { bar.hidden = true; }, 4000); }
+  if (!ok) { const why = txMsgText; redrawLists(); const bar = $("undoBar"); $("undoTxt").textContent = "המחיקה נכשלה: " + (why || "נסו שוב"); bar.classList.remove("run"); bar.hidden = false; setTimeout(() => { bar.hidden = true; }, 7000); }
 }
 $("undoBtn").onclick = () => {
   const p = pendingDel; if (!p) return;
@@ -5198,13 +5220,12 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) commi
 window.addEventListener("pagehide", () => commitDel());
 
 async function deleteTx(k, btn) {
-  const t = txByKey(k); if (!t || !mcp) return false;
+  const t = txByKey(k); if (!t || !mcp) { txMsgText = "התנועה לא נמצאה. רעננו ונסו שוב."; return false; }
   btn.disabled = true; btn.textContent = "מוחק…";
   const msg = text => { txMsgText = esc(text); btn.disabled = false; btn.textContent = "מחיקה"; document.querySelectorAll(".tx-msg").forEach(m => m.textContent = text); };
   try {
     // check the row still holds this transaction before deleting it (rows shift when the sheet changes)
-    const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
-    const now = trimRow(((res.payload && res.payload.values) || [[]])[0]);
+    const now = trimRow(await readRowOf(t));
     if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) { msg("הגיליון השתנה. רעננו ונסו שוב."); return false; }
     const arr = arrOf(t.del.key);
     if (t.del.mode === "mark") {
@@ -5465,12 +5486,10 @@ async function saveEdit(t, amount, desc, date, cat, card, kind) {
   else if (t.del.key === "bank") { range = "'_moneyman'!A" + (t.del.index + 2) + ":E" + (t.del.index + 2); values = [[ddmm, kind === "inc" ? amount : -amount, desc, t.del.raw[3] || "", cat]]; }
   else { range = "'הוצאות יומיות'!D" + t.del.row + ":I" + t.del.row; values = [["=DATE(" + d.getFullYear() + "," + (d.getMonth() + 1) + "," + d.getDate() + ")", type, cat, desc, card, amount]]; }
   // same safety check as delete: the row must still hold this transaction
-  const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
-  const now = trimRow(((res.payload && res.payload.values) || [[]])[0]);
+  const now = trimRow(await readRowOf(t));
   if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) throw { code: "changed" };
   await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range, values });
-  const back = await mcp.callTool(SERVER, "get_values", { spreadsheetId: t.del.file, range: t.del.range }, { cache: false });
-  arrOf(t.del.key)[t.del.index] = ((back.payload && back.payload.values) || [[]])[0] || [];
+  arrOf(t.del.key)[t.del.index] = await readRowOf(t);
   // remember the viewer's choice for this business, so the next payment there is named and sorted the same way
   if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && (desc !== t.merchant || cat !== t.category)) {
     const next = { ...merchantRules, [t.rawMerchant]: { name: desc, cat } };
@@ -6127,7 +6146,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025163715";
+const BUILD_ID = "20261025170815";
 let updToast = null;
 async function checkUpdate() {
   try {
