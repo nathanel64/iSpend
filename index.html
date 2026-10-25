@@ -56,7 +56,12 @@ body {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
-@media (display-mode: standalone) { .wrap { padding-top: 22px !important; } header.top { padding-top: 22px !important; } }
+/* iPhone (and the app on the home screen): the top edge blurs whatever sits right under the clock,
+   so every screen starts lower and the sticky header keeps its text out of that strip */
+html.ios .wrap { padding-top: 30px !important; }
+html.ios header.top { padding-top: 30px !important; }
+html.ios.pwa .wrap { padding-top: 38px !important; }
+html.ios.pwa header.top { padding-top: 38px !important; }
 .wrap { max-width: 600px; margin: 0 auto; padding-block: 4px 48px; display: flex; flex-direction: column; gap: 18px; }
 .num { font-variant-numeric: tabular-nums; }
 button, select, input { font: inherit; color: inherit; }
@@ -1475,6 +1480,278 @@ body { margin: 0; }
 </div>
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* accounts and storage on Supabase. The page code talks to it through the same small set of calls it used with the sheet. */
+const SUPA_URL = "https://kgggpqoaporqkxcdngqn.supabase.co", SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2dwcW9hcG9ycWt4Y2RuZ3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjY5MDIsImV4cCI6MjEwODAwMjkwMn0.5VIFb-E28SroABOSisX4CYR2COEO1Bcfj2K_yx-wzJQ";
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); // stays signed in on this device
+let USER_NAME = "", PROFILE = null, SHEET_MODE = false, TOUR_PENDING = false, USER_ID = "", JUST_SIGNED_UP = false;
+// any user name (Hebrew too) becomes a technical e-mail address the login system accepts
+const emailOf = u => "u" + Array.from(new TextEncoder().encode(u.trim().toLowerCase())).map(b => b.toString(16).padStart(2, "0")).join("") + "@users.ispend.app";
+
+function showLogin() {
+  return new Promise(resolve => {
+    const g = id => document.getElementById(id);
+    let mode = "login";
+    const setMode = m => {
+      mode = m;
+      g("tabLogin").setAttribute("aria-pressed", m === "login"); g("tabSignup").setAttribute("aria-pressed", m === "signup");
+      g("nameField").hidden = m !== "signup"; g("authGo").textContent = m === "login" ? "כניסה" : "יצירת חשבון";
+      g("authPass").autocomplete = m === "login" ? "current-password" : "new-password"; g("authMsg").textContent = "";
+    };
+    g("tabLogin").onclick = () => setMode("login"); g("tabSignup").onclick = () => setMode("signup");
+    g("authBg").hidden = false;
+    g("authForm").onsubmit = async e => {
+      e.preventDefault();
+      const user = g("authUser").value.trim(), pass = g("authPass").value, name = g("authName").value.trim();
+      const msg = t => { g("authMsg").textContent = t; };
+      if (user.length < 2) return msg("שם משתמש של 2 תווים לפחות.");
+      if (pass.length < 6) return msg("סיסמה של 6 תווים לפחות.");
+      g("authGo").disabled = true; msg("");
+      try {
+        let res;
+        if (mode === "signup") JUST_SIGNED_UP = true;
+        if (mode === "signup") res = await sb.auth.signUp({ email: emailOf(user), password: pass, options: { data: { username: user, display_name: name || user } } });
+        else res = await sb.auth.signInWithPassword({ email: emailOf(user), password: pass });
+        if (res.error) {
+          const m = res.error.message || "";
+          msg(/already registered|already exists/i.test(m) ? "שם המשתמש הזה תפוס. נסו שם אחר."
+            : /invalid login|invalid credentials/i.test(m) ? "שם משתמש או סיסמה לא נכונים."
+            : /confirm/i.test(m) ? "צריך לכבות אימות מייל בהגדרות של Supabase."
+            : /database error/i.test(m) ? "שם המשתמש הזה תפוס. נסו שם אחר."
+            : "משהו השתבש: " + m);
+        } else if (!res.data.session) msg("החשבון נוצר, אבל צריך לכבות אימות מייל בהגדרות של Supabase.");
+        else { g("authBg").hidden = true; resolve(res.data.session); return; }
+      } catch (err) { msg("אין חיבור לאינטרנט. נסו שוב."); }
+      g("authGo").disabled = false;
+    };
+  });
+}
+
+async function startApp() {
+  // signed in before on this device: start right away from the stored session; the login library refreshes it in the background
+  let session = null;
+  try {
+    const ref = new URL(SUPA_URL).hostname.split(".")[0];
+    const stored = JSON.parse(localStorage.getItem("sb-" + ref + "-auth-token") || "null");
+    if (stored && stored.user && stored.user.id && stored.refresh_token) session = { user: stored.user };
+  } catch (e) {}
+  if (session) sb.auth.getSession().then(({ data }) => { if (!data.session) { location.reload(); } }).catch(() => {});
+  else { session = (await sb.auth.getSession()).data.session; if (!session) session = await showLogin(); }
+  const uid = session.user.id;
+  const pKey = "profile-" + uid;
+  let cachedProf = null; try { cachedProf = JSON.parse(localStorage.getItem(pKey) || "null"); } catch (e) {}
+  const freshProf = sb.from("profiles").select("*").eq("id", uid).single().then(({ data }) => {
+    if (data) { try { localStorage.setItem(pKey, JSON.stringify(data)); } catch (e) {} }
+    return data;
+  });
+  const prof = cachedProf || await freshProf;
+  PROFILE = prof || { settings: [] };
+  USER_NAME = (PROFILE.display_name || PROFILE.username || "").trim();
+  const payUrl = SUPA_URL + "/rest/v1/rpc/add_pay?apikey=" + SUPA_KEY;
+  // copy for real (and say so only when it worked); otherwise select the text so it can be copied by hand
+  const copy = async (txt, label) => {
+    const note = document.getElementById("payCopied");
+    if (!txt) { note.textContent = "המפתח עוד לא נטען. רעננו את הדף ונסו שוב."; return; }
+    try { await navigator.clipboard.writeText(txt); note.textContent = label + " הועתק."; return; } catch (e) {}
+    const t = document.createElement("textarea"); t.value = txt; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select(); t.setSelectionRange(0, txt.length);
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+    t.remove();
+    note.textContent = ok ? label + " הועתק." : "לא הצלחתי להעתיק. סמנו את המפתח בתיבה והעתיקו ידנית.";
+  };
+  document.getElementById("payTokShow").value = PROFILE.pay_token || "";
+  freshProf.then(p => { if (p && p.pay_token) { PROFILE.pay_token = p.pay_token; document.getElementById("payTokShow").value = p.pay_token; } }).catch(() => {});
+  document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
+  document.getElementById("whoAmI").textContent = "מחובר בתור " + (PROFILE.username || "");
+  document.getElementById("logoutBtn").onclick = async () => {
+    try { Object.keys(localStorage).filter(k => k.startsWith("c1:") || k.startsWith("profile-") || k.startsWith("sheetcfg-")).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    await sb.auth.signOut(); location.reload();
+  };
+  USER_ID = uid;
+  // linked account: read and write the owner's own Google Sheets through his Apps Script
+  const sh = PROFILE.sheet_api;
+  const box = document.getElementById("sheetBox");
+  if (sh || location.hash === "#sheet") box.hidden = false;
+  if (sh) { document.getElementById("sheetUrl").value = sh.url || ""; document.getElementById("sheetState").textContent = "מחובר לגיליונות שלך. כל הנתונים נקראים ונכתבים לשם."; }
+  document.getElementById("sheetSave").onclick = async () => {
+    const url = document.getElementById("sheetUrl").value.trim(), key = document.getElementById("sheetKey").value.trim(), m = document.getElementById("sheetMsg");
+    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url) || !key) { m.textContent = "צריך כתובת שמסתיימת ב-/exec ומפתח."; return; }
+    m.textContent = "בודק…";
+    try { await sheetCall(url, key, "config"); } catch (e) { m.textContent = "החיבור נכשל: " + (e.message || "בדקו את הכתובת והמפתח"); return; }
+    const { error } = await sb.from("profiles").update({ sheet_api: { url, key } }).eq("id", uid);
+    if (error) { m.textContent = "השמירה נכשלה."; return; }
+    location.reload();
+  };
+  document.getElementById("sheetOff").onclick = async () => { await sb.from("profiles").update({ sheet_api: null }).eq("id", uid); location.reload(); };
+  if (sh && sh.url && sh.key) {
+    try {
+      const cKey = "sheetcfg-" + uid;
+      let cfg = null; try { cfg = JSON.parse(localStorage.getItem(cKey) || "null"); } catch (e) {}
+      const freshCfg = sheetCall(sh.url, sh.key, "config").then(c => { try { localStorage.setItem(cKey, JSON.stringify(c)); } catch (e) {} return c; });
+      if (!cfg) cfg = await freshCfg; else freshCfg.catch(() => {});
+      HISTORY = cfg.history || []; FIRST_MONTH = cfg.first || FIRST_MONTH; SHEET_MODE = true; useOwnerRules();
+      document.getElementById("payBox").hidden = true;
+      try { render(); } catch (e) {}
+      return withCache(makeSheetAdapter(sh.url, sh.key), uid);
+    } catch (e) { document.getElementById("sheetState").textContent = "לא הצלחתי להתחבר לגיליונות: " + (e.message || ""); }
+  }
+  let tourDone = false; try { tourDone = localStorage.getItem("tourDone-" + uid) === "1"; } catch (e) {}
+  TOUR_PENDING = !tourDone && JUST_SIGNED_UP;
+  if (TOUR_PENDING) setTimeout(() => startTour(), 700);
+  try { render(); } catch (e) {}
+  return withCache(makeSupaAdapter(uid), uid);
+}
+
+/* show the last data saved on this device immediately, then replace it with fresh data as it arrives */
+function withCache(ad, ns) {
+  const key = input => "c1:" + ns + ":" + input.spreadsheetId + ":" + input.range;
+  return Object.assign({}, ad, {
+    watchTool(server, tool, input, handler, opts) {
+      if (tool === "get_values") {
+        try { const c = localStorage.getItem(key(input)); if (c) handler({ type: "data", result: { payload: JSON.parse(c), cached: true } }); } catch (e) {}
+      }
+      return ad.watchTool(server, tool, input, ev => {
+        if (ev.type === "data" && tool === "get_values") { try { localStorage.setItem(key(input), JSON.stringify(ev.result.payload)); } catch (e) {} }
+        handler(ev);
+      }, opts);
+    },
+    callTool(server, tool, input, o) {
+      return ad.callTool(server, tool, input, o).then(res => {
+        if (tool === "get_values" && input.range && !/!\w+\d+:\w+\d+$/.test(input.range)) { try { localStorage.setItem(key(input), JSON.stringify(res.payload)); } catch (e) {} }
+        return res;
+      });
+    }
+  });
+}
+
+async function sheetCall(url, key, fn, ...args) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ api: key, fn, args }) });
+  const j = await r.json();
+  if (j.error) throw { code: "tool_error", message: j.error };
+  return j.result;
+}
+function makeSheetAdapter(url, key) {
+  // reads that start together go to the server as one request
+  let queue = [], timer = null, noBatch = false;
+  const flush = async () => {
+    const q = queue; queue = []; timer = null;
+    if (noBatch || q.length === 1) { q.forEach(j => sheetCall(url, key, "getValues", j.id, j.range).then(j.ok, j.bad)); return; }
+    try {
+      const res = await sheetCall(url, key, "batchGet", q.map(j => [j.id, j.range]));
+      q.forEach((j, i) => res[i] && !res[i].error ? j.ok(res[i]) : j.bad({ code: "tool_error", message: res[i] && res[i].error }));
+    } catch (e) {
+      if (/לא מוכרת/.test(e.message || "")) { noBatch = true; q.forEach(j => sheetCall(url, key, "getValues", j.id, j.range).then(j.ok, j.bad)); }
+      else q.forEach(j => j.bad(e));
+    }
+  };
+  const getBatched = (id, range) => new Promise((ok, bad) => { queue.push({ id, range, ok, bad }); if (!timer) timer = setTimeout(flush, 40); });
+  const run = (tool, input) => {
+    if (tool === "get_values") return getBatched(input.spreadsheetId, input.range).then(p => ({ payload: p }));
+    if (tool === "update_values") return sheetCall(url, key, "updateValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
+    if (tool === "append_values") return sheetCall(url, key, "appendValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
+    if (tool === "update_spreadsheet") return input.requests.reduce((pr, q) => pr.then(() => sheetCall(url, key, "deleteRow", input.spreadsheetId, q.deleteDimension.range.sheetId, q.deleteDimension.range.startIndex)), Promise.resolve()).then(p => ({ payload: p }));
+    return Promise.reject({ code: "bad_request" });
+  };
+  return {
+    callTool: (server, tool, input) => run(tool, input),
+    watchTool: (server, tool, input, handler, opts) => {
+      const go = () => run(tool, input).then(result => handler({ type: "data", result }), error => handler({ type: "error", error }));
+      go(); const t = setInterval(go, (opts && opts.refetchInterval) || 3600000); return () => clearInterval(t);
+    },
+    invalidate: () => Promise.resolve()
+  };
+}
+
+function makeSupaAdapter(uid) {
+  const COL = s => s.split("").reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1;
+  const parse = a1 => {
+    const m = a1.match(/^'?(.*?)'?!([A-Z]+)(\d+)(?::([A-Z]+)(\d+)?)?$/);
+    return { tab: m[1], c0: COL(m[2]), r0: +m[3], c1: m[4] ? COL(m[4]) : COL(m[2]), r1: m[5] ? +m[5] : (m[4] ? Infinity : +m[3]) };
+  };
+  const trim = rows => {
+    const out = rows.map(r => { const a = (r || []).map(x => x == null ? "" : String(x)); let n = a.length; while (n && a[n - 1] === "") n--; return a.slice(0, n); });
+    let e = out.length; while (e && !out[e - 1].length) e--; return out.slice(0, e);
+  };
+  const fail = error => { throw { code: "tool_error", message: error && error.message }; };
+  let txRows = [];
+  const loadTx = async () => {
+    const { data, error } = await sb.from("tx").select("id,vals").order("id"); if (error) fail(error);
+    // rows emptied by a month deletion are removed for good here (emptying keeps rows in place while the writes run)
+    const empty = (data || []).filter(r => !(r.vals || []).some(x => String(x == null ? "" : x).trim()));
+    if (empty.length) { await Promise.all(empty.map(r => sb.from("tx").delete().eq("id", r.id))); }
+    txRows = (data || []).filter(r => !empty.includes(r));
+    // the year starts at the first transaction
+    txRows.forEach(r => { const d = String((r.vals || [])[0] || ""); const m = d.match(/^(\d{4})-(\d{2})/); if (m) FIRST_MONTH = Math.min(FIRST_MONTH, +m[1] * 12 + +m[2] - 1); });
+    return txRows;
+  };
+  const loadSettings = async () => {
+    const { data, error } = await sb.from("profiles").select("settings").eq("id", uid).single(); if (error) fail(error);
+    return Array.isArray(data.settings) ? data.settings : [];
+  };
+  let setQ = Promise.resolve();
+  const run = async (tool, input) => {
+    if (tool === "update_spreadsheet") {
+      // several rows: bottom first, so the indexes above stay right
+      for (const q of input.requests) {
+        const r = q.deleteDimension.range;
+        const row = txRows[r.startIndex - 1]; if (!row) fail({ message: "row" });
+        const { error } = await sb.from("tx").delete().eq("id", row.id); if (error) fail(error);
+        txRows.splice(r.startIndex - 1, 1);
+      }
+      return { payload: { ok: true } };
+    }
+    const p = parse(input.range);
+    if (tool === "get_values") {
+      if (p.tab === "עסקאות") { const rows = await loadTx(); return { payload: { values: trim(rows.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r.vals || []).slice(p.c0, p.c1 + 1))) } }; }
+      if (p.tab === "הגדרות") { const g = await loadSettings(); return { payload: { values: trim(g.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r || []).slice(p.c0, p.c1 + 1))) } }; }
+      return { payload: { values: [] } };
+    }
+    if (tool === "append_values") {
+      if (p.tab !== "עסקאות") fail({ message: "append" });
+      const { data, error } = await sb.from("tx").insert(input.values.map(v => ({ user_id: uid, vals: v.map(x => x == null ? "" : String(x)) }))).select("id,vals"); if (error) fail(error);
+      txRows.push(...(data || [])); return { payload: { ok: true } };
+    }
+    if (tool === "update_values") {
+      if (p.tab === "עסקאות") {
+        for (let i = 0; i < input.values.length; i++) {
+          const row = txRows[p.r0 - 2 + i]; if (!row) fail({ message: "row" });
+          const vals = (row.vals || []).slice(); input.values[i].forEach((v, j) => { while (vals.length <= p.c0 + j) vals.push(""); vals[p.c0 + j] = v == null ? "" : String(v); });
+          const { error } = await sb.from("tx").update({ vals }).eq("id", row.id); if (error) fail(error);
+          row.vals = vals;
+        }
+        return { payload: { ok: true } };
+      }
+      if (p.tab === "הגדרות") {
+        // one settings save at a time: each save reads the list, changes its cells and writes it all back,
+        // so two at once (e.g. the billing day and the order of the day) used to undo each other
+        const prev = setQ; let done; setQ = new Promise(r => done = r);
+        try { await prev; } catch (e) {}
+        try {
+        const g = await loadSettings();
+        input.values.forEach((rowVals, i) => {
+          const ri = p.r0 - 2 + i; while (g.length <= ri) g.push([]);
+          const r = (g[ri] || []).slice(); rowVals.forEach((v, j) => { while (r.length <= p.c0 + j) r.push(""); r[p.c0 + j] = v == null ? "" : String(v); }); g[ri] = r;
+        });
+        const { error } = await sb.from("profiles").update({ settings: trim(g) }).eq("id", uid); if (error) fail(error);
+        return { payload: { ok: true } };
+        } finally { done(); }
+      }
+      return { payload: { ok: true } };
+    }
+    fail({ message: tool });
+  };
+  return {
+    callTool: (server, tool, input) => run(tool, input),
+    watchTool: (server, tool, input, handler, opts) => {
+      const go = () => run(tool, input).then(result => handler({ type: "data", result }), error => handler({ type: "error", error }));
+      go(); const t = setInterval(go, Math.min((opts && opts.refetchInterval) || 3600000, 600000)); return () => clearInterval(t);
+    },
+    invalidate: () => Promise.resolve()
+  };
+}
+</script>
+<script>(function () { try { const h = document.documentElement, ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); if (ios) h.classList.add("ios"); if (navigator.standalone || matchMedia("(display-mode: standalone)").matches) h.classList.add("pwa"); } catch (e) {} })();</script>
 <div class="splash" id="splash" aria-hidden="true"><div class="sp-logo"><svg viewBox="0 0 64 64" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lgS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b4cf0"/><stop offset="1" stop-color="#9a52d6"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#lgS)"/><circle cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="6"/><circle class="sp-arc" cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" transform="rotate(-90 32 32)"/><g class="sp-coin"><circle cx="32" cy="14" r="3" fill="#ffd36e"/></g><path d="M24 37 L29.5 31.5 L33.5 35 L40 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M35.5 27 H40.5 V32" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="sp-name">iSpend</div></div>
 
 <div class="wrap" dir="rtl" lang="he">
@@ -1950,277 +2227,6 @@ body { margin: 0; }
   </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script>
-/* accounts and storage on Supabase. The page code talks to it through the same small set of calls it used with the sheet. */
-const SUPA_URL = "https://kgggpqoaporqkxcdngqn.supabase.co", SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2dwcW9hcG9ycWt4Y2RuZ3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjY5MDIsImV4cCI6MjEwODAwMjkwMn0.5VIFb-E28SroABOSisX4CYR2COEO1Bcfj2K_yx-wzJQ";
-const sb = supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); // stays signed in on this device
-let USER_NAME = "", PROFILE = null, SHEET_MODE = false, TOUR_PENDING = false, USER_ID = "", JUST_SIGNED_UP = false;
-// any user name (Hebrew too) becomes a technical e-mail address the login system accepts
-const emailOf = u => "u" + Array.from(new TextEncoder().encode(u.trim().toLowerCase())).map(b => b.toString(16).padStart(2, "0")).join("") + "@users.ispend.app";
-
-function showLogin() {
-  return new Promise(resolve => {
-    const g = id => document.getElementById(id);
-    let mode = "login";
-    const setMode = m => {
-      mode = m;
-      g("tabLogin").setAttribute("aria-pressed", m === "login"); g("tabSignup").setAttribute("aria-pressed", m === "signup");
-      g("nameField").hidden = m !== "signup"; g("authGo").textContent = m === "login" ? "כניסה" : "יצירת חשבון";
-      g("authPass").autocomplete = m === "login" ? "current-password" : "new-password"; g("authMsg").textContent = "";
-    };
-    g("tabLogin").onclick = () => setMode("login"); g("tabSignup").onclick = () => setMode("signup");
-    g("authBg").hidden = false;
-    g("authForm").onsubmit = async e => {
-      e.preventDefault();
-      const user = g("authUser").value.trim(), pass = g("authPass").value, name = g("authName").value.trim();
-      const msg = t => { g("authMsg").textContent = t; };
-      if (user.length < 2) return msg("שם משתמש של 2 תווים לפחות.");
-      if (pass.length < 6) return msg("סיסמה של 6 תווים לפחות.");
-      g("authGo").disabled = true; msg("");
-      try {
-        let res;
-        if (mode === "signup") JUST_SIGNED_UP = true;
-        if (mode === "signup") res = await sb.auth.signUp({ email: emailOf(user), password: pass, options: { data: { username: user, display_name: name || user } } });
-        else res = await sb.auth.signInWithPassword({ email: emailOf(user), password: pass });
-        if (res.error) {
-          const m = res.error.message || "";
-          msg(/already registered|already exists/i.test(m) ? "שם המשתמש הזה תפוס. נסו שם אחר."
-            : /invalid login|invalid credentials/i.test(m) ? "שם משתמש או סיסמה לא נכונים."
-            : /confirm/i.test(m) ? "צריך לכבות אימות מייל בהגדרות של Supabase."
-            : /database error/i.test(m) ? "שם המשתמש הזה תפוס. נסו שם אחר."
-            : "משהו השתבש: " + m);
-        } else if (!res.data.session) msg("החשבון נוצר, אבל צריך לכבות אימות מייל בהגדרות של Supabase.");
-        else { g("authBg").hidden = true; resolve(res.data.session); return; }
-      } catch (err) { msg("אין חיבור לאינטרנט. נסו שוב."); }
-      g("authGo").disabled = false;
-    };
-  });
-}
-
-async function startApp() {
-  // signed in before on this device: start right away from the stored session; the login library refreshes it in the background
-  let session = null;
-  try {
-    const ref = new URL(SUPA_URL).hostname.split(".")[0];
-    const stored = JSON.parse(localStorage.getItem("sb-" + ref + "-auth-token") || "null");
-    if (stored && stored.user && stored.user.id && stored.refresh_token) session = { user: stored.user };
-  } catch (e) {}
-  if (session) sb.auth.getSession().then(({ data }) => { if (!data.session) { location.reload(); } }).catch(() => {});
-  else { session = (await sb.auth.getSession()).data.session; if (!session) session = await showLogin(); }
-  const uid = session.user.id;
-  const pKey = "profile-" + uid;
-  let cachedProf = null; try { cachedProf = JSON.parse(localStorage.getItem(pKey) || "null"); } catch (e) {}
-  const freshProf = sb.from("profiles").select("*").eq("id", uid).single().then(({ data }) => {
-    if (data) { try { localStorage.setItem(pKey, JSON.stringify(data)); } catch (e) {} }
-    return data;
-  });
-  const prof = cachedProf || await freshProf;
-  PROFILE = prof || { settings: [] };
-  USER_NAME = (PROFILE.display_name || PROFILE.username || "").trim();
-  const payUrl = SUPA_URL + "/rest/v1/rpc/add_pay?apikey=" + SUPA_KEY;
-  // copy for real (and say so only when it worked); otherwise select the text so it can be copied by hand
-  const copy = async (txt, label) => {
-    const note = document.getElementById("payCopied");
-    if (!txt) { note.textContent = "המפתח עוד לא נטען. רעננו את הדף ונסו שוב."; return; }
-    try { await navigator.clipboard.writeText(txt); note.textContent = label + " הועתק."; return; } catch (e) {}
-    const t = document.createElement("textarea"); t.value = txt; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
-    document.body.appendChild(t); t.select(); t.setSelectionRange(0, txt.length);
-    let ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
-    t.remove();
-    note.textContent = ok ? label + " הועתק." : "לא הצלחתי להעתיק. סמנו את המפתח בתיבה והעתיקו ידנית.";
-  };
-  document.getElementById("payTokShow").value = PROFILE.pay_token || "";
-  freshProf.then(p => { if (p && p.pay_token) { PROFILE.pay_token = p.pay_token; document.getElementById("payTokShow").value = p.pay_token; } }).catch(() => {});
-  document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
-  document.getElementById("whoAmI").textContent = "מחובר בתור " + (PROFILE.username || "");
-  document.getElementById("logoutBtn").onclick = async () => {
-    try { Object.keys(localStorage).filter(k => k.startsWith("c1:") || k.startsWith("profile-") || k.startsWith("sheetcfg-")).forEach(k => localStorage.removeItem(k)); } catch (e) {}
-    await sb.auth.signOut(); location.reload();
-  };
-  USER_ID = uid;
-  // linked account: read and write the owner's own Google Sheets through his Apps Script
-  const sh = PROFILE.sheet_api;
-  const box = document.getElementById("sheetBox");
-  if (sh || location.hash === "#sheet") box.hidden = false;
-  if (sh) { document.getElementById("sheetUrl").value = sh.url || ""; document.getElementById("sheetState").textContent = "מחובר לגיליונות שלך. כל הנתונים נקראים ונכתבים לשם."; }
-  document.getElementById("sheetSave").onclick = async () => {
-    const url = document.getElementById("sheetUrl").value.trim(), key = document.getElementById("sheetKey").value.trim(), m = document.getElementById("sheetMsg");
-    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url) || !key) { m.textContent = "צריך כתובת שמסתיימת ב-/exec ומפתח."; return; }
-    m.textContent = "בודק…";
-    try { await sheetCall(url, key, "config"); } catch (e) { m.textContent = "החיבור נכשל: " + (e.message || "בדקו את הכתובת והמפתח"); return; }
-    const { error } = await sb.from("profiles").update({ sheet_api: { url, key } }).eq("id", uid);
-    if (error) { m.textContent = "השמירה נכשלה."; return; }
-    location.reload();
-  };
-  document.getElementById("sheetOff").onclick = async () => { await sb.from("profiles").update({ sheet_api: null }).eq("id", uid); location.reload(); };
-  if (sh && sh.url && sh.key) {
-    try {
-      const cKey = "sheetcfg-" + uid;
-      let cfg = null; try { cfg = JSON.parse(localStorage.getItem(cKey) || "null"); } catch (e) {}
-      const freshCfg = sheetCall(sh.url, sh.key, "config").then(c => { try { localStorage.setItem(cKey, JSON.stringify(c)); } catch (e) {} return c; });
-      if (!cfg) cfg = await freshCfg; else freshCfg.catch(() => {});
-      HISTORY = cfg.history || []; FIRST_MONTH = cfg.first || FIRST_MONTH; SHEET_MODE = true; useOwnerRules();
-      document.getElementById("payBox").hidden = true;
-      try { render(); } catch (e) {}
-      return withCache(makeSheetAdapter(sh.url, sh.key), uid);
-    } catch (e) { document.getElementById("sheetState").textContent = "לא הצלחתי להתחבר לגיליונות: " + (e.message || ""); }
-  }
-  let tourDone = false; try { tourDone = localStorage.getItem("tourDone-" + uid) === "1"; } catch (e) {}
-  TOUR_PENDING = !tourDone && JUST_SIGNED_UP;
-  if (TOUR_PENDING) setTimeout(() => startTour(), 700);
-  try { render(); } catch (e) {}
-  return withCache(makeSupaAdapter(uid), uid);
-}
-
-/* show the last data saved on this device immediately, then replace it with fresh data as it arrives */
-function withCache(ad, ns) {
-  const key = input => "c1:" + ns + ":" + input.spreadsheetId + ":" + input.range;
-  return Object.assign({}, ad, {
-    watchTool(server, tool, input, handler, opts) {
-      if (tool === "get_values") {
-        try { const c = localStorage.getItem(key(input)); if (c) handler({ type: "data", result: { payload: JSON.parse(c), cached: true } }); } catch (e) {}
-      }
-      return ad.watchTool(server, tool, input, ev => {
-        if (ev.type === "data" && tool === "get_values") { try { localStorage.setItem(key(input), JSON.stringify(ev.result.payload)); } catch (e) {} }
-        handler(ev);
-      }, opts);
-    },
-    callTool(server, tool, input, o) {
-      return ad.callTool(server, tool, input, o).then(res => {
-        if (tool === "get_values" && input.range && !/!\w+\d+:\w+\d+$/.test(input.range)) { try { localStorage.setItem(key(input), JSON.stringify(res.payload)); } catch (e) {} }
-        return res;
-      });
-    }
-  });
-}
-
-async function sheetCall(url, key, fn, ...args) {
-  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ api: key, fn, args }) });
-  const j = await r.json();
-  if (j.error) throw { code: "tool_error", message: j.error };
-  return j.result;
-}
-function makeSheetAdapter(url, key) {
-  // reads that start together go to the server as one request
-  let queue = [], timer = null, noBatch = false;
-  const flush = async () => {
-    const q = queue; queue = []; timer = null;
-    if (noBatch || q.length === 1) { q.forEach(j => sheetCall(url, key, "getValues", j.id, j.range).then(j.ok, j.bad)); return; }
-    try {
-      const res = await sheetCall(url, key, "batchGet", q.map(j => [j.id, j.range]));
-      q.forEach((j, i) => res[i] && !res[i].error ? j.ok(res[i]) : j.bad({ code: "tool_error", message: res[i] && res[i].error }));
-    } catch (e) {
-      if (/לא מוכרת/.test(e.message || "")) { noBatch = true; q.forEach(j => sheetCall(url, key, "getValues", j.id, j.range).then(j.ok, j.bad)); }
-      else q.forEach(j => j.bad(e));
-    }
-  };
-  const getBatched = (id, range) => new Promise((ok, bad) => { queue.push({ id, range, ok, bad }); if (!timer) timer = setTimeout(flush, 40); });
-  const run = (tool, input) => {
-    if (tool === "get_values") return getBatched(input.spreadsheetId, input.range).then(p => ({ payload: p }));
-    if (tool === "update_values") return sheetCall(url, key, "updateValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
-    if (tool === "append_values") return sheetCall(url, key, "appendValues", input.spreadsheetId, input.range, input.values).then(p => ({ payload: p }));
-    if (tool === "update_spreadsheet") return input.requests.reduce((pr, q) => pr.then(() => sheetCall(url, key, "deleteRow", input.spreadsheetId, q.deleteDimension.range.sheetId, q.deleteDimension.range.startIndex)), Promise.resolve()).then(p => ({ payload: p }));
-    return Promise.reject({ code: "bad_request" });
-  };
-  return {
-    callTool: (server, tool, input) => run(tool, input),
-    watchTool: (server, tool, input, handler, opts) => {
-      const go = () => run(tool, input).then(result => handler({ type: "data", result }), error => handler({ type: "error", error }));
-      go(); const t = setInterval(go, (opts && opts.refetchInterval) || 3600000); return () => clearInterval(t);
-    },
-    invalidate: () => Promise.resolve()
-  };
-}
-
-function makeSupaAdapter(uid) {
-  const COL = s => s.split("").reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1;
-  const parse = a1 => {
-    const m = a1.match(/^'?(.*?)'?!([A-Z]+)(\d+)(?::([A-Z]+)(\d+)?)?$/);
-    return { tab: m[1], c0: COL(m[2]), r0: +m[3], c1: m[4] ? COL(m[4]) : COL(m[2]), r1: m[5] ? +m[5] : (m[4] ? Infinity : +m[3]) };
-  };
-  const trim = rows => {
-    const out = rows.map(r => { const a = (r || []).map(x => x == null ? "" : String(x)); let n = a.length; while (n && a[n - 1] === "") n--; return a.slice(0, n); });
-    let e = out.length; while (e && !out[e - 1].length) e--; return out.slice(0, e);
-  };
-  const fail = error => { throw { code: "tool_error", message: error && error.message }; };
-  let txRows = [];
-  const loadTx = async () => {
-    const { data, error } = await sb.from("tx").select("id,vals").order("id"); if (error) fail(error);
-    // rows emptied by a month deletion are removed for good here (emptying keeps rows in place while the writes run)
-    const empty = (data || []).filter(r => !(r.vals || []).some(x => String(x == null ? "" : x).trim()));
-    if (empty.length) { await Promise.all(empty.map(r => sb.from("tx").delete().eq("id", r.id))); }
-    txRows = (data || []).filter(r => !empty.includes(r));
-    // the year starts at the first transaction
-    txRows.forEach(r => { const d = String((r.vals || [])[0] || ""); const m = d.match(/^(\d{4})-(\d{2})/); if (m) FIRST_MONTH = Math.min(FIRST_MONTH, +m[1] * 12 + +m[2] - 1); });
-    return txRows;
-  };
-  const loadSettings = async () => {
-    const { data, error } = await sb.from("profiles").select("settings").eq("id", uid).single(); if (error) fail(error);
-    return Array.isArray(data.settings) ? data.settings : [];
-  };
-  let setQ = Promise.resolve();
-  const run = async (tool, input) => {
-    if (tool === "update_spreadsheet") {
-      // several rows: bottom first, so the indexes above stay right
-      for (const q of input.requests) {
-        const r = q.deleteDimension.range;
-        const row = txRows[r.startIndex - 1]; if (!row) fail({ message: "row" });
-        const { error } = await sb.from("tx").delete().eq("id", row.id); if (error) fail(error);
-        txRows.splice(r.startIndex - 1, 1);
-      }
-      return { payload: { ok: true } };
-    }
-    const p = parse(input.range);
-    if (tool === "get_values") {
-      if (p.tab === "עסקאות") { const rows = await loadTx(); return { payload: { values: trim(rows.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r.vals || []).slice(p.c0, p.c1 + 1))) } }; }
-      if (p.tab === "הגדרות") { const g = await loadSettings(); return { payload: { values: trim(g.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r || []).slice(p.c0, p.c1 + 1))) } }; }
-      return { payload: { values: [] } };
-    }
-    if (tool === "append_values") {
-      if (p.tab !== "עסקאות") fail({ message: "append" });
-      const { data, error } = await sb.from("tx").insert(input.values.map(v => ({ user_id: uid, vals: v.map(x => x == null ? "" : String(x)) }))).select("id,vals"); if (error) fail(error);
-      txRows.push(...(data || [])); return { payload: { ok: true } };
-    }
-    if (tool === "update_values") {
-      if (p.tab === "עסקאות") {
-        for (let i = 0; i < input.values.length; i++) {
-          const row = txRows[p.r0 - 2 + i]; if (!row) fail({ message: "row" });
-          const vals = (row.vals || []).slice(); input.values[i].forEach((v, j) => { while (vals.length <= p.c0 + j) vals.push(""); vals[p.c0 + j] = v == null ? "" : String(v); });
-          const { error } = await sb.from("tx").update({ vals }).eq("id", row.id); if (error) fail(error);
-          row.vals = vals;
-        }
-        return { payload: { ok: true } };
-      }
-      if (p.tab === "הגדרות") {
-        // one settings save at a time: each save reads the list, changes its cells and writes it all back,
-        // so two at once (e.g. the billing day and the order of the day) used to undo each other
-        const prev = setQ; let done; setQ = new Promise(r => done = r);
-        try { await prev; } catch (e) {}
-        try {
-        const g = await loadSettings();
-        input.values.forEach((rowVals, i) => {
-          const ri = p.r0 - 2 + i; while (g.length <= ri) g.push([]);
-          const r = (g[ri] || []).slice(); rowVals.forEach((v, j) => { while (r.length <= p.c0 + j) r.push(""); r[p.c0 + j] = v == null ? "" : String(v); }); g[ri] = r;
-        });
-        const { error } = await sb.from("profiles").update({ settings: trim(g) }).eq("id", uid); if (error) fail(error);
-        return { payload: { ok: true } };
-        } finally { done(); }
-      }
-      return { payload: { ok: true } };
-    }
-    fail({ message: tool });
-  };
-  return {
-    callTool: (server, tool, input) => run(tool, input),
-    watchTool: (server, tool, input, handler, opts) => {
-      const go = () => run(tool, input).then(result => handler({ type: "data", result }), error => handler({ type: "error", error }));
-      go(); const t = setInterval(go, Math.min((opts && opts.refetchInterval) || 3600000, 600000)); return () => clearInterval(t);
-    },
-    invalidate: () => Promise.resolve()
-  };
-}
-</script>
 <script>
 const SHEET_ID = "1CwS8tTfMiKgwk-ke0ScWgYEYvABhqIQltITGK3d9Px8";
 const SERVER = "Google Sheets";
@@ -7016,7 +7022,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025210340";
+const BUILD_ID = "20261025211210";
 let updToast = null;
 async function checkUpdate() {
   try {
