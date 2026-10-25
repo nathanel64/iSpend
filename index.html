@@ -56,6 +56,8 @@ body {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+/* nothing may push the page sideways (a sliding page, a long name); clip keeps sticky headers working */
+html, body { overflow-x: clip; }
 /* iPhone (and the app on the home screen): the top edge blurs whatever sits right under the clock,
    so every screen starts lower and the sticky header keeps its text out of that strip */
 html.ios .wrap { padding-top: 30px !important; }
@@ -256,8 +258,8 @@ body.tx-select #fab { display: none; }
 .fl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .fl-chips button { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: 500 .84rem var(--font-body); cursor: pointer; }
 .fl-chips button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
-.fl-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.fl-two input { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 12px; font: inherit; color: var(--ink); }
+.fl-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.fl-two input { min-width: 0; width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 12px; font: inherit; color: var(--ink); }
 .fl-acts { display: flex; gap: 8px; margin-top: 16px; } .fl-acts .btn { flex: 1; padding: 12px; }
 .fl-sheet > * { flex-shrink: 0; }
 
@@ -270,6 +272,8 @@ body.tx-select #fab { display: none; }
 .gb-row span { flex: 1; } .gb-row small { color: var(--muted); font-size: .76rem; display: block; }
 .gb-row b { font-variant-numeric: tabular-nums; }
 .gb-row.sum { border-top: 2px solid var(--ink); border-bottom: 0; margin-top: 4px; font-size: 1rem; }
+.gb-top { margin-top: 12px; text-align: start; } .gb-tk { font-size: .78rem; color: var(--muted); margin-bottom: 2px; }
+.gb-top .gb-row .ic { flex: none; }
 .gb-row.sum b.pos { color: var(--good); } .gb-row.sum b.neg { color: var(--bad); }
 .gb-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--bg); margin: 4px 0 10px; }
 .gb-bar i { display: block; height: 100%; }
@@ -1202,7 +1206,8 @@ body.dragging .day-grp { transition: background .2s, box-shadow .2s; border-radi
 .vibe .chev { color: var(--muted); font-size: 1.1rem; }
 @keyframes vibeIn { from { opacity: 0; transform: translateY(-6px); } }
 /* the bottom bar: five even tabs; the + floats above it */
-.nav { grid-template-columns: repeat(5, 1fr) !important; }
+.nav { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+.nav button span, .nav button { min-width: 0; white-space: nowrap; }
 .nav > div:has(.fab) { position: absolute; inset-inline-end: max(14px, env(safe-area-inset-left, 0px)); bottom: calc(100% + 14px); }
 .nav .fab { margin: 0 !important; inset: auto !important; width: 58px !important; height: 58px !important; border-radius: 20px !important; }
 body { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 170px); }
@@ -3130,7 +3135,7 @@ function renderInstallments() {
   if (empty) { $("instLeft").textContent = ""; $("instList").innerHTML = `<p class="inst-empty">אין כרגע עסקאות בתשלומים. כשתוסיפו קנייה בתשלומים היא תופיע כאן, ובמסך הבית.</p>`; return; }
   $("instLeft").textContent = "נשאר " + fmt(rows.reduce((s, r) => s + r.left, 0));
   $("instList").innerHTML = rows.map(r => `<div class="tx inst-row">${catIcon(r.t.category)}
-    <div class="m"><bdi>${esc(r.t.merchant)}</bdi> <bdi dir="ltr" class="inst">(${r.cur}/${r.n})</bdi></div>
+    <div class="m"><bdi dir="ltr" class="inst">(${r.cur}/${r.n})</bdi> <bdi>${esc(r.t.merchant)}</bdi></div>
     <div class="a num">${fmt(r.per)}<small>נשארו ${fmt(r.left)}</small></div>
     <div class="meta">${r.n - r.cur === 1 ? "תשלום אחרון ב" : "עוד " + (r.n - r.cur) + " תשלומים, אחרון ב"}${MONTHS[r.end.getMonth()]} ${r.end.getFullYear()}</div>
     <div class="inst-bar"><i style="width:${(r.cur / r.n * 100).toFixed(1)}%"></i></div></div>`).join("");
@@ -4055,7 +4060,7 @@ function openCap(cat) {
 function setCapVal(v, fromCode) {
   v = Math.max(0, Math.round(+v || 0));
   const r = $("capRange"); if (v > +r.max) r.max = Math.ceil(v * 1.3 / 100) * 100;
-  r.value = v; if (fromCode || document.activeElement !== $("capAmt")) $("capAmt").value = v ? withCommas(String(v)) : "";
+  r.value = v; r.dataset.v = v; if (fromCode || document.activeElement !== $("capAmt")) $("capAmt").value = v ? withCommas(String(v)) : "";
   r.style.setProperty("--p", (v / r.max * 100).toFixed(1) + "%");
   const spent = +$("capBg").dataset.spent || 0, mt = $("capMeter"), pct = v ? spent / v * 100 : 0;
   mt.className = "cap-meter" + (!v ? " none" : pct >= 100 ? " over" : pct >= 80 ? " warn" : "");
@@ -4071,7 +4076,7 @@ $("capClose").onclick = closeCap; $("capCancel").onclick = closeCap;
 $("capBg").addEventListener("click", e => { if (e.target.id === "capBg") closeCap(); });
 $("capForm").addEventListener("submit", async e => {
   e.preventDefault(); if (!capCat) return;
-  const v = Math.round(+$("capRange").value || 0), k = mkey(view.y, view.m), cat = capCat;
+  const v = Math.round(+($("capRange").dataset.v != null ? $("capRange").dataset.v : $("capRange").value) || 0), k = mkey(view.y, view.m), cat = capCat;
   const next = JSON.parse(JSON.stringify(capsBy)); next[k] = next[k] || {};
   const def = capDefault(cat);
   if (!(capsBy[""] && capsBy[""][CAP_MARK])) next[""] = { ...capsDef() }; // keep today's defaults fixed from now on
@@ -4177,7 +4182,7 @@ function txRowHtml(t, withDate) {
   const open = k && openTx === k;
   const row = `<div class="tx ${t.del ? "can-del" : ""}" ${k ? `role="button" tabindex="0" aria-expanded="${open}"` : ""}>
     ${catIcon(t.category)}
-    <div class="m"><bdi>${esc(t.merchant)}</bdi>${t.inst ? ` <bdi dir="ltr" class="inst">(${t.inst.k}/${t.inst.n})</bdi>` : ""}</div>
+    <div class="m">${t.inst ? `<bdi dir="ltr" class="inst">(${t.inst.k}/${t.inst.n})</bdi> ` : ""}<bdi>${esc(t.merchant)}</bdi></div>
     <div class="a num ${pos ? "in" : ""}">${pos ? ltr("+" + fmt2(t.amount)) : fmt2(t.amount)}</div>
     <div class="meta">${isPendingTx(t) ? `<span class="pend" title="נשמר בטלפון, יישלח כשיהיה חיבור"><svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 01-.5-9.97A6 6 0 0118 9a4.5 4.5 0 01-.5 9z"/></svg>ממתין · </span>` : ""}<span class="${t.category === "לא מסווג" ? "uncat" : ""}">${esc(t.category)}</span>${withDate === true ? " · " + dd(t.date) : ""} · ${esc(t.account)}${t.gen ? " · מתוך " + fmt(t.total) : ""}</div>
   </div>`;
@@ -4976,10 +4981,10 @@ function renderMonthsChart(months) {
     g += `<text x="${cx}" y="${H - 9}" font-size="10.5" fill="${net >= 0 ? "var(--muted)" : "var(--bad)"}" text-anchor="middle" direction="ltr">${net >= 0 ? "+" : "−"}${Math.abs(Math.round(net / 100) / 10)}K</text>`;
     g += `<rect x="${cx - slot / 2}" y="${T}" width="${slot}" height="${H - T - B + 30}" fill="transparent" style="cursor:pointer" data-mo="${x.y * 12 + x.m}" data-tip="<b>${MONTHS[x.m]} ${x.y}</b><br>הכנסות ${fmt(x.income)}<br>הוצאות ${fmt(x.expense)}<br>${net >= 0 ? "נשאר" : "חסר"} ${fmt(Math.abs(net))}"/>`;
   });
-  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="הכנסות מול הוצאות לפי חודש">${g}</svg><p class="chart-hint">לחיצה על חודש פותחת אותו</p>`;
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="הכנסות מול הוצאות לפי חודש">${g}</svg><p class="chart-hint">לחיצה על חודש מציגה את הסיכום שלו</p>`;
   bindTips(box);
   // 9: a month of the chart opens that month
-  box.onclick = e => { const r = e.target.closest("[data-mo]"); if (!r) return; const k = +r.dataset.mo; view = { y: Math.floor(k / 12), m: k % 12 }; showAll = false; document.querySelectorAll(".tip-pop, .chart-tip").forEach(x => x.remove()); showView("flow"); render(); };
+  box.onclick = e => { const r = e.target.closest("[data-mo]"); if (!r) return; const k = +r.dataset.mo; try { tipOff(box); } catch (x) {} openGaugeInfo(Math.floor(k / 12), k % 12, true); };
 }
 
 function renderDonut(months) {
@@ -6522,7 +6527,7 @@ boot();
     const setCap = (v, fromCode) => {
       v = Math.max(0, Math.round(+v || 0)); const r = $("ceRange");
       if (v > +r.max) r.max = Math.ceil(v * 1.3 / 100) * 100;
-      r.value = v; r.style.setProperty("--p", (v / r.max * 100).toFixed(1) + "%");
+      r.value = v; r.dataset.v = v; r.style.setProperty("--p", (v / r.max * 100).toFixed(1) + "%");
       if (fromCode || document.activeElement !== $("ceCap")) $("ceCap").value = v ? withCommas(String(v)) : "";
     };
     function openCe(i) {
@@ -6559,7 +6564,7 @@ boot();
       if (draftCats.some((c, j) => j !== ce.i && c.name.trim() === name)) { $("ceMsg").textContent = "כבר יש קטגוריה בשם הזה."; return; }
       const c = ce.i == null ? { name: "", fixed: false, orig: "" } : draftCats[ce.i];
       const before = JSON.stringify(c);
-      c.name = name; c.fixed = $("ceFixed").checked; c.cap = Math.round(+$("ceRange").value || 0);
+      c.name = name; c.fixed = $("ceFixed").checked; c.cap = Math.round(+($("ceRange").dataset.v != null ? $("ceRange").dataset.v : $("ceRange").value) || 0);
       if (!ce.auto || ce.i != null) { c.icon = ce.icon; c.hue = ce.hue; }
       if (ce.i == null) draftCats.push(c);
       adminDirty.cats = true;
@@ -6580,9 +6585,10 @@ boot();
 })();
 
 /* 3: a tap on the gauge: where this month's money came from and where it went */
-function openGaugeInfo() {
-  const f = monthFigures(view.y, view.m), { start, end } = f, isCurrent = today >= start && today <= end, isFuture = today < start;
-  const sal = salaryFor(view.y, view.m, isCurrent || isFuture), goal = goalFor(view.y, view.m).amount || 0;
+async function openGaugeInfo(Y, M, fromYear) {
+  if (Y == null || typeof Y === "object") { Y = view.y; M = view.m; }
+  const f = monthFigures(Y, M), { start, end } = f, isCurrent = today >= start && today <= end, isFuture = today < start;
+  const sal = salaryFor(Y, M, isCurrent || isFuture), goal = goalFor(Y, M).amount || 0;
   const val = t => t.refund ? -t.amount : t.amount;
   const refunds = f.spend.filter(t => t.refund).reduce((a, t) => a + t.amount, 0);
   const fixedG = f.spend.filter(t => FIXED.has(t.category) && !t.refund).reduce((a, t) => a + t.amount, 0);
@@ -6598,8 +6604,15 @@ function openGaugeInfo() {
       ${row("var(--s2)", "הוצאות משתנות", "", varG)}
       ${refunds ? row("var(--s3)", "החזרים שקיבלת", "מקוזזים מההוצאות", -refunds) : ""}
       ${row("", left >= 0 ? "נשאר" : "חריגה", goal ? (left >= goal ? "עמדת ביעד החיסכון (" + fmt(goal) + ")" : "היעד: לחסוך " + fmt(goal)) : "", left, "sum")}
-    </div>`;
-  askDialog({ kick: MONTHS[view.m] + " " + view.y, title: "פירוט החודש", text: html, buttons: [{ label: "סגירה", value: null, cls: "ghost" }] });
+    </div>${fromYear ? (() => {
+      // from the year screen: the month's top categories as well
+      const m = new Map(); f.spend.forEach(t => m.set(t.category, (m.get(t.category) || 0) + val(t)));
+      const top = [...m.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 4);
+      return top.length ? `<div class="gb-top"><div class="gb-tk">הכי הרבה הלך על</div>${top.map(([c, v]) => `<div class="gb-row">${catIcon(c, true)}<span>${esc(c)}</span><b class="num">${fmt(v)}</b></div>`).join("")}</div>` : "";
+    })() : ""}`;
+  const go = await askDialog({ kick: MONTHS[M] + " " + Y, title: fromYear ? "סיכום החודש" : "פירוט החודש", text: html,
+    buttons: fromYear ? [{ label: "סגירה", value: null, cls: "ghost" }, { label: "לכל הפרטים של החודש", value: "go", cls: "plain" }] : [{ label: "סגירה", value: null, cls: "ghost" }] });
+  if (go === "go") { view = { y: Y, m: M }; showAll = false; showView("flow"); render(); }
 }
 $("gaugeTap").addEventListener("click", openGaugeInfo);
 $("gaugeTap").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGaugeInfo(); } });
@@ -6937,7 +6950,7 @@ const TOUR = [
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, לוח, השוואה, תחזית, קבועות ועוד." },
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות לפי ימים, וליד כל יום סימון אם היה יקר או חסכוני מיום רגיל. <b>חיפוש</b> חכם כמו ״סופר מעל 200״, <b>סינון</b> לפי סוג, קטגוריה, כרטיס, סכום ותאריכים, ו<b>בחירה</b> של כמה תנועות כדי לשנות להן קטגוריה או למחוק יחד." },
   { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה או <b>החלקה ימינה</b>: עריכה או מחיקה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
-  { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה. לחיצה על חודש בגרף פותחת אותו. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
+  { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה. לחיצה על חודש בגרף פותחת חלון עם הסיכום שלו. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
   { t: "#tabAdmin", h: "הגדרות", b: "כל ההגדרות מסודרות בקבוצות קצרות, וכל נושא נפתח במסך משלו. בואו נציץ." },
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "מאיזה חודש אתם באתר, כמה חודשים וכמה תנועות. למעלה משמאל, ״סיור באתר״ מראה את הסיור הזה שוב. מתחתיו חיפוש בהגדרות: ״תקרה״, ״כהה״, ״יום חיוב״." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת לכל חודש (עם הממוצע של 3 האחרונים), יום החיוב בכרטיס ומאיזה חודש האתר מתחיל. ב״חודשים״ מסתירים חודש או מוחקים אותו." },
@@ -7022,7 +7035,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025211210";
+const BUILD_ID = "20261025213822";
 let updToast = null;
 async function checkUpdate() {
   try {
