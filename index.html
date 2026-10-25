@@ -149,6 +149,97 @@ header.top {
 .cap-in span { color: var(--muted); font-size: .8rem; }
 .cap-total { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 2px; padding: 9px 12px; border-radius: 14px; background: var(--brand-soft); font-size: .84rem; color: var(--ink); }
 .cap-total[hidden] { display: none; }
+/* ---------- settings: a menu of groups, each subject on a page of its own ---------- */
+#setMenu { display: flex; flex-direction: column; }
+.set-prof { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, #5b4cf0, #9a52d6); color: #fff; border-radius: 22px; padding: 16px; margin: 4px 0 6px; box-shadow: 0 10px 26px rgba(75, 63, 214, .22); }
+.set-prof .av { width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,.22); display: grid; place-items: center; font-size: 1.45rem; font-weight: 700; flex: none; border: 2px solid rgba(255,255,255,.5); }
+.set-prof b { display: block; font-size: 1.08rem; }
+.set-prof small { opacity: .85; font-size: .78rem; }
+.set-prof .stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.set-prof .stats span { background: rgba(255,255,255,.16); border-radius: 999px; padding: 3px 9px; font-size: .72rem; font-weight: 600; }
+.set-gh { font-size: .76rem; font-weight: 700; color: var(--muted); margin: 16px 6px 6px; }
+.set-grp { background: var(--surface); border-radius: 18px; overflow: hidden; }
+.set-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; position: relative; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.set-row:active { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.set-row + .set-row::before { content: ""; position: absolute; top: 0; inset-inline-start: 58px; inset-inline-end: 0; height: 1px; background: var(--line); }
+.set-row[hidden] { display: none; }
+.set-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: none; background: hsl(var(--h) 70% 93%); color: hsl(var(--h) 55% 38%); }
+:root[data-theme="dark"] .set-ic { background: hsl(var(--h) 30% 22%); color: hsl(var(--h) 60% 72%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .set-ic { background: hsl(var(--h) 30% 22%); color: hsl(var(--h) 60% 72%); } }
+.set-ic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.set-rt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.set-rt b { font-weight: 600; font-size: .95rem; }
+.set-rt small { color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-chev { color: color-mix(in srgb, var(--muted) 60%, transparent); font-size: 1.25rem; line-height: 1; }
+.set-pill { font-size: .7rem; font-weight: 700; border-radius: 999px; padding: 2px 8px; flex: none; }
+.set-pill.on { color: var(--good); background: var(--good-soft); } .set-pill.off { color: var(--muted); background: var(--bg); }
+.set-row .theme-seg { flex: none; }
+.set-danger { border: 1.5px solid color-mix(in srgb, var(--bad) 30%, transparent); background: color-mix(in srgb, var(--bad) 4%, var(--surface)); }
+.set-danger .set-rt b { color: var(--bad); }
+.set-gh.bad { color: var(--bad); }
+.set-page { display: flex; flex-direction: column; gap: 12px; }
+.set-page[hidden] { display: none; }
+.set-page.in { animation: setIn .32s cubic-bezier(.2, .8, .2, 1); }
+#setMenu.in { animation: setBack .32s cubic-bezier(.2, .8, .2, 1); }
+@keyframes setIn { from { opacity: 0; transform: translateX(-28px); } }
+@keyframes setBack { from { opacity: 0; transform: translateX(28px); } }
+@media (prefers-reduced-motion: reduce) { .set-page.in, #setMenu.in { animation: none; } }
+.set-back { align-self: flex-start; border: 0; background: none; color: var(--brand); font: 600 .95rem var(--font-body); padding: 4px 0; cursor: pointer; }
+.set-ph { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: -4px; }
+.set-ph h2 { margin: 0; font-size: 1.45rem; font-weight: 700; font-family: var(--font-display); }
+.set-info-btn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 700 .85rem/1 var(--font-body); flex: none; cursor: pointer; }
+.set-info-btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.set-page .set-info { display: none !important; }
+.set-page.show-info .set-info { display: block !important; background: var(--brand-soft); color: var(--ink); border-radius: 12px; padding: 9px 12px !important; margin: 4px 0 !important; animation: setInfo .25s ease; }
+@keyframes setInfo { from { opacity: 0; transform: translateY(-4px); } }
+.set-page .card > h2.set-dup { display: none; }
+.set-page .fold-btn { display: none; }
+.set-page .card > h2.fold-h { pointer-events: none; }
+.set-page.flat > .card { background: none; box-shadow: none; padding: 0; border: 0; }
+.set-page details > summary { display: none; }
+.set-avg { display: flex; justify-content: space-between; align-items: baseline; background: var(--surface); border-radius: 16px; padding: 12px 16px; font-size: .86rem; }
+.set-avg b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.sal-more { border: 0; background: none; color: var(--brand); font: 600 .88rem var(--font-body); padding: 10px; width: 100%; cursor: pointer; }
+#salList.collapsed .sal-row:nth-child(n+4) { display: none; }
+/* categories: clean rows, each opens a small editor */
+.cat-rows { background: var(--surface); border-radius: 18px; overflow: hidden; }
+.cat-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; position: relative; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.cat-row + .cat-row::before { content: ""; position: absolute; top: 0; inset-inline-start: 62px; inset-inline-end: 0; height: 1px; background: var(--line); }
+.cat-row .nm { flex: 1; min-width: 0; font-weight: 600; font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-row .fx-tag { font-size: .66rem; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 999px; padding: 1px 7px; margin-inline-start: 6px; vertical-align: 2px; }
+.cat-row .cp { font-weight: 700; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.cat-row .cp.no { color: var(--muted); font-weight: 500; font-size: .8rem; }
+.cat-add { border: 1.5px dashed color-mix(in srgb, var(--muted) 40%, transparent); background: none; border-radius: 16px; padding: 12px; color: var(--brand); font: 600 .95rem var(--font-body); cursor: pointer; }
+.ce-sheet > * { flex-shrink: 0; }
+.ce-sheet { padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+.ce-top { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.ce-top .big { flex: none; }
+.ce-top .big .ic { width: 54px; height: 54px; border-radius: 17px; } .ce-top .big .ic svg { width: 26px; height: 26px; }
+.ce-lbl { font-size: .78rem; color: var(--muted); margin: 12px 0 6px; }
+.ce-icons { display: flex; gap: 6px; overflow-x: auto; padding: 3px; margin: 0 -3px; scrollbar-width: none; }
+.ce-icons::-webkit-scrollbar { display: none; }
+.ce-icons button { flex: none; width: 44px; height: 44px; border-radius: 13px; border: 0; background: var(--bg); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.ce-icons button.on { outline: 2px solid var(--brand); }
+.ce-icons svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.ce-icons button.on { background: hsl(var(--h, 240) 70% 93%); }
+.ce-hues { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ce-hues button { width: 26px; height: 26px; border-radius: 50%; border: 0; background: hsl(var(--h) 60% 55%); cursor: pointer; }
+.ce-hues button.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ce-tg { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 12px 14px; background: var(--bg); border-radius: 14px; cursor: pointer; }
+.ce-tg small { display: block; color: var(--muted); font-size: .76rem; }
+.ce-tg input { position: absolute; opacity: 0; pointer-events: none; }
+.ce-sw { width: 46px; height: 28px; border-radius: 14px; background: color-mix(in srgb, var(--muted) 35%, transparent); position: relative; flex: none; transition: background .2s; }
+.ce-sw::after { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: inset-inline-start .2s; }
+.ce-tg input:checked + .ce-sw { background: var(--brand); }
+.ce-tg input:checked + .ce-sw::after { inset-inline-start: 21px; }
+.ce-cap { display: flex; align-items: baseline; justify-content: center; gap: 6px; margin: 4px 0 2px; }
+.ce-cap span { color: var(--muted); font-size: 1.1rem; }
+.ce-cap input { border: 0; background: none; font: 700 2rem var(--font-display); color: var(--ink); width: 6.5ch; text-align: center; outline: none; font-variant-numeric: tabular-nums; }
+.ce-cap input::placeholder { color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.ce-hint { font-size: .76rem; color: var(--muted); text-align: center; margin: 6px 0 0; }
+.ce-del { border: 0; background: none; color: var(--bad); font: 600 .9rem var(--font-body); padding: 10px; width: 100%; cursor: pointer; }
+.ce-msg { min-height: 1.1em; font-size: .82rem; color: var(--bad); margin: 6px 0 0; text-align: center; }
+
 /* iPhone zooms into any field with text under 16px when it gets focus, and stays zoomed: fields get 16px there */
 @supports (-webkit-touch-callout: none) { .edit-row input[type="text"], .cap-in input, .field input, .field select, #startDay, #startMonth, .money-in input, .search input, #capAmt { font-size: 16px; } }
 .cap-total b { font-size: 1.02rem; color: var(--brand); font-variant-numeric: tabular-nums; }
@@ -684,10 +775,10 @@ header.top { gap: 10px; }
 .cap-amt { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
 .cap-amt span { font-size: 1.5rem; color: var(--muted); }
 .cap-amt input { border: 0; background: none; outline: none; text-align: center; font: 700 2.6rem/1.1 var(--font-display); color: var(--ink); width: 6.5em; letter-spacing: -.02em; }
-#capRange { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 6px; direction: rtl;
+#capRange, #ceRange { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 6px; direction: rtl;
   background: linear-gradient(to left, var(--brand) var(--p, 0%), color-mix(in srgb, var(--ink) 10%, transparent) var(--p, 0%)); margin: 6px 0 2px; }
-#capRange::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffe7a3, #ffcf5c 55%, #e3a429); box-shadow: 0 2px 8px rgba(120, 80, 0, .35), 0 0 0 3px #fff; }
-#capRange::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #ffcf5c; box-shadow: 0 2px 8px rgba(120, 80, 0, .35), 0 0 0 3px #fff; }
+#capRange::-webkit-slider-thumb, #ceRange::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffe7a3, #ffcf5c 55%, #e3a429); box-shadow: 0 2px 8px rgba(120, 80, 0, .35), 0 0 0 3px #fff; }
+#capRange::-moz-range-thumb, #ceRange::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #ffcf5c; box-shadow: 0 2px 8px rgba(120, 80, 0, .35), 0 0 0 3px #fff; }
 .cap-meter { height: 8px; border-radius: 5px; background: color-mix(in srgb, var(--ink) 8%, transparent); overflow: hidden; direction: rtl; margin-top: 8px; }
 .cap-meter i { display: block; height: 100%; border-radius: 5px; background: var(--good); transition: width .35s cubic-bezier(.3, .8, .3, 1), background .3s; }
 .cap-meter.warn i { background: var(--warn); } .cap-meter.over i { background: var(--bad); } .cap-meter.none i { width: 0 !important; }
@@ -1212,6 +1303,9 @@ body { margin: 0; }
 .tour-tip h3 { margin: 0; font-size: 1.15rem; }
 .tour-tip p { margin: 0; font-size: .92rem; line-height: 1.55; color: var(--muted); }
 .tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.tour-prog { flex: 1; min-width: 30px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.tour-prog i { display: block; height: 100%; border-radius: 3px; background: var(--brand); transition: width .35s; }
+.tour-n { font-size: .74rem; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
 .tour-dots { display: flex; gap: 5px; flex: 1; }
 .tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
 .tour-dots i.on { background: var(--brand); width: 18px; border-radius: 4px; }
@@ -4140,7 +4234,7 @@ function afterData() {
   render(); renderBankStatus(); renderCardMap();
   try { maybeWeekRecap(); } catch (e) { console.error(e); }
   try { renderYear(); renderCatSheet(); } catch (e) { console.error(e); }
-  try { if (currentView === "admin") renderMonths(); } catch (e) { console.error(e); }
+  try { if (currentView === "admin") { renderMonths(); renderSetMenu(); } } catch (e) { console.error(e); }
 }
 
 /* 5: expenses added without a connection wait on the phone (by their id in column H) and go out when it is back */
@@ -4339,6 +4433,7 @@ function renderCapTotal() {
 function renderAdminLists() {
   if (!adminDirty.cats) drawCatList();
   renderCapTotal();
+  try { if (window.drawCatRows) drawCatRows(); if (window.renderSetMenu) renderSetMenu(); } catch (e) {}
   if (!adminDirty.pay) {
     $("payList").innerHTML = draftPay.map((p, i) => i === 0 ? `<div class="edit-row pay bank-row">
       <input type="text" id="pay-0" value="${esc(p)}" aria-label="שם חשבון הבנק" data-i="0">
@@ -4361,6 +4456,7 @@ function renderSal() {
       <label class="money-in"><span aria-hidden="true">₪</span><input type="text" inputmode="decimal" autocomplete="off" id="sal-${k}" data-k="${k}" value="${salaries[k] != null ? withCommas(String(salaries[k])) : ""}" placeholder="0" aria-label="משכורת ${MONTHS[m]} ${y}"></label></div>`);
   }
   $("salList").innerHTML = rows.join("");
+  try { const m = $("salMore"); if (m) { const n = rows.length; m.hidden = n <= 3; m.textContent = $("salList").classList.contains("collapsed") ? `הצג את כל ${n} החודשים ⌄` : "הצג פחות ⌃"; } } catch (e) {}
 }
 function flash(id, ok, text) { $(id).className = ok ? "ok" : "err"; $(id).textContent = text; }
 
@@ -4609,11 +4705,12 @@ function showView(v) {
   if (v === "home") v = "flow";
   // leaving the transactions screen drops any category or card filter, so the next visit starts from everything
   if (currentView === "tx" && v !== "tx" && (filterCat || filterAcc)) { filterCat = null; filterAcc = null; showAll = false; openTx = null; render(); }
+  const wasAdmin = currentView === "admin";
   currentView = v;
   $("navHome").setAttribute("aria-pressed", v === "flow"); $("navTx").setAttribute("aria-pressed", v === "tx"); $("tabAna").setAttribute("aria-pressed", v === "ana"); $("anaView").hidden = v !== "ana"; $("tabYear").setAttribute("aria-pressed", v === "year"); $("tabAdmin").setAttribute("aria-pressed", v === "admin");
   $("flowView").hidden = v !== "flow"; $("txView").hidden = v !== "tx"; $("yearView").hidden = v !== "year"; $("adminView").hidden = v !== "admin";
   $("monthBar").hidden = v === "year" || v === "admin";
-  if (v === "admin") { if (!adminDirty.sal) renderSal(); renderAdminLists(); try { renderMonths(); } catch (e) {} }
+  if (v === "admin") { if (!adminDirty.sal) renderSal(); renderAdminLists(); try { renderMonths(); } catch (e) {} try { if (!wasAdmin) setGo(null, { quiet: true, keepScroll: true }); else renderSetMenu(); } catch (e) {} }
   if (v === "year") renderYear();
   window.scrollTo(0, 0);
   if (v === "ana") { try { render(); } catch (e) {} }
@@ -6025,6 +6122,266 @@ document.querySelectorAll(".card > h2").forEach(h => {
 
 render();
 boot();
+
+/* ---------- settings: a menu of groups, each subject opens on a page of its own ---------- */
+(function settings2() {
+  const av = $("adminView"); if (!av) return;
+  const SI = {
+    money: "M3 7h18v10H3z M7 12h.01 M17 12h.01 M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z",
+    grid: "M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z",
+    tag: "M3 12l9-9h8v8l-9 9z M15.5 8.5h.01",
+    card: "M3 6h18v12H3z M3 10h18 M7 15h4",
+    wallet: "M4 7h15v12H4z M4 7l11-3v3 M16 13h.01",
+    apple: "M12 7c1-2 3-3 4-3-1 2-2 3-4 3z M8 8c2-1 3 0 4 0s2-1 4 0c2 1 2 4 1 7s-2 5-3 5-2-1-2-1-1 1-2 1-2-2-3-5-1-6 1-7z",
+    bank: "M3 10l9-6 9 6 M5 10v8 M9 10v8 M15 10v8 M19 10v8 M3 20h18",
+    bolt: "M13 3L5 14h6l-1 7 8-11h-6z",
+    sheet: "M5 3h10l4 4v14H5z M8 12h8 M8 16h8 M12 9v10",
+    moon: "M20 14A8 8 0 0110 4a8 8 0 1010 10z",
+    out: "M15 4h4v16h-4 M10 8l-4 4 4 4 M6 12h10",
+    unlink: "M10 14l-1 1a3 3 0 01-4-4l2-2 M14 10l1-1a3 3 0 014 4l-2 2 M4 4l16 16",
+    trash: "M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13"
+  };
+  const ico = (k, h) => `<span class="set-ic" style="--h:${h}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${SI[k]}"/></svg></span>`;
+  const byH2 = t => [...av.querySelectorAll("section.card")].find(s => { const h = s.querySelector("h2"); return h && h.textContent.trim().startsWith(t); });
+  const el = (html) => { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstElementChild; };
+
+  // the pages, made of the cards that were here before (their ids and handlers stay as they were)
+  const billing = byH2("מועד החיוב"), sal = byH2("משכורת"), cats = byH2("קטגוריות"), pay = byH2("אמצעי תשלום"), wallet = byH2("כרטיסים מהארנק"),
+        look = byH2("מראה"), quick = $("quickAddCard"), months = $("monthsCard"), bank = $("bankBox"), sheet = $("sheetBox"),
+        apple = $("payBox") || [...av.querySelectorAll("details")].find(d => /Apple Pay/.test(d.querySelector("summary") ? d.querySelector("summary").textContent : "")),
+        account = $("logoutBtn") ? $("logoutBtn").closest("section") : null;
+  const PAGES = [
+    { id: "sal", title: "משכורות ומועד החיוב", parts: [sal, billing], info: true },
+    { id: "months", title: "חודשים", parts: [months], info: true },
+    { id: "cats", title: "קטגוריות ותקרות", parts: [cats], info: true, flat: true },
+    { id: "pay", title: "אמצעי תשלום", parts: [pay], info: false },
+    { id: "wallet", title: "כרטיסים מהארנק", parts: [wallet], info: true },
+    { id: "apple", title: "Apple Pay", parts: [apple], info: false },
+    { id: "bank", title: "בנק ואשראי", parts: [bank], info: false },
+    { id: "sheet", title: "Google Sheets", parts: [sheet], info: false },
+    { id: "quick", title: "הוספה מהירה", parts: [quick], info: false }
+  ];
+  const pages = {};
+  PAGES.forEach(P => {
+    const parts = P.parts.filter(Boolean); if (!parts.length) return;
+    const pg = el(`<div class="set-page" data-page="${P.id}" hidden><button type="button" class="set-back">› הגדרות</button>
+      <div class="set-ph"><h2>${P.title}</h2>${P.info ? `<button type="button" class="set-info-btn" aria-pressed="false" aria-label="הסבר">i</button>` : ""}</div></div>`);
+    av.appendChild(pg);
+    parts.forEach(p => {
+      pg.appendChild(p);
+      if (p.tagName === "DETAILS") { p.open = true; p.classList.add("card"); }
+      const h = p.querySelector(":scope > h2"); if (h && parts.length === 1) h.classList.add("set-dup");
+      if (P.info) p.querySelectorAll("p.note:not([id])").forEach(n => n.classList.add("set-info"));
+    });
+    if (P.flat) pg.classList.add("flat");
+    pages[P.id] = { pg, parts };
+  });
+  if (look) look.hidden = true;
+  if (account) account.hidden = true;
+  // the salaries: an average on top, and only the last three months until asked for more
+  if (pages.sal) {
+    pages.sal.pg.insertBefore(el(`<div class="set-avg" id="salAvg"><span>ממוצע 3 החודשים האחרונים</span><b class="num" id="salAvgV">—</b></div>`), pages.sal.pg.querySelector(".set-ph").nextSibling);
+    const list = $("salList"); list.classList.add("collapsed");
+    const more = el(`<button type="button" class="sal-more" id="salMore"></button>`); list.after(more);
+    more.onclick = () => { list.classList.toggle("collapsed"); setSalMore(); };
+  }
+  function setSalMore() {
+    const list = $("salList"), m = $("salMore"); if (!list || !m) return;
+    const n = list.querySelectorAll(".sal-row").length;
+    m.hidden = n <= 3; m.textContent = list.classList.contains("collapsed") ? `הצג את כל ${n} החודשים ⌄` : "הצג פחות ⌃";
+  }
+
+  // the menu
+  const menu = el(`<div id="setMenu">
+    <div class="set-prof" id="setProf"></div>
+    <div class="set-gh">הכסף שלי</div>
+    <div class="set-grp" data-g="money">
+      <button type="button" class="set-row" data-go="sal">${ico("money", 150)}<span class="set-rt"><b>משכורות ומועד החיוב</b><small data-s="sal"></small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="months">${ico("grid", 200)}<span class="set-rt"><b>חודשים</b><small data-s="months"></small></span><span class="set-chev">‹</span></button>
+    </div>
+    <div class="set-gh">סידור</div>
+    <div class="set-grp" data-g="org">
+      <button type="button" class="set-row" data-go="cats">${ico("tag", 330)}<span class="set-rt"><b>קטגוריות ותקרות</b><small data-s="cats"></small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="pay">${ico("card", 210)}<span class="set-rt"><b>אמצעי תשלום</b><small data-s="pay"></small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="wallet">${ico("wallet", 45)}<span class="set-rt"><b>כרטיסים מהארנק</b><small data-s="wallet"></small></span><span class="set-chev">‹</span></button>
+    </div>
+    <div class="set-gh" data-gh="links">חיבורים</div>
+    <div class="set-grp" data-g="links">
+      <button type="button" class="set-row" data-go="apple">${ico("apple", 0)}<span class="set-rt"><b>Apple Pay</b><small>כל תשלום באייפון נכנס לבד</small></span><span class="set-pill" data-p="apple" hidden></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="bank">${ico("bank", 160)}<span class="set-rt"><b>בנק ואשראי</b><small>משיכה אוטומטית של התנועות</small></span><span class="set-pill" data-p="bank"></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="sheet">${ico("sheet", 140)}<span class="set-rt"><b>Google Sheets</b><small>הנתונים נשמרים בגיליונות שלך</small></span><span class="set-pill" data-p="sheet"></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="quick">${ico("bolt", 45)}<span class="set-rt"><b>הוספה מהירה</b><small>קיצור מהמסך הראשי של הטלפון</small></span><span class="set-chev">‹</span></button>
+    </div>
+    <div class="set-gh">החשבון</div>
+    <div class="set-grp" data-g="me">
+      <div class="set-row" style="cursor:default">${ico("moon", 250)}<span class="set-rt"><b>מראה</b></span><span id="setLook"></span></div>
+    </div>
+    <div class="set-gh bad" data-gh="danger">אזור זהירות</div>
+    <div class="set-grp set-danger" data-g="danger">
+      <button type="button" class="set-row" data-go="months">${ico("trash", 0)}<span class="set-rt"><b>מחיקת חודשים</b><small>הסתרה, או מחיקה לצמיתות אחרי אישור</small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-act="unsheet" hidden>${ico("unlink", 0)}<span class="set-rt"><b>ניתוק הגיליון</b><small>האתר יפסיק לקרוא מהגיליונות שלך</small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-act="logout" hidden>${ico("out", 0)}<span class="set-rt"><b>התנתקות</b><small data-s="who"></small></span><span class="set-chev">‹</span></button>
+    </div>
+  </div>`);
+  const first = av.querySelector(".set-page"); av.insertBefore(menu, first);
+  if (look) { const seg = look.querySelector(".theme-seg"); if (seg) $("setLook").appendChild(seg); }
+
+  let curPage = null;
+  window.setGo = function (id, opts = {}) {
+    const P = id && pages[id];
+    Object.values(pages).forEach(x => { x.pg.hidden = true; x.pg.classList.remove("in", "show-info"); const b = x.pg.querySelector(".set-info-btn"); if (b) b.setAttribute("aria-pressed", "false"); });
+    menu.hidden = !!P; curPage = P ? id : null;
+    const node = P ? P.pg : menu;
+    if (!opts.quiet) { node.classList.remove("in"); void node.offsetWidth; node.classList.add("in"); }
+    if (P) { P.parts.forEach(x => x.classList.remove("collapsed")); P.pg.hidden = false; if (id === "months") try { renderMonths(); } catch (e) {} if (id === "cats") drawCatRows(); if (id === "sal") setSalMore(); }
+    else renderSetMenu();
+    if (!opts.keepScroll) window.scrollTo(0, 0);
+  };
+  menu.addEventListener("click", async e => {
+    const r = e.target.closest(".set-row"); if (!r) return;
+    if (r.dataset.go) return setGo(r.dataset.go);
+    if (r.dataset.act === "logout") {
+      const ok = await askDialog({ kick: "החשבון", title: "להתנתק?", text: "אפשר להתחבר שוב בכל רגע עם שם המשתמש והסיסמה.", buttons: [{ label: "כן, להתנתק", value: 1, cls: "danger" }, { label: "ביטול", value: null, cls: "ghost" }] });
+      if (ok) $("logoutBtn").click();
+    }
+    if (r.dataset.act === "unsheet") {
+      const ok = await askDialog({ kick: "Google Sheets", title: "לנתק את הגיליון?", text: "האתר יפסיק לקרוא ולכתוב לגיליונות שלך. הנתונים בגיליונות עצמם לא נמחקים.", buttons: [{ label: "כן, לנתק", value: 1, cls: "danger" }, { label: "ביטול", value: null, cls: "ghost" }] });
+      if (ok) $("sheetOff").click();
+    }
+  });
+  av.addEventListener("click", e => {
+    if (e.target.closest(".set-back")) { setGo(null); return; }
+    const ib = e.target.closest(".set-info-btn");
+    if (ib) { const pg = ib.closest(".set-page"), on = !pg.classList.contains("show-info"); pg.classList.toggle("show-info", on); ib.setAttribute("aria-pressed", on); }
+  });
+
+  // the short line under each subject
+  window.renderSetMenu = function () {
+    if (menu.hidden) return;
+    const [cy, cm] = curYM(), ck = cy * 12 + cm, s = (k, t) => { const x = menu.querySelector(`[data-s="${k}"]`); if (x) x.textContent = t; };
+    const name = (typeof USER_NAME !== "undefined" && USER_NAME) || "נתנאל";
+    const user = typeof PROFILE !== "undefined" && PROFILE && PROFILE.username ? "@" + PROFILE.username : "";
+    const linked = typeof SHEET_MODE !== "undefined" ? SHEET_MODE : true;
+    const nMonths = Math.max(1, ck - FIRST_MONTH + 1 - [...hiddenMonths].filter(k => k >= FIRST_MONTH && k <= ck).length);
+    const nTx = txAll.filter(t => !t.gen || t.gen === 1).length;
+    $("setProf").innerHTML = `<div class="av">${esc(name.trim().charAt(0) || "?")}</div><div><b>${esc(name)}</b><small>${[user, linked ? "מחובר לגיליונות שלך" : ""].filter(Boolean).join(" · ")}</small>
+      <div class="stats"><span>מאז ${MONTHS[FIRST_MONTH % 12]} ${Math.floor(FIRST_MONTH / 12)}</span><span>${nMonths === 1 ? "חודש אחד" : nMonths + " חודשים"}</span><span>${nTx === 1 ? "תנועה אחת" : nTx.toLocaleString("he-IL") + " תנועות"}</span></div></div>`;
+    const sl = salaryFor(cy, cm, true);
+    s("sal", (sl.amount ? fmt(sl.amount) + " ב" + MONTHS[cm] : "עוד לא הוזנה משכורת") + " · חיוב ב-" + startDay + " לחודש");
+    const hid = [...hiddenMonths].filter(k => k >= FIRST_MONTH && k <= ck).length;
+    s("months", (nMonths === 1 ? "חודש אחד" : nMonths + " חודשים") + (hid ? " · " + (hid === 1 ? "אחד מוסתר" : hid + " מוסתרים") : ""));
+    const capSum = CATS.reduce((a, c) => a + (capDefault(c) || 0), 0);
+    s("cats", CATS.length + " קטגוריות" + (capSum ? " · תקרות " + fmt(capSum) : ""));
+    s("pay", PAY.length <= 1 ? "חשבון הבנק" : (PAY.length - 1) + " כרטיסים וחשבון בנק");
+    const nc = Object.keys(cardMap || {}).length; s("wallet", nc ? nc + (nc === 1 ? " כרטיס מזוהה" : " כרטיסים מזוהים") : "יופיעו אחרי התשלום הראשון ב-Apple Pay");
+    s("who", user ? "מחובר בתור " + user.slice(1) : "");
+    const row = id => menu.querySelector(`.set-row[data-go="${id}"]`), vis = n => !!(n && !n.hidden);
+    row("apple").hidden = !vis(apple); row("bank").hidden = !vis(bank); row("sheet").hidden = !vis(sheet); row("quick").hidden = !vis(quick);
+    menu.querySelector('[data-g="links"]').hidden = menu.querySelector('[data-gh="links"]').hidden = ![apple, bank, sheet, quick].some(vis);
+    const pill = (k, on, t) => { const p = menu.querySelector(`[data-p="${k}"]`); if (!p) return; p.hidden = false; p.className = "set-pill " + (on ? "on" : "off"); p.textContent = t; };
+    if (vis(bank)) { const bp = $("bankPill"); pill("bank", bp && /מחובר/.test(bp.textContent) && !/לא/.test(bp.textContent), bp ? bp.textContent : "לא מחובר"); }
+    if (vis(sheet)) pill("sheet", linked, linked ? "מחובר" : "לא מחובר");
+    if (vis(apple)) { const recent = txAll.some(t => t.source === "applepay" && daysBetween(t.date, today) <= 45); pill("apple", recent, recent ? "פעיל" : "להגדרה"); }
+    menu.querySelector('[data-act="logout"]').hidden = !$("logoutBtn");
+    menu.querySelector('[data-act="unsheet"]').hidden = !(vis(sheet) && linked && $("sheetOff"));
+    // the salaries page numbers
+    const cur = mkey(cy, cm), last3 = Object.keys(salaries).filter(k => k <= cur && +salaries[k] > 0).sort().slice(-3);
+    const avg = last3.length ? Math.round(last3.reduce((a, k) => a + +salaries[k], 0) / last3.length) : 0;
+    if ($("salAvgV")) $("salAvgV").textContent = avg ? fmt(avg) : "—";
+  };
+
+  /* categories: clean rows; a tap opens a small editor for that one */
+  const catsCard = pages.cats && pages.cats.parts[0];
+  if (catsCard) {
+    $("catList").hidden = true; $("addCatRow").hidden = true; $("saveCats").closest(".save-row").style.display = "none";
+    const rows = el(`<div class="cat-rows" id="catRows"></div>`), add = el(`<button type="button" class="cat-add" id="catAdd">+ קטגוריה חדשה</button>`), msg = el(`<p class="note" id="catMsg2" style="margin:0;text-align:center"></p>`);
+    $("catList").after(rows, add, msg);
+    document.body.appendChild(el(`<div class="sheet-bg" id="ceBg" hidden dir="rtl" lang="he" style="z-index:31"><form class="sheet ce-sheet" id="ceForm" role="dialog" aria-modal="true" aria-labelledby="ceName" novalidate>
+      <h3><span id="ceKick">קטגוריה</span><span class="h3-acts"><button type="button" class="x" id="ceClose" aria-label="סגירה">✕</button></span></h3>
+      <div class="ce-top"><span class="big" id="ceBig"></span><div class="field" style="flex:1"><label for="ceName">שם</label><input id="ceName" type="text" autocomplete="off" placeholder="למשל: חיות מחמד"></div></div>
+      <div class="ce-lbl">אייקון וצבע</div><div class="ce-icons" id="ceIcons"></div><div class="ce-hues" id="ceHues"></div>
+      <label class="ce-tg"><span><b>הוצאה קבועה</b><small>חוזרת כל חודש באותו סכום, כמו מנוי או ביטוח</small></span><input type="checkbox" id="ceFixed"><span class="ce-sw" aria-hidden="true"></span></label>
+      <div class="ce-lbl">תקרה לכל חודש</div>
+      <div class="ce-cap"><span>₪</span><input id="ceCap" inputmode="numeric" autocomplete="off" placeholder="ללא" aria-label="תקרה חודשית"></div>
+      <input type="range" id="ceRange" min="0" max="3000" step="50" value="0" aria-label="תקרה">
+      <p class="ce-hint" id="ceHint"></p>
+      <p class="ce-msg" id="ceMsg"></p>
+      <button type="submit" class="btn" id="ceSave" style="padding:13px;width:100%;margin-top:6px">שמירה</button>
+      <button type="button" class="ce-del" id="ceDel">מחיקת הקטגוריה</button>
+    </form></div>`));
+    let ce = null; // { i, icon, hue }
+    window.drawCatRows = function () {
+      $("catRows").innerHTML = draftCats.map((c, i) => {
+        if (!c.name.trim()) return "";
+        const [icon, hue, sat] = draftIcon(c), cap = c.cap != null ? c.cap : capsDef()[c.orig || c.name];
+        return `<button type="button" class="cat-row" data-ce="${i}">${glyph(icon, hue, sat)}<span class="nm">${esc(c.name)}${c.fixed ? `<span class="fx-tag">קבועה</span>` : ""}</span><span class="cp ${cap > 0 ? "" : "no"}">${cap > 0 ? fmt(cap) : "+ תקרה"}</span><span class="set-chev">‹</span></button>`;
+      }).join("");
+      try { renderCapTotal(); } catch (e) {}
+    };
+    const drawIc = () => {
+      $("ceBig").innerHTML = glyph(ce.icon, ce.hue, 55);
+      $("ceIcons").innerHTML = Object.keys(ICONS).filter(k => k !== "question" && k !== "income").map(k => `<button type="button" class="${k === ce.icon ? "on" : ""}" data-ic="${k}" aria-label="${k}" style="color:hsl(${ce.hue} 55% 40%)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[k]}"/></svg></button>`).join("");
+      $("ceHues").innerHTML = HUES.map(h => `<button type="button" class="${h === ce.hue ? "on" : ""}" data-hue="${h}" style="--h:${h}" aria-label="צבע"></button>`).join("");
+    };
+    const setCap = (v, fromCode) => {
+      v = Math.max(0, Math.round(+v || 0)); const r = $("ceRange");
+      if (v > +r.max) r.max = Math.ceil(v * 1.3 / 100) * 100;
+      r.value = v; r.style.setProperty("--p", (v / r.max * 100).toFixed(1) + "%");
+      if (fromCode || document.activeElement !== $("ceCap")) $("ceCap").value = v ? withCommas(String(v)) : "";
+    };
+    function openCe(i) {
+      const isNew = i == null, c = isNew ? { name: "", fixed: false } : draftCats[i];
+      const [icon, hue] = isNew ? ["tag", 240] : draftIcon(c);
+      ce = { i, icon, hue, auto: isNew };
+      $("ceKick").textContent = isNew ? "קטגוריה חדשה" : "עריכת קטגוריה";
+      $("ceName").value = c.name; $("ceFixed").checked = !!c.fixed; $("ceMsg").textContent = "";
+      const cap = c.cap != null ? c.cap : (capsDef()[c.orig || c.name] || 0);
+      // a sense of scale: what usually goes on this category
+      let sum = 0, n = 0, last = 0; if (!isNew) { const [cy, cm] = curYM(); let y = cy, m = cm; for (let k = 0; k < 3; k++) { [y, m] = prevYM(y, m); if (y * 12 + m < FIRST_MONTH) break; const v = Math.max(0, catSpent(c.orig || c.name, y, m)); if (!k) last = v; sum += v; n++; } }
+      const avg = n ? sum / n : 0;
+      $("ceRange").max = Math.ceil(Math.max(avg * 2, cap * 1.5, 1500) / 100) * 100;
+      $("ceHint").textContent = n && avg > 0 ? `בממוצע ${n === 1 ? "בחודש שעבר" : n + " החודשים האחרונים"}: ${fmt(avg)}` + (n > 1 && last ? ` · בחודש שעבר: ${fmt(last)}` : "") : "התקרה חלה על כל חודש. לחודש מסוים משנים במסך הבית, בכפתור ״תקרות״.";
+      setCap(cap, true); drawIc();
+      $("ceDel").hidden = isNew;
+      $("ceBg").hidden = false;
+      if (isNew) setTimeout(() => $("ceName").focus(), 60);
+    }
+    const closeCe = () => { $("ceBg").hidden = true; ce = null; };
+    $("catRows").addEventListener("click", e => { const b = e.target.closest("[data-ce]"); if (b) openCe(+b.dataset.ce); });
+    $("catAdd").onclick = () => openCe(null);
+    $("ceClose").onclick = closeCe;
+    $("ceBg").addEventListener("click", e => { if (e.target.id === "ceBg") closeCe(); });
+    $("ceName").addEventListener("input", () => { if (ce && ce.auto) { const a = autoIcon($("ceName").value.trim()); ce.icon = a[0]; ce.hue = a[1]; drawIc(); } });
+    $("ceIcons").addEventListener("click", e => { const b = e.target.closest("[data-ic]"); if (b) { ce.icon = b.dataset.ic; ce.auto = false; drawIc(); } });
+    $("ceHues").addEventListener("click", e => { const b = e.target.closest("[data-hue]"); if (b) { ce.hue = +b.dataset.hue; ce.auto = false; drawIc(); } });
+    $("ceRange").addEventListener("input", e => setCap(e.target.value));
+    $("ceCap").addEventListener("input", e => { const d = e.target.value.replace(/[^\d]/g, ""); e.target.value = d ? withCommas(d) : ""; setCap(+d || 0); });
+    $("ceForm").addEventListener("submit", async e => {
+      e.preventDefault(); if (!ce) return;
+      const name = $("ceName").value.trim();
+      if (!name) { $("ceMsg").textContent = "צריך שם לקטגוריה."; return; }
+      if (draftCats.some((c, j) => j !== ce.i && c.name.trim() === name)) { $("ceMsg").textContent = "כבר יש קטגוריה בשם הזה."; return; }
+      const c = ce.i == null ? { name: "", fixed: false, orig: "" } : draftCats[ce.i];
+      const before = JSON.stringify(c);
+      c.name = name; c.fixed = $("ceFixed").checked; c.cap = Math.round(+$("ceRange").value || 0);
+      if (!ce.auto || ce.i != null) { c.icon = ce.icon; c.hue = ce.hue; }
+      if (ce.i == null) draftCats.push(c);
+      adminDirty.cats = true;
+      const btn = $("ceSave"); btn.disabled = true; btn.textContent = "שומר…";
+      await $("saveCats").onclick();
+      btn.disabled = false; btn.textContent = "שמירה";
+      const m = $("catMsg").textContent;
+      if ($("catMsg").className === "err") { $("ceMsg").textContent = m; if (ce.i == null) draftCats.pop(); else Object.assign(c, JSON.parse(before)); return; }
+      closeCe(); drawCatRows(); $("catMsg2").textContent = "נשמר ✓"; setTimeout(() => { $("catMsg2").textContent = ""; }, 2200);
+    });
+    $("ceDel").onclick = () => {
+      if (!ce || ce.i == null) return; const i = ce.i, c = draftCats[i]; closeCe();
+      if (c && c.orig) { askMove(i); return; }
+      draftCats.splice(i, 1); drawCatRows();
+    };
+  }
+  setGo(null, { quiet: true, keepScroll: true });
+})();
 </script>
 
 <script>
@@ -6068,7 +6425,12 @@ const TOUR = [
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות, מסודרות לפי ימים. אפשר לסנן להוצאות, הכנסות או תשלומים, ולחפש חכם: ״סופר מעל 200״, ״מקס ספטמבר״, ״קפה פחות מ-30״." },
   { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה או <b>החלקה ימינה</b>: עריכה או מחיקה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה, השוואה בין חודשים, וסיכום שנתי. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
-  { t: "#tabAdmin", h: "הגדרות", b: "למעלה: יום החיוב בכרטיס ומאיזה חודש האתר מתחיל (קידום קדימה מוחק את החודשים שלפניו, רק אחרי אישור). אחר כך: משכורת לכל חודש, קטגוריות עם תקרה קבועה לכל אחת, אמצעי תשלום, ו״חודשים״, שבו מסתירים חודש (ומחזירים אותו) או מוחקים אותו לצמיתות. בסוף: מצב כהה, הוספה מהירה מהמסך הראשי, וחיבור Apple Pay שמכניס כל תשלום באייפון לבד." },
+  { t: "#tabAdmin", h: "הגדרות", b: "כל ההגדרות מסודרות בקבוצות קצרות, וכל נושא נפתח במסך משלו. בואו נציץ." },
+  { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "מאיזה חודש אתם באתר, כמה חודשים וכמה תנועות. למעלה משמאל, ״סיור באתר״ מראה את הסיור הזה שוב." },
+  { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת לכל חודש (עם הממוצע של 3 האחרונים), יום החיוב בכרטיס ומאיזה חודש האתר מתחיל. ב״חודשים״ מסתירים חודש או מוחקים אותו." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "<b>קטגוריות ותקרות</b>: לחיצה על קטגוריה פותחת חלון קטן לשם, אייקון וצבע, ״קבועה״ ותקרה לכל חודש. כאן גם אמצעי התשלום והכרטיסים מהארנק." },
+  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay מכניס כל תשלום באייפון לבד. הגדרה חד-פעמית של דקה." },
+  { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "מחיקת חודשים והתנתקות, במקום אחד ותמיד עם שאלת אישור. ליד כל דבר שצריך הסבר יש כפתור ⓘ." },
   { t: null, e: "👆", h: "עוד שני טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
 ];
@@ -6104,7 +6466,7 @@ function tourStep() {
   const fixed = el && getComputedStyle(el.closest(".nav") || el).position === "fixed";
   if (el && !fixed) el.scrollIntoView({ block: el.offsetHeight > innerHeight * .45 ? "start" : "center", behavior: "smooth" });
   tip.innerHTML = (s.e && !el ? `<div class="tour-emoji">${s.e}</div>` : "") + `<h3>${typeof s.h === "function" ? s.h() : s.h}</h3><p>${s.b}</p>
-    <div class="tour-foot"><div class="tour-dots">${TOUR.map((_, i) => `<i class="${i === tourI ? "on" : ""}"></i>`).join("")}</div>
+    <div class="tour-foot"><div class="tour-prog" aria-hidden="true"><i style="width:${((tourI + 1) / TOUR.length * 100).toFixed(1)}%"></i></div><span class="tour-n num">${tourI + 1}/${TOUR.length}</span>
     ${s.last ? "" : `<button class="tour-skip" type="button" data-skip>דלג</button>`}<button class="btn" type="button" data-next>${s.last ? "יאללה" : tourI === 0 ? "בואו נתחיל" : "הבא"}</button></div>`;
   tip.querySelector("[data-next]").onclick = () => { if (s.last) endTour(); else { tourI++; tourStep(); } };
   const sk = tip.querySelector("[data-skip]"); if (sk) sk.onclick = endTour;
@@ -6146,7 +6508,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025170815";
+const BUILD_ID = "20261025201139";
 let updToast = null;
 async function checkUpdate() {
   try {
