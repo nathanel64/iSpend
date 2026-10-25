@@ -1445,6 +1445,27 @@ body.arrange .arr-open { display: none !important; }
 .wl-cr bdi{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .wl-hint{font-size:.8rem;color:var(--muted);text-align:center;margin-top:6px;min-height:1.2em}
 @media (prefers-reduced-motion:reduce){.wl,.wl-c,.wl-t,.wl-i{transition-duration:.01s}}
+
+/* ===== "added" card with undo, after saving a new transaction ===== */
+.saved-card{position:fixed;z-index:31;inset-inline:16px 86px;bottom:calc(env(safe-area-inset-bottom,0px) + 100px);max-width:480px;margin-inline:auto;display:flex;align-items:center;gap:12px;
+  padding:12px 14px 14px;border-radius:18px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 18px 40px -16px rgba(20,14,50,.45);overflow:hidden;
+  animation:svIn .45s cubic-bezier(.2,.9,.25,1.15) both}
+.saved-card[hidden]{display:none}
+.saved-card.out{animation:svOut .3s ease-in forwards}
+.saved-card .sv-ic{flex:0 0 auto;position:relative}
+.saved-card .sv-ok{position:absolute;bottom:-3px;inset-inline-start:-3px;width:18px;height:18px;border-radius:50%;background:var(--good);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid var(--surface)}
+.saved-card .sv-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.saved-card .sv-h{display:flex;gap:8px;align-items:baseline;min-width:0}
+.saved-card .sv-h b{font-size:1.02rem;white-space:nowrap}
+.saved-card .sv-h span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;min-width:0}
+.saved-card small{color:var(--muted);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved-card button{flex:0 0 auto;border:0;background:var(--brand-soft);color:var(--brand);font:inherit;font-weight:700;font-size:.88rem;padding:8px 14px;border-radius:12px;cursor:pointer}
+.saved-card button:disabled{opacity:.6}
+.saved-card i{position:absolute;inset-inline:0;bottom:0;height:3px;background:var(--brand);transform-origin:right;animation:undoTime 5s linear forwards}
+.saved-card.hold i{animation-play-state:paused}
+@keyframes svIn{from{transform:translateY(30px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+@keyframes svOut{to{transform:translateY(24px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.saved-card,.saved-card.out{animation-duration:.01s}}
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -2114,6 +2135,7 @@ function makeSupaAdapter(uid) {
 </div>
 
 <div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcf5c" stroke="#e0a22a" stroke-width="1.5"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="800" fill="#8a5a00">₪</text></svg></div>
+<div class="saved-card" id="savedCard" dir="rtl" lang="he" role="status" hidden></div>
 <div class="undo-bar" id="undoBar" dir="rtl" lang="he" role="status" hidden><span id="undoTxt">התנועה נמחקה</span><button type="button" id="undoBtn">ביטול</button><i></i></div>
 <nav class="nav" dir="rtl" lang="he" aria-label="ניווט">
   <button id="navHome" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8 M5 10v11h14V10 M10 21v-6h4v6"/></svg>בית</button>
@@ -5945,6 +5967,33 @@ function againAfterSave() {
   if (!addAgain) return; addAgain = false;
   setTimeout(() => { openAdd(); if (addAgainCard && PAY.includes(addAgainCard)) $("addCard").value = addAgainCard; toast("נשמר ✓ אפשר להוסיף את הבאה", 1800); setTimeout(() => $("addAmount").focus(), 80); }, 420);
 }
+// 8: after adding, a small card shows what was saved, with a few seconds to undo it
+let savedT = null;
+function hideSaved(now) {
+  const c = $("savedCard"); clearTimeout(savedT); savedT = null; if (c.hidden) return;
+  if (now) { c.hidden = true; return; }
+  c.classList.add("out"); setTimeout(() => { c.hidden = true; c.classList.remove("out"); }, 300);
+}
+function showSaved(row, kind) {
+  const c = $("savedCard"); hideSaved(true);
+  const n = +row[8] || 1, amt = +row[1];
+  const meta = [kind === "inc" ? "הכנסה" : row[4], row[3], n > 1 ? n + " תשלומים" : ""].filter(Boolean).map(esc).join(" · ");
+  c.innerHTML = `<span class="sv-ic">${catIcon(row[4], true)}<span class="sv-ok" aria-hidden="true">✓</span></span>
+    <span class="sv-tx"><span class="sv-h"><b class="num">${kind === "inc" ? "+" : ""}${fmt(amt)}</b><span><bdi>${esc(row[2])}</bdi></span></span><small>נוסף · ${meta}</small></span>
+    <button type="button" id="savedUndo">ביטול</button><i></i>`;
+  c.hidden = false; c.classList.remove("hold");
+  savedT = setTimeout(() => hideSaved(), 5000);
+  $("savedUndo").onclick = async () => {
+    const b = $("savedUndo"); clearTimeout(savedT); c.classList.add("hold");
+    const t = tx.find(x => x.del && x.del.raw && x.del.raw[7] === row[7]);
+    if (!t) { c.querySelector("small").textContent = "לא נמצאה התנועה. אפשר למחוק אותה מהרשימה."; savedT = setTimeout(() => hideSaved(), 4000); return; }
+    txMsgText = "";
+    const ok = await deleteTx(txKey(t), b);
+    if (ok) { c.querySelector("small").textContent = "בוטל. התנועה לא נשמרה."; b.hidden = true; const k = c.querySelector(".sv-ok"); if (k) { k.textContent = "✕"; k.style.background = "var(--muted)"; } savedT = setTimeout(() => hideSaved(), 1600); }
+    else { c.querySelector("small").textContent = "הביטול נכשל: " + (txMsgText || "נסו שוב"); b.disabled = false; b.textContent = "ביטול"; savedT = setTimeout(() => hideSaved(), 5000); }
+  };
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) hideSaved(true); });
 $("addForm").addEventListener("submit", async e => {
   e.preventDefault();
   const amount = Math.round((parseFloat($("addAmount").value) || 0) * 100) / 100;
@@ -5988,6 +6037,7 @@ $("addForm").addEventListener("submit", async e => {
     const fr = $("fab").getBoundingClientRect();
     closeAdd(); afterData();
     if (addKind === "exp") requestAnimationFrame(() => flyCoin({ x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 }));
+    if (!addAgain) showSaved(row, addKind);
     againAfterSave();
     try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
   } catch (err) {
@@ -7041,7 +7091,7 @@ const TOUR = [
   { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים כאן, ומתחת מקלידים את הסכום. בטלפון יש מקשים גדולים משלנו, וכפתורים כמו ״+50״ שמוסיפים לסכום בלחיצה." },
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "לחיצה על הוצאה שכבר הוספתם ממלאת את כל הטופס בבת אחת." },
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם, והקטגוריה נבחרת לפי כל המשפט (״קניות בסופר למתנה״ ← מתנות). אפשר לשנות אותה, ואמצעי התשלום שהכי בשימוש כבר מסומן." },
-  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo, h: "תאריך ותשלומים", b: "כשמוסיפים כמה ברצף, נשאר התאריך של הקודמת. בעסקה בתשלומים בוחרים כמה, וכל תשלום יורד ביום החיוב של החודש שלו. ״שמירה והוספת עוד״ שומר ופותח את החלון שוב, עם אותו כרטיס ותאריך." },
+  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo, h: "תאריך ותשלומים", b: "כשמוסיפים כמה ברצף, נשאר התאריך של הקודמת. בעסקה בתשלומים בוחרים כמה, וכל תשלום יורד ביום החיוב של החודש שלו. ״שמירה והוספת עוד״ שומר ופותח את החלון שוב, עם אותו כרטיס ותאריך. אחרי שמירה עולה למטה כרטיס קטן עם מה שנוסף, ויש כמה שניות ללחוץ ״ביטול״ אם טעיתם." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "לוחצים על המיקרופון ואומרים הכול במשפט אחד: סכום, על מה ובמה שילמתם. למשל ״45 שקל שווארמה במקס״, או ״קיבלתי 300 מאבא״. הסכום, התיאור, הקטגוריה ואמצעי התשלום מתמלאים לבד, ואתם רק בודקים ולוחצים שמירה." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. תקרה לכל קטגוריה (כמה מותר להוציא בחודש) קובעים בהגדרות, ליד הקטגוריה, וטבעת סביב העיגול מתמלאת. בכפתור ״תקרות״ משנים אותה רק לחודש מסוים." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כל אמצעי תשלום הוא כרטיס בארנק, עם הסכום שיצא ממנו החודש. לחיצה שולפת כרטיס, לחיצה נוספת הופכת אותו ומראה על מה הוצאת בו, ו'כל התנועות' מציג רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
@@ -7134,7 +7184,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025223702";
+const BUILD_ID = "20261025230111";
 let updToast = null;
 async function checkUpdate() {
   try {
