@@ -3645,11 +3645,16 @@ function renderUpcoming(isCurrent) {
 function curYM() { let y = now.getFullYear(), m = now.getMonth(); if (now.getDate() < startDay) { m--; if (m < 0) { m = 11; y--; } } return [y, m]; }
 
 /* a new expense: a coin flies from the + button into the gauge, which gives a small bump when it lands */
-function flyCoin(from) {
+function flyCoin(from, tries = 0) {
   try {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches || $("flowView").hidden) return;
+    if ($("flowView").hidden) return;
     const tip = $("ringTip"), svg = tip.ownerSVGElement, wrap = svg.closest(".ring-wrap");
-    const m = (tip.style.transform || "").match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/); if (!m || tip.style.opacity === "0") return;
+    const bump = () => { wrap.classList.remove("bump"); void wrap.offsetWidth; wrap.classList.add("bump"); try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} setTimeout(() => wrap.classList.remove("bump"), 600); };
+    const m = (tip.style.transform || "").match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/); if (!m) return;
+    // the gauge is out of sight (scrolled down): bring it into view first, then the coin flies
+    const wr = wrap.getBoundingClientRect();
+    if ((wr.bottom < 60 || wr.top > innerHeight - 60) && tries < 1) { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => flyCoin(from, tries + 1), 450); return; }
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { tip.style.opacity = "1"; bump(); return; }
     const pt = svg.createSVGPoint(); pt.x = +m[1]; pt.y = +m[2]; const to = pt.matrixTransform(svg.getScreenCTM());
     if (to.y < 0 || to.y > innerHeight) return;
     const c = document.createElement("div"); c.className = "fly-coin"; document.body.appendChild(c);
@@ -3657,9 +3662,8 @@ function flyCoin(from) {
     for (let i = 0; i <= 24; i++) { const t = i / 24; frames.push({ transform: `translate(${from.x + dx * t - 12}px,${from.y + dy * t - Math.sin(Math.PI * t) * lift - 12}px) scale(${1.15 - .55 * t}) rotate(${t * 540}deg)` }); }
     wrap.classList.add("landing");
     c.animate(frames, { duration: 900, easing: "cubic-bezier(.45,0,.25,1)" }).onfinish = () => {
-      c.remove(); wrap.classList.remove("landing"); wrap.classList.remove("bump"); void wrap.offsetWidth; wrap.classList.add("bump");
-      try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
-      setTimeout(() => wrap.classList.remove("bump"), 600);
+      // the first, tiny expense of a month: the gauge's coin shows up where this one lands
+      c.remove(); wrap.classList.remove("landing"); tip.style.opacity = "1"; bump();
     };
   } catch (e) {}
 }
@@ -5526,7 +5530,9 @@ $("addForm").addEventListener("submit", async e => {
     writePending([...readPending(), row]); data.apple = [...(data.apple || []), row];
     try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
     const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1); if (startMonthPref != null && mIdxOf(d) < startMonthPref) setStartMonth(mIdxOf(d));
+    const fr = $("fab").getBoundingClientRect();
     closeAdd(); afterData(); btn.disabled = false; btn.textContent = "שמירה";
+    if (addKind === "exp") requestAnimationFrame(() => flyCoin({ x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 }));
     toast("אין חיבור. ההוצאה נשמרה בטלפון ותישלח לבד כשהאינטרנט יחזור ☁");
   };
   if (!navigator.onLine) return keepLocal();
@@ -5963,9 +5969,9 @@ function tourTxDemo() {
   return () => { box.innerHTML = old; try { render(); } catch (e) {} };
 }
 function tourAddDemo() {
-  // the add window, open for the tour (no keyboard: nothing gets focus)
+  // the add window, open for the tour (no keyboard: nothing gets focus). It stays open through the steps about it.
   openAdd(); setTimeout(() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0);
-  return () => closeAdd();
+  const close = () => closeAdd(); close.keep = tourAddDemo; return close;
 }
 function tourLift(el) {
   // shows the long press: the first row lifts, glides down past the next one and back
@@ -5980,7 +5986,10 @@ const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. מעליו מופיע בכל כניסה הדבר הכי חשוב עכשיו, ומתחת שעון חול של כמה אפשר להוציא היום." },
   { t: "#fab", h: "הוספת הוצאה", b: "הכפתור הזה פותח את חלון ההוספה. לחיצה ארוכה עליו פותחת אותו ישר בהקשבה, כדי להוסיף בקול. בלי קליטה? ההוצאה נשמרת בטלפון ונשלחת כשהחיבור חוזר. ככה נראה החלון:" },
-  { t: "#addForm", demo: tourAddDemo, h: "חלון ההוספה", b: "<b>למעלה</b> בוחרים: הוצאה או קיבלתי כסף. <b>סכום</b>. <b>מהאחרונים</b>: לחיצה על הוצאה שכבר הוספתם ממלאת הכול. <b>תיאור</b>: הקטגוריה נבחרת לבד לפי כל המשפט (״קניות בסופר למתנה״ ← מתנות), ואפשר לשנות אותה. <b>אמצעי התשלום</b> שהכי בשימוש כבר מסומן. <b>תאריך</b>: כשמוסיפים כמה ברצף, נשאר התאריך של הקודמת. <b>תשלומים</b>: בוחרים מספר, וכל תשלום יורד ביום החיוב של החודש שלו." },
+  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים כאן, ומתחת מקלידים את הסכום." },
+  { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "לחיצה על הוצאה שכבר הוספתם ממלאת את כל הטופס בבת אחת." },
+  { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם, והקטגוריה נבחרת לפי כל המשפט (״קניות בסופר למתנה״ ← מתנות). אפשר לשנות אותה, ואמצעי התשלום שהכי בשימוש כבר מסומן." },
+  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo, h: "תאריך ותשלומים", b: "כשמוסיפים כמה ברצף, נשאר התאריך של הקודמת. בעסקה בתשלומים בוחרים כמה, וכל תשלום יורד ביום החיוב של החודש שלו." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "לוחצים על המיקרופון ואומרים הכול במשפט אחד: סכום, על מה ובמה שילמתם. למשל ״45 שקל שווארמה במקס״, או ״קיבלתי 300 מאבא״. הסכום, התיאור, הקטגוריה ואמצעי התשלום מתמלאים לבד, ואתם רק בודקים ולוחצים שמירה." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. תקרה לכל קטגוריה (כמה מותר להוציא בחודש) קובעים בהגדרות, ליד הקטגוריה, וטבעת סביב העיגול מתמלאת. בכפתור ״תקרות״ משנים אותה רק לחודש מסוים." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "לפי אמצעי תשלום", b: "כמה יצא מכל כרטיס ומהבנק. לחיצה על כרטיס מציגה רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
@@ -6005,7 +6014,7 @@ function endTour() {
   if (tourRestore) { try { tourRestore(); } catch (e) {} tourRestore = null; }
   try { localStorage.setItem("tourDone-" + USER_ID, "1"); } catch (e) {}
   if (tourEl) { tourEl.remove(); tourEl = null; }
-  if (tourPlace) { removeEventListener("scroll", tourPlace); tourPlace = null; }
+  if (tourPlace) { removeEventListener("scroll", tourPlace, true); tourPlace = null; }
   window.scrollTo(0, 0);
   if (TOUR_PENDING) { TOUR_PENDING = false; salAsked = false; askSalary(); }
 }
@@ -6013,9 +6022,9 @@ function tourStep() {
   let s = TOUR[tourI];
   // a step whose place is not on screen (no data for it yet) is skipped
   const vis = x => { const el = x && document.querySelector(x); return !!(el && el.getClientRects().length && !el.closest("[hidden]")); };
-  if (tourRestore) { tourRestore(); tourRestore = null; }
+  if (tourRestore && !(tourRestore.keep && tourRestore.keep === s.demo)) { tourRestore(); tourRestore = null; }
   if (currentView !== (s.view || "flow")) showView(s.view || "flow");
-  if (s.demo && !vis(s.t)) tourRestore = s.demo(); // nothing real yet: show an example for this step
+  if (s.demo && !vis(s.t) && !(tourRestore && tourRestore.keep === s.demo)) tourRestore = s.demo(); // nothing real yet: show an example for this step
   while (s && s.opt && !vis(s.t) && tourI < TOUR.length - 1) s = TOUR[++tourI];
   if (currentView !== (s.view || "flow")) showView(s.view || "flow");
   const spot = tourEl.querySelector(".tour-spot"), tip = tourEl.querySelector(".tour-tip"), dim = tourEl.querySelector(".tour-dim");
@@ -6046,8 +6055,8 @@ function tourStep() {
     else { tip.style.bottom = "auto"; tip.style.top = Math.max(12, vh - th - 12) + "px"; }
   };
   // the page may still be scrolling to the card: follow it until it settles
-  if (tourPlace) removeEventListener("scroll", tourPlace);
-  tourPlace = () => requestAnimationFrame(place); addEventListener("scroll", tourPlace, { passive: true });
+  if (tourPlace) removeEventListener("scroll", tourPlace, true);
+  tourPlace = () => requestAnimationFrame(place); addEventListener("scroll", tourPlace, { passive: true, capture: true });
   place(); setTimeout(place, 450); setTimeout(place, 1000);
   tip.querySelector("[data-next]").focus();
 }
@@ -6067,7 +6076,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025015529";
+const BUILD_ID = "20261025084525";
 let updToast = null;
 async function checkUpdate() {
   try {
