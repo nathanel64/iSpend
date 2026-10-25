@@ -56,6 +56,7 @@ body {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+@media (display-mode: standalone) { .wrap { padding-top: 22px !important; } header.top { padding-top: 22px !important; } }
 .wrap { max-width: 600px; margin: 0 auto; padding-block: 4px 48px; display: flex; flex-direction: column; gap: 18px; }
 .num { font-variant-numeric: tabular-nums; }
 button, select, input { font: inherit; color: inherit; }
@@ -209,7 +210,9 @@ body.tx-select #days .tx-sw.sel-on .tx { background: color-mix(in srgb, var(--br
 .sel-bar .sb-t { flex: 1; min-width: 0; font-size: .84rem; } .sel-bar .sb-t b { font-size: .95rem; }
 .sel-bar button { border: 0; border-radius: 12px; padding: 8px 10px; font: 600 .8rem var(--font-body); background: rgba(255,255,255,.12); color: #fff; cursor: pointer; }
 .sel-bar button:disabled { opacity: .4; }
-.sel-bar button.del { background: var(--bad); }
+.sel-bar button { flex: none; white-space: nowrap; }
+.sel-bar button.sb-del { background: var(--bad); }
+.sel-bar button.sb-x { width: 34px; height: 34px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-size: .9rem; }
 body.tx-select #fab { display: none; }
 #askBtns.chips { flex-direction: row; flex-wrap: wrap; justify-content: center; }
 #askBtns.chips .btn.chip { padding: 8px 14px; font-size: .88rem; flex: none; }
@@ -265,6 +268,7 @@ body.tx-select #fab { display: none; }
 .gb-row.sum b.pos { color: var(--good); } .gb-row.sum b.neg { color: var(--bad); }
 .gb-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--bg); margin: 4px 0 10px; }
 .gb-bar i { display: block; height: 100%; }
+.today.back .td-v { color: var(--good); } .today.back .td-ic { color: var(--good); background: var(--good-soft); }
 .today.flat .td-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; }
 #anaView .auto-empty { display: none; }
 body.arrange .auto-empty { display: block !important; }
@@ -3331,12 +3335,12 @@ function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
   let cls = "", k, v, side;
   if (pool <= 0) {
     // the month is already past what came in: still say what today took, and that every shekel adds to it
-    cls = "over"; k = spentToday > 0 ? "היום יצאו" : "היום עוד לא יצא כלום";
-    side = spentToday > 0 ? "כל הוצאה החודש<br>מגדילה את החריגה" : "יום בלי הוצאות<br>מקטין את החריגה";
-    box.className = "today over flat";
+    cls = "over"; k = spentToday > 0 ? "היום יצאו" : spentToday < 0 ? "היום חזרו אליך" : "היום עוד לא יצא כלום";
+    side = spentToday > 0 ? "כל הוצאה החודש<br>מגדילה את החריגה" : spentToday < 0 ? "החזרים מקטינים<br>את החריגה" : "יום בלי הוצאות<br>מקטין את החריגה";
+    box.className = "today flat " + (spentToday < 0 ? "back" : "over");
     box.innerHTML = `<span class="td-ic">${sun}</span><div><div class="td-k">${k}</div><div class="td-v num" id="todayVal"></div></div><div class="td-side">${side}</div>`;
-    $("mbToday").innerHTML = `היום: <b>${fmt(spentToday)}</b>`;
-    const tv = $("todayVal"); countTo(tv, spentToday, fmt); box.dataset.v = tv.dataset.v; box.hidden = false; return;
+    $("mbToday").innerHTML = `היום: <b>${spentToday < 0 ? "+" + fmt(-spentToday) : fmt(spentToday)}</b>`;
+    const tv = $("todayVal"); countTo(tv, Math.abs(spentToday), fmt); box.dataset.v = tv.dataset.v; box.hidden = false; return;
   }
   if (left >= 0) {
     k = "אפשר להוציא היום"; v = fmt(left);
@@ -6683,7 +6687,7 @@ function markEmpty() {
 /* 6: "בחירה": tap rows to choose several, then change their category or card, or delete them together.
    A long press still drags a row, as before (not while choosing). */
 document.body.insertAdjacentHTML("beforeend", `<div class="sel-bar" id="selBar" hidden dir="rtl" lang="he" role="toolbar" aria-label="פעולות על התנועות שנבחרו">
-  <span class="sb-t" id="selTxt"></span><button type="button" id="selCat">קטגוריה</button><button type="button" id="selCard">כרטיס</button><button type="button" class="del" id="selDel">מחיקה</button><button type="button" id="selOff" aria-label="סיום">✕</button></div>`);
+  <span class="sb-t" id="selTxt"></span><button type="button" id="selCat">קטגוריה</button><button type="button" id="selCard">כרטיס</button><button type="button" class="sb-del" id="selDel">מחיקה</button><button type="button" class="sb-x" id="selOff" aria-label="סיום">✕</button></div>`);
 function setSelMode(on) {
   selMode = on; selSet = new Set(); openTx = null; confirmTx = null;
   document.body.classList.toggle("tx-select", on); $("selBtn").setAttribute("aria-pressed", on); $("selBar").hidden = !on;
@@ -6742,7 +6746,8 @@ $("selDel").onclick = async () => {
 (function numpad() {
   if (!matchMedia("(pointer: coarse)").matches) return;
   const inp = $("addAmount"), pad = $("numpad"), wrap = inp.closest(".amount-in");
-  inp.setAttribute("inputmode", "none"); inp.readOnly = true;
+  // a number field throws away "45." (not a number yet), so on a phone the amount is a plain text field fed by the keys
+  inp.type = "text"; inp.setAttribute("inputmode", "none"); inp.readOnly = true; inp.removeAttribute("step"); inp.removeAttribute("min");
   const show = on => { pad.hidden = !on; wrap.classList.toggle("np-on", on); };
   const set = v => { inp.value = v; inp.dispatchEvent(new Event("input", { bubbles: true })); };
   inp.addEventListener("focus", () => show(true));
@@ -7011,7 +7016,7 @@ addEventListener("resize", () => { if (tourEl) tourStep(); });
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261025205647";
+const BUILD_ID = "20261025210340";
 let updToast = null;
 async function checkUpdate() {
   try {
