@@ -11,6 +11,9 @@ const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { sta
 // the same key the site uses: lower case, no digits or punctuation
 export const keyOf = (s: string) => String(s || "").toLowerCase().replace(/[0-9*#_.,'"()\/\\|:;!?+\-]+/g, " ").replace(/\s+/g, " ").trim();
 const UNSORTED = "לא מסווג";
+// names and categories are shown to every account: plain text only
+const clean = (v: unknown, max = 40) => String(v ?? "").replace(/[<>"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, max);
+const DAILY_CAP = 200;
 
 async function askAI(names: string[], cats: string[]): Promise<{ name: string; cat: string }[]> {
   const prompt = `אלה שמות של בתי עסק כפי שהם מופיעים בפירוט של כרטיס אשראי או חשבון בנק בישראל.
@@ -50,7 +53,7 @@ ${names.map((n, i) => `${i}. ${n}`).join("\n")}`;
   const arr = JSON.parse(m[0]) as { i: number; name: string; cat: string }[];
   const out: { name: string; cat: string }[] = names.map(n => ({ name: n, cat: UNSORTED }));
   for (const x of arr) if (Number.isInteger(x.i) && x.i >= 0 && x.i < names.length) {
-    out[x.i] = { name: String(x.name || names[x.i]).trim().slice(0, 40) || names[x.i], cat: cats.includes(x.cat) ? x.cat : UNSORTED };
+    out[x.i] = { name: clean(x.name || names[x.i]) || clean(names[x.i]), cat: cats.includes(x.cat) ? x.cat : UNSORTED };
   }
   return out;
 }
@@ -58,15 +61,16 @@ ${names.map((n, i) => `${i}. ${n}`).join("\n")}`;
 Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  // a signed-in person, or the project's own server key (used by the automatic check in GitHub)
-  const chk = Deno.env.get("ISPEND_CHECK"), admin = (token && token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) || (!!chk && chk.length > 20 && req.headers.get("x-ispend-check") === chk);
-  if (!admin) { const { data: u } = await sb.auth.getUser(token); if (!u?.user) return json({ error: "not signed in" }, 401); }
+  const { data: u } = await sb.auth.getUser(token);
+  if (!u?.user) return json({ error: "not signed in" }, 401);
+  const uid = u.user.id;
   let body: { names?: string[]; cats?: string[]; learn?: { raw: string; name: string; cat: string }[] } = {};
   try { body = await req.json(); } catch (_) { /* empty */ }
 
   if (Array.isArray(body.learn)) {
-    const rows = body.learn.slice(0, 20).filter(x => x && x.raw && keyOf(x.raw)).map(x => ({ raw_key: keyOf(x.raw), raw: String(x.raw).slice(0, 120), name: String(x.name || "").slice(0, 40), cat: String(x.cat || "").slice(0, 40), source: "user", updated_at: new Date().toISOString() }));
-    if (rows.length) await sb.from("merchant_cache").upsert(rows);
+    // a person's correction fills a name nobody answered yet; it never overwrites what others already see
+    const rows = body.learn.slice(0, 20).filter(x => x && x.raw && keyOf(x.raw) && clean(x.name)).map(x => ({ raw_key: keyOf(x.raw), raw: clean(x.raw, 120), name: clean(x.name), cat: clean(x.cat), source: "user", updated_at: new Date().toISOString() }));
+    if (rows.length) await sb.from("merchant_cache").upsert(rows, { onConflict: "raw_key", ignoreDuplicates: true });
     return json({ ok: rows.length });
   }
 
@@ -80,9 +84,16 @@ Deno.serve(async req => {
   const missing: string[] = [];
   names.forEach((n, i) => { const h = byKey.get(keys[i]); if (h) results[n] = { name: h.name || n, cat: h.cat || UNSORTED }; else if (keys[i]) missing.push(n); });
   if (missing.length) {
+    // a daily cap per person, so the AI quota can't be used up
+    const day = new Date().toISOString().slice(0, 10);
+    const { data: use } = await sb.from("ai_usage").select("n").eq("user_id", uid).eq("day", day).maybeSingle();
+    const used = use?.n || 0, room = Math.max(0, DAILY_CAP - used);
+    if (!room) return json({ results, error: "daily limit" });
+    missing.splice(room);
+    await sb.from("ai_usage").upsert({ user_id: uid, day, n: used + missing.length });
     try {
       const ans = await askAI(missing, cats.length ? cats : ["סופר", "אוכל ושתיה", "קניות", "תחבורה ודלק", "בילויים", "הוצאות שוטפות"]);
-      const rows = missing.map((n, i) => ({ raw_key: keyOf(n), raw: n.slice(0, 120), name: ans[i].name, cat: ans[i].cat, source: "ai", updated_at: new Date().toISOString() }));
+      const rows = missing.map((n, i) => ({ raw_key: keyOf(n), raw: clean(n, 120), name: ans[i].name, cat: ans[i].cat, source: "ai", updated_at: new Date().toISOString() }));
       await sb.from("merchant_cache").upsert(rows, { onConflict: "raw_key", ignoreDuplicates: true });
       missing.forEach((n, i) => { results[n] = ans[i]; });
     } catch (e) { return json({ results, error: String((e as Error).message || e).slice(0, 200) }); }

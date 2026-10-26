@@ -2,7 +2,10 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://script.google.com https://script.googleusercontent.com https://cdn.jsdelivr.net; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" id="vp" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* iPhone: stop the jump-zoom when a field gets focus (iOS still lets people pinch to zoom); elsewhere zoom stays fully free */if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) document.getElementById("vp").content += ", maximum-scale=1";</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%235b4cf0%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239a52d6%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2218%22%20fill%3D%22url%28%23bg%29%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2218%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-opacity%3D%22.22%22%20stroke-width%3D%226%22/%3E%3Cpath%20d%3D%22M32%2014%20A18%2018%200%201%201%2014.6%2036.6%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2214.6%22%20cy%3D%2236.6%22%20r%3D%223%22%20fill%3D%22%23ffd36e%22/%3E%3Cpath%20d%3D%22M24%2037%20L29.5%2031.5%20L33.5%2035%20L40%2027.5%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3Cpath%20d%3D%22M35.5%2027%20H40.5%20V32%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#5b4cf0">
@@ -19,34 +22,34 @@
   --bg: #f6f3ee;
   --surface: #ffffff;
   --ink: #1c1b22;
-  --muted: #7d7987;
+  --muted: #696572;
   --line: #ebe6de;
   --brand: #4b3fd6;
   --brand2: #8a4fd0;
   --brand-ink: #ffffff;
   --brand-soft: #ebe8fc;
-  --good: #16935f;
+  --good: #0b6e46;
   --good-soft: #dcf3e8;
-  --bad: #d9473f;
+  --bad: #b3302a;
   --bad-soft: #fbe4e1;
-  --ic-bg-l: 92%; --ic-fg-l: 36%; --ic-sat: 1; --slice-l: 52%;
+  --ic-bg-l: 92%; --ic-fg-l: 30%; --ic-sat: 1; --slice-l: 52%;
   --heat-0: #e6ebf2; --heat-1: #c7d6f7; --heat-2: #8fb0f0; --heat-3: #4f7fe0; --heat-4: #1f4fb8;
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s-other: #9aa3ad;
-  --warn: #b5650f;
+  --warn: #8f4f08;
   --warn-soft: #fbecd9;
   --font-display: "IBM Plex Sans Hebrew", "Arial Hebrew", system-ui, sans-serif;
   --font-body: "IBM Plex Sans Hebrew", "Arial Hebrew", "Segoe UI", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121117; --surface: #1d1c24; --ink: #f2f0f7; --muted: #9a96a6; --line: #2c2a35;
+    --bg: #121117; --surface: #1d1c24; --ink: #f2f0f7; --muted: #aeaab9; --line: #2c2a35;
     --brand: #7c70f0; --brand2: #a874e6; --brand-ink: #ffffff; --brand-soft: #2a2648;
     --good: #43c995; --good-soft: #15342a; --bad: #f2857a; --bad-soft: #3b1e1c; --warn: #f0ac5e; --warn-soft: #3a2a17; --ic-bg-l: 22%; --ic-fg-l: 74%; --ic-sat: .75; --slice-l: 58%; --heat-0: #1c2536; --heat-1: #1f3566; --heat-2: #2b4f9c; --heat-3: #4b78d6; --heat-4: #8fb0ff; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s-other: #5f6b7a;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #121117; --surface: #1d1c24; --ink: #f2f0f7; --muted: #9a96a6; --line: #2c2a35;
+  --bg: #121117; --surface: #1d1c24; --ink: #f2f0f7; --muted: #aeaab9; --line: #2c2a35;
   --brand: #7c70f0; --brand2: #a874e6; --brand-ink: #ffffff; --brand-soft: #2a2648;
   --good: #43c995; --good-soft: #15342a; --bad: #f2857a; --bad-soft: #3b1e1c; --warn: #f0ac5e; --warn-soft: #3a2a17; --ic-bg-l: 22%; --ic-fg-l: 74%; --ic-sat: .75; --slice-l: 58%; --heat-0: #1c2536; --heat-1: #1f3566; --heat-2: #2b4f9c; --heat-3: #4b78d6; --heat-4: #8fb0ff; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s-other: #5f6b7a;
   color-scheme: dark;
@@ -305,9 +308,10 @@ body.arrange .auto-empty { display: block !important; }
 .set-rt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .set-rt b { font-weight: 600; font-size: .95rem; }
 .set-rt small { color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.set-chev { color: color-mix(in srgb, var(--muted) 60%, transparent); font-size: 1.25rem; line-height: 1; }
+.set-chev { color: var(--muted); font-size: 1.25rem; line-height: 1; }
 /* chevrons point left (forward in Hebrew): kept out of the right-to-left mirroring */
 .set-chev, .chev, .chv { display: inline-block; direction: ltr; unicode-bidi: isolate; }
+.set-legal { margin: 14px 0 4px; text-align: center; font-size: .8rem; color: var(--muted); } .set-legal a { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
 .set-pill { font-size: .7rem; font-weight: 700; border-radius: 999px; padding: 2px 8px; flex: none; }
 .set-pill.on { color: var(--good); background: var(--good-soft); } .set-pill.off { color: var(--muted); background: var(--bg); }
 .set-row .theme-seg { flex: none; }
@@ -540,7 +544,7 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .insight b { font-weight: 700; }
 .insight .btn.add { padding: 6px 14px; font-size: .82rem; }
 .insight .acts { display: flex; gap: 2px; align-items: center; }
-.insight .x { border: 0; background: none; color: var(--muted); font-size: .9rem; padding: 4px; }
+.insight .x { border: 0; background: none; color: var(--muted); font-size: .9rem; padding: 4px; min-width: 32px; min-height: 32px; }
 .wrapped-pill { align-self: center; border: 0; border-radius: 999px; padding: 8px 16px; font-weight: 700; color: #fff; background: linear-gradient(120deg, #6d4bd8, #e0569a); box-shadow: 0 4px 14px rgba(109, 75, 216, .3); display: inline-flex; gap: 8px; align-items: center; }
 .wrapped-pill svg { width: 16px; height: 16px; fill: currentColor; }
 .streak { gap: 14px; }
@@ -1193,7 +1197,7 @@ body.dragging .day-grp { transition: background .2s, box-shadow .2s; border-radi
   background: var(--bg); border: 0; border-radius: 14px; padding: 8px 12px; color: var(--ink); text-decoration: none; font-weight: 400; opacity: 1; }
 .money .mt .k { font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .money .mt b { grid-row: 2; font-size: .98rem; font-weight: 700; color: var(--ink); }
-.money .mt b.gold { color: #b7791f; } .money .mt b.add { color: var(--brand); font-size: .88rem; }
+.money .mt b.gold { color: #8a6008; } .money .mt b.add { color: var(--brand); font-size: .88rem; }
 .money .mt .pen { grid-row: 1 / 3; grid-column: 2; width: 15px; height: 15px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .money .goal-form { box-shadow: none; background: var(--bg); width: 100%; }
 .money .income-form { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
@@ -1205,7 +1209,7 @@ body.dragging .day-grp { transition: background .2s, box-shadow .2s; border-radi
 .vibe[hidden] { display: none; }
 .vibe .e { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-size: 1.05rem; flex: none; background: var(--brand-soft); }
 .vibe.good .e { background: var(--good-soft); } .vibe.warn .e { background: var(--warn-soft); } .vibe.bad .e { background: var(--bad-soft); }
-.vibe.good b { color: var(--good); } .vibe.warn b { color: #c0670f; } .vibe.bad b { color: var(--bad); } .vibe.info b { color: var(--brand); }
+.vibe.good b { color: var(--good); } .vibe.warn b { color: var(--warn); } .vibe.bad b { color: var(--bad); } .vibe.info b { color: var(--brand); }
 .vibe .t { flex: 1; min-width: 0; }
 .vibe .chev { color: var(--muted); font-size: 1.1rem; }
 @keyframes vibeIn { from { opacity: 0; transform: translateY(-6px); } }
@@ -1383,8 +1387,10 @@ body.arrange .arr-open { display: none !important; }
 .ins-view { overflow: hidden; border-radius: 20px; }
 .ins-track { display: flex; transition: transform .45s cubic-bezier(.3, .8, .3, 1); touch-action: pan-y; }
 .ins-track .insight { flex: 0 0 100%; min-height: 64px; border-radius: 20px; }
-.ins-dots { display: flex; justify-content: center; gap: 6px; }
-.ins-dots button { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 3px; background: var(--line); transition: width .3s, background .3s; }
+.ins-dots { display: flex; justify-content: center; gap: 0; }
+.ins-dots button { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 3px; background: var(--line); transition: width .3s, background .3s; margin: 9px; background-clip: padding-box; position: relative; }
+/* each dot answers taps on a 24px square around it */
+.ins-dots button::after { content: ""; position: absolute; inset: -9px; }
 .ins-dots button[aria-current="true"] { width: 18px; background: var(--brand); }
 .insight .ins-ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: linear-gradient(135deg, #5b4cf0, #9a52d6); }
 .insight .ins-ic svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -1485,7 +1491,7 @@ body.arrange .arr-open { display: none !important; }
 .pc-holes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 10px; }
 .pc-hole { width: 20px; height: 20px; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--ink) 28%, transparent); display: grid; place-items: center; font-size: .62rem; color: var(--muted); font-weight: 700; }
 .pc-hole.on { border: 0; background: color-mix(in srgb, #050408 80%, var(--surface)); box-shadow: inset 0 3px 5px rgba(0, 0, 0, .55), 0 1px 0 rgba(255, 255, 255, .5); color: transparent; }
-.pc-hole.next { border-style: solid; border-color: var(--brand); color: var(--brand); }
+.pc-hole.next { border-style: solid; border-color: var(--brand-text); color: var(--brand-text); }
 .pc-hole.punch { animation: pcPunch .6s .3s cubic-bezier(.3, 1.6, .5, 1) backwards; }
 @keyframes pcPunch { 0% { transform: scale(1.5); box-shadow: inset 0 0 0 rgba(0,0,0,0), 0 0 0 6px color-mix(in srgb, var(--brand) 30%, transparent); background: var(--brand); } 100% { transform: scale(1); } }
 .pc.small .pc-hole { width: 15px; height: 15px; font-size: 0; } .pc.small .pc-holes { gap: 5px; }
@@ -1617,6 +1623,23 @@ body.arrange .arr-open { display: none !important; }
 .buy-er { display: grid; grid-template-columns: 44px minmax(0, 1fr) 96px; gap: 6px; }
 .buy-er input { font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: var(--bg); color: var(--ink); min-width: 0; width: 100%; box-sizing: border-box; }
 .buy-er .be-e { text-align: center; }
+
+/* ===== accessibility ===== */
+/* dark: brand-colored text on dark tints gets a lighter shade, and buttons a deeper fill, so both read clearly */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --brand-text: #a99ff8; --brand-fill: #6356d8; } }
+:root[data-theme="dark"] { --brand-text: #a99ff8; --brand-fill: #6356d8; }
+:root { --brand-text: var(--brand); --brand-fill: var(--brand); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --brand-text: #a99ff8; --brand-fill: #6356d8; } }
+.slip-btn, .cap-btn:not([aria-pressed="true"]), .ci-go, .ft-n, .set-legal a, .buy-edit, .tt-n, .money .mt b.add { color: var(--brand-text); }
+.btn:not(.ghost):not(.plain):not(.danger), .cap-btn[aria-pressed="true"], .tt-next { background: var(--brand-fill); }
+.money .mt b.gold { color: var(--gold-text, #8a6008); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gold-text: #f0c060; } }
+:root[data-theme="dark"] { --gold-text: #f0c060; }
+.tk-tag { color: color-mix(in srgb, var(--ink) 72%, var(--surface)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nav button:not([aria-pressed="true"]) { color: #c4c0ce; } }
+:root[data-theme="dark"] .nav button:not([aria-pressed="true"]) { color: #c4c0ce; }
+/* a visible keyboard focus everywhere */
+:where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible { outline: 2.5px solid var(--brand-text); outline-offset: 2px; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -1638,6 +1661,7 @@ body { margin: 0; }
 .auth .btn { padding: 13px; font-size: 1rem; }
 .auth-msg { min-height: 1.2em; margin: 0; font-size: .85rem; color: var(--bad); }
 .auth-note { margin: 0; font-size: .78rem; color: var(--muted); text-align: center; }
+.auth-legal { margin: 0; font-size: .78rem; text-align: center; } .auth-legal a { color: var(--brand); }
 /* reminder time */
 .rt-quick { display: flex; flex-wrap: wrap; gap: 8px; }
 .rt-q { border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 700 .95rem var(--font-body); padding: 9px 14px; border-radius: 12px; cursor: pointer; font-variant-numeric: tabular-nums; direction: ltr; }
@@ -1713,6 +1737,7 @@ body { margin: 0; }
       <p class="auth-msg" id="authMsg"></p>
       <button class="btn" type="submit" id="authGo">כניסה</button>
       <p class="auth-note" id="authNote">אין אפשרות לשחזר סיסמה, אז כדאי לשמור אותה.</p>
+      <p class="auth-legal"><a href="privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a> · <a href="accessibility.html" target="_blank" rel="noopener">הצהרת נגישות</a></p>
     </div>
   </form>
 </div>
@@ -1745,6 +1770,11 @@ function showLogin() {
       const msg = t => { g("authMsg").textContent = t; };
       if (user.length < 2) return msg("שם משתמש של 2 תווים לפחות.");
       if (pass.length < 6) return msg("סיסמה של 6 תווים לפחות.");
+      if (mode === "signup") {
+        // new accounts: a stronger password (older accounts keep signing in as before)
+        if (pass.length < 8) return msg("לחשבון חדש צריך סיסמה של 8 תווים לפחות.");
+        if (pass.toLowerCase().includes(user.toLowerCase()) || /^(\d)+$|^(12345678|123456789|password|qwerty)/i.test(pass)) return msg("הסיסמה קלה מדי לניחוש. בחרו סיסמה אחרת.");
+      }
       g("authGo").disabled = true; msg("");
       try {
         let res;
@@ -2796,6 +2826,7 @@ BUSINESS_TYPES.forEach(r => { r[1] = ["דלק", "חניה", "מונית", "שט�
 let merchantRules = {}; // learned from the viewer's edits: raw name → {name, cat}
 // 9: names the server (shared memory or the AI) gave to businesses the site did not know, kept on this device
 const aiKey = s => String(s || "").toLowerCase().replace(/[0-9*#_.,'"()\/\\|:;!?+\-]+/g, " ").replace(/\s+/g, " ").trim();
+const aiClean = v => String(v || "").replace(/[<>"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
 let aiMerch = {}; try { aiMerch = JSON.parse(localStorage.getItem("aiMerch") || "{}") || {}; } catch (e) {}
 const normMerchant = raw => " " + String(raw || "").toLowerCase().replace(/[׳'`"]/g, "").replace(/\s+/g, " ").trim() + " ";
 function recognizeMerchant(raw) {
@@ -2927,6 +2958,8 @@ document.getElementById("startDay").value = startDay;
 if (now.getDate() < startDay) shift(-1);
 
 /* ---------- helpers ---------- */
+// the page language and direction, for screen readers (the Apps Script host does not set them)
+document.documentElement.lang = "he"; document.documentElement.dir = "rtl";
 const $ = id => document.getElementById(id);
 /* a sign always sits on the left of the amount, also inside right-to-left text */
 const ltr = s => "\u2066" + s + "\u2069";
@@ -4689,25 +4722,38 @@ function maybeWeekRecap() {
 }
 // unknown businesses go to the server in one batch after the data loads; each name is asked once (a failure waits a week)
 let aiBusy = false;
-async function aiClassify() {
-  if (aiBusy || !window.ispendClassify || !tx.length) return;
+async function aiClassify(force) {
+  if (aiBusy) return { busy: true };
+  if (!window.ispendClassify || !tx.length) return { want: 0, got: 0 };
   let asked = {}; try { asked = JSON.parse(localStorage.getItem("aiAsked") || "{}") || {}; } catch (e) {}
   const now = Date.now(), want = [];
   tx.forEach(t => {
     const raw = t.rawMerchant; if (!raw || t.income || merchantRules[raw.trim()]) return;
     if (!(t.source === "applepay" || (t.del && t.del.key === "bank") || (t.del && t.del.raw && t.del.raw[6] === "ייבוא"))) return;
-    const k = aiKey(raw); if (!k || aiMerch[k] || (asked[k] && now - asked[k] < 7 * 864e5)) return;
+    const k = aiKey(raw); if (!k || aiMerch[k] || (!force && asked[k] && now - asked[k] < 7 * 864e5)) return;
     const hit = recognizeMerchant(raw); if (hit && !hit.kind && hit.cat && t.category !== "לא מסווג") return;
     if (!want.includes(raw)) want.push(raw);
   });
-  if (!want.length) return;
+  if (!want.length) return { want: 0, got: 0 };
   aiBusy = true;
   try {
     const res = await window.ispendClassify(want.slice(0, 60), CATS.filter(c => c !== "הכנסה"));
-    let n = 0; want.slice(0, 60).forEach(r => { const k = aiKey(r); asked[k] = now; const a = res && res[r]; if (a) { aiMerch[k] = { name: a.name, cat: a.cat }; n++; } });
+    let n = 0; want.slice(0, 60).forEach(r => { const k = aiKey(r); asked[k] = now; const a = res && res[r]; if (a) { aiMerch[k] = { name: aiClean(a.name), cat: aiClean(a.cat) }; n++; } });
     try { localStorage.setItem("aiMerch", JSON.stringify(aiMerch)); localStorage.setItem("aiAsked", JSON.stringify(asked)); } catch (e) {}
     if (n) { afterData(); toast(`✨ ${n} עסקים קיבלו שם וקטגוריה`, 2600); }
-  } catch (e) {} finally { aiBusy = false; }
+    return { want: want.length, got: n };
+  } catch (e) { return { want: want.length, got: 0, error: String((e && e.message) || e) }; } finally { aiBusy = false; }
+}
+// from the settings: run it now and say what happened
+async function aiCheckNow() {
+  if (!window.ispendClassify) { await askDialog({ kick: "סיווג עסקים", title: "לא זמין כאן", text: "הסיווג החכם עובד באתר החדש (iSpend ב-GitHub), אחרי התחברות.", buttons: [{ label: "סגירה", value: null, cls: "plain" }] }); return; }
+  toast("בודק את העסקים…", 1500);
+  const r = await aiClassify(true);
+  const known = Object.keys(aiMerch).length;
+  const text = r.busy ? "בדיקה כבר רצה. נסו שוב בעוד רגע."
+    : r.error ? (/no AI key/.test(r.error) ? "השרת עוד לא קיבל מפתח בינה מלאכותית (GEMINI_API_KEY ב-Supabase)." : /daily limit/.test(r.error) ? "הגעתם למכסה היומית של עסקים חדשים. מחר אפשר להמשיך." : "השרת החזיר שגיאה: " + esc(r.error).slice(0, 160))
+    : !r.want ? "כל העסקים שלכם כבר מוכרים לאתר, אין מה לסווג. ✓" : `נשלחו ${r.want} עסקים, ${r.got} קיבלו שם וקטגוריה.`;
+  await askDialog({ kick: "סיווג עסקים חכם", title: r.error ? "משהו לא עבד" : "הבדיקה הסתיימה", text: text + `<br><span style="color:var(--muted);font-size:.85em">${known} עסקים בזיכרון במכשיר הזה</span>`, buttons: [{ label: "סגירה", value: null, cls: "plain" }] });
 }
 function afterData() {
   setTimeout(aiClassify, 2500);
@@ -6830,35 +6876,38 @@ boot();
     <p class="set-none" id="setNone" hidden>לא נמצא. נסו מילה אחרת.</p>
     <div class="set-gh">הכסף שלי</div>
     <div class="set-grp" data-g="money">
-      <button type="button" class="set-row" data-go="sal">${ico("money", 150)}<span class="set-rt"><b>משכורות ומועד החיוב</b><small data-s="sal"></small></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-go="months">${ico("grid", 200)}<span class="set-rt"><b>חודשים</b><small data-s="months"></small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="sal">${ico("money", 150)}<span class="set-rt"><b>משכורות ומועד החיוב</b><small data-s="sal"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-go="months">${ico("grid", 200)}<span class="set-rt"><b>חודשים</b><small data-s="months"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
     </div>
     <div class="set-gh">סידור</div>
     <div class="set-grp" data-g="org">
-      <button type="button" class="set-row" data-go="cats">${ico("tag", 330)}<span class="set-rt"><b>קטגוריות ותקרות</b><small data-s="cats"></small></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-go="pay">${ico("card", 210)}<span class="set-rt"><b>אמצעי תשלום</b><small data-s="pay"></small></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-go="wallet">${ico("wallet", 45)}<span class="set-rt"><b>כרטיסים מהארנק</b><small data-s="wallet"></small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="cats">${ico("tag", 330)}<span class="set-rt"><b>קטגוריות ותקרות</b><small data-s="cats"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-go="pay">${ico("card", 210)}<span class="set-rt"><b>אמצעי תשלום</b><small data-s="pay"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-go="wallet">${ico("wallet", 45)}<span class="set-rt"><b>כרטיסים מהארנק</b><small data-s="wallet"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
     </div>
     <div class="set-gh" data-gh="links">חיבורים</div>
     <div class="set-grp" data-g="links">
-      <button type="button" class="set-row" data-go="apple">${ico("apple", 0)}<span class="set-rt"><b>Apple Pay</b><small>כל תשלום באייפון נכנס לבד</small></span><span class="set-pill" data-p="apple" hidden></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-go="bank">${ico("bank", 160)}<span class="set-rt"><b>בנק ואשראי</b><small>משיכה אוטומטית של התנועות</small></span><span class="set-pill" data-p="bank"></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-go="sheet">${ico("sheet", 140)}<span class="set-rt"><b>Google Sheets</b><small>הנתונים נשמרים בגיליונות שלך</small></span><span class="set-pill" data-p="sheet"></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-act="import">${ico("xls", 270)}<span class="set-rt"><b>ייבוא מקובץ</b><small>אקסל או CSV מהבנק או מחברת האשראי</small></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-go="quick">${ico("bolt", 45)}<span class="set-rt"><b>הוספה מהירה</b><small>קיצור מהמסך הראשי של הטלפון</small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="apple">${ico("apple", 0)}<span class="set-rt"><b>Apple Pay</b><small>כל תשלום באייפון נכנס לבד</small></span><span class="set-pill" data-p="apple" hidden></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-go="bank">${ico("bank", 160)}<span class="set-rt"><b>בנק ואשראי</b><small>משיכה אוטומטית של התנועות</small></span><span class="set-pill" data-p="bank"></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-go="sheet">${ico("sheet", 140)}<span class="set-rt"><b>Google Sheets</b><small>הנתונים נשמרים בגיליונות שלך</small></span><span class="set-pill" data-p="sheet"></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="aicheck"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bolt", 280)}<span class="set-rt"><b>סיווג עסקים חכם</b><small>שם וקטגוריה לעסקים שהאתר לא מכיר</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="import">${ico("xls", 270)}<span class="set-rt"><b>ייבוא מקובץ</b><small>אקסל או CSV מהבנק או מחברת האשראי</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-go="quick">${ico("bolt", 45)}<span class="set-rt"><b>הוספה מהירה</b><small>קיצור מהמסך הראשי של הטלפון</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
     </div>
     <div class="set-gh">החשבון</div>
     <div class="set-grp" data-g="me">
       <div class="set-row" style="cursor:default">${ico("moon", 250)}<span class="set-rt"><b>מראה</b></span><span id="setLook"></span></div>
-      <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת יומית</b><small>בשעה שתבחר, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-act="xlsx">${ico("xls", 140)}<span class="set-rt"><b>הורדה לאקסל</b><small>כל התנועות, סיכום חודשי ולפי קטגוריה</small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת יומית</b><small>בשעה שתבחר, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="xlsx">${ico("xls", 140)}<span class="set-rt"><b>הורדה לאקסל</b><small>כל התנועות, סיכום חודשי ולפי קטגוריה</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
     </div>
     <div class="set-gh bad" data-gh="danger">אזור זהירות</div>
     <div class="set-grp set-danger" data-g="danger">
-      <button type="button" class="set-row" data-go="months">${ico("trash", 0)}<span class="set-rt"><b>מחיקת חודשים</b><small>הסתרה, או מחיקה לצמיתות אחרי אישור</small></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-act="unsheet" hidden>${ico("unlink", 0)}<span class="set-rt"><b>ניתוק הגיליון</b><small>האתר יפסיק לקרוא מהגיליונות שלך</small></span><span class="set-chev">‹</span></button>
-      <button type="button" class="set-row" data-act="logout" hidden>${ico("out", 0)}<span class="set-rt"><b>התנתקות</b><small data-s="who"></small></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-go="months">${ico("trash", 0)}<span class="set-rt"><b>מחיקת חודשים</b><small>הסתרה, או מחיקה לצמיתות אחרי אישור</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="unsheet" hidden>${ico("unlink", 0)}<span class="set-rt"><b>ניתוק הגיליון</b><small>האתר יפסיק לקרוא מהגיליונות שלך</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="delacct"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("trash", 0)}<span class="set-rt"><b>מחיקת החשבון</b><small>כל הנתונים באתר נמחקים לצמיתות</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="logout" hidden>${ico("out", 0)}<span class="set-rt"><b>התנתקות</b><small data-s="who"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
     </div>
+    <p class="set-legal"><a href="https://nathanel64.github.io/iSpend/privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a> · <a href="https://nathanel64.github.io/iSpend/accessibility.html" target="_blank" rel="noopener">הצהרת נגישות</a></p>
   </div>`);
   const first = av.querySelector(".set-page"); av.insertBefore(menu, first);
   // 13: search: each subject also answers to the words people use for it
@@ -6894,6 +6943,8 @@ boot();
     if (r.dataset.go) return setGo(r.dataset.go);
     if (r.dataset.act === "xlsx") { exportXlsx(r); return; }
     if (r.dataset.act === "import") { openImport(); return; }
+    if (r.dataset.act === "aicheck") { aiCheckNow(); return; }
+    if (r.dataset.act === "delacct") { if (window.ispendDeleteAccount) window.ispendDeleteAccount(); return; }
     if (r.dataset.act === "remind") { if (window.ispendRemind) window.ispendRemind(); return; }
     if (r.dataset.act === "logout") {
       const ok = await askDialog({ kick: "החשבון", title: "להתנתק?", text: "אפשר להתחבר שוב בכל רגע עם שם המשתמש והסיסמה.", buttons: [{ label: "כן, להתנתק", value: 1, cls: "danger" }, { label: "ביטול", value: null, cls: "ghost" }] });
@@ -6969,7 +7020,7 @@ boot();
       $("catRows").innerHTML = draftCats.map((c, i) => {
         if (!c.name.trim()) return "";
         const [icon, hue, sat] = draftIcon(c), cap = c.cap != null ? c.cap : capsDef()[c.orig || c.name];
-        return `<button type="button" class="cat-row" data-ce="${i}">${glyph(icon, hue, sat)}<span class="nm">${esc(c.name)}${c.fixed ? `<span class="fx-tag">קבועה</span>` : ""}</span><span class="cp ${cap > 0 ? "" : "no"}">${cap > 0 ? fmt(cap) : "+ תקרה"}</span><span class="set-chev">‹</span></button>`;
+        return `<button type="button" class="cat-row" data-ce="${i}">${glyph(icon, hue, sat)}<span class="nm">${esc(c.name)}${c.fixed ? `<span class="fx-tag">קבועה</span>` : ""}</span><span class="cp ${cap > 0 ? "" : "no"}">${cap > 0 ? fmt(cap) : "+ תקרה"}</span><span class="set-chev" aria-hidden="true">‹</span></button>`;
       }).join("");
       try { renderCapTotal(); } catch (e) {}
     };
@@ -7054,7 +7105,7 @@ async function openGaugeInfo(Y, M, fromYear) {
     <div class="gb-list">
       ${row("var(--s1)", "משכורת", sal.est ? "הערכה לפי החודש הקודם" : sal.missing ? "עוד לא הוזנה" : "", sal.amount)}
       ${f.income ? row("var(--s1)", "הכנסות נוספות", "", f.income) : ""}
-      ${row("var(--s7)", "הוצאות קבועות", [...FIXED].slice(0, 3).join(", "), fixedG)}
+      ${row("var(--s7)", "הוצאות קבועות", esc([...FIXED].slice(0, 3).join(", ")), fixedG)}
       ${row("var(--s2)", "הוצאות משתנות", "", varG)}
       ${refunds ? row("var(--s3)", "החזרים שקיבלת", "מקוזזים מההוצאות", -refunds) : ""}
       ${row("", left >= 0 ? "נשאר" : "חריגה", goal ? (left >= goal ? "עמדת ביעד החיסכון (" + fmt(goal) + ")" : "היעד: לחסוך " + fmt(goal)) : "", left, "sum")}
@@ -7309,7 +7360,7 @@ function openImport() {
           const st0 = impState, unk = [...new Set(st0.items.filter(x => !x.inc && (x.cat === "לא מסווג" || !recognizeMerchant(x.raw) || recognizeMerchant(x.raw).kind)).map(x => x.raw))].slice(0, 60);
           if (unk.length) window.ispendClassify(unk, CATS.filter(c => c !== "הכנסה")).then(res => {
             if (impState !== st0 || !res) return; let n = 0;
-            st0.items.forEach(x => { const a = res[x.raw]; if (!a || x.touched) return; aiMerch[aiKey(x.raw)] = { name: a.name, cat: a.cat }; if (a.name) x.name = a.name; if (CATS.includes(a.cat)) x.cat = a.cat; n++; });
+            st0.items.forEach(x => { const a = res[x.raw]; if (!a || x.touched) return; aiMerch[aiKey(x.raw)] = { name: aiClean(a.name), cat: aiClean(a.cat) }; if (a.name) x.name = aiClean(a.name); if (CATS.includes(a.cat)) x.cat = a.cat; n++; });
             try { localStorage.setItem("aiMerch", JSON.stringify(aiMerch)); } catch (e) {}
             if (n) impRender();
           }).catch(() => {});
@@ -7753,10 +7804,10 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "מאיזה חודש אתם באתר, כמה חודשים וכמה תנועות. למעלה משמאל, ״סיור באתר״ מראה את הסיור הזה שוב. מתחתיו חיפוש בהגדרות: ״תקרה״, ״כהה״, ״יום חיוב״." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת לכל חודש (עם הממוצע של 3 האחרונים), יום החיוב בכרטיס ומאיזה חודש האתר מתחיל. ב״חודשים״ מסתירים חודש או מוחקים אותו." },
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "<b>קטגוריות ותקרות</b>: לחיצה על קטגוריה פותחת חלון קטן לשם, אייקון וצבע, ״קבועה״ ותקרה לכל חודש. כאן גם אמצעי התשלום והכרטיסים מהארנק." },
-  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay מכניס כל תשלום באייפון לבד. הגדרה חד-פעמית של דקה. ו<b>ייבוא מקובץ</b> מכניס בבת אחת פירוט שהורדתם מהבנק או מחברת האשראי (אקסל או CSV): העמודות מזוהות לבד, ומה שכבר קיים לא נכנס פעמיים." },
+  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay מכניס כל תשלום באייפון לבד. הגדרה חד-פעמית של דקה. <b>סיווג עסקים חכם</b> נותן שם וקטגוריה לעסקים שהאתר לא מכיר. ו<b>ייבוא מקובץ</b> מכניס בבת אחת פירוט שהורדתם מהבנק או מחברת האשראי (אקסל או CSV): העמודות מזוהות לבד, ומה שכבר קיים לא נכנס פעמיים." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "קובץ אקסל מסודר עם כל התנועות (כולל עמודת חודש), סיכום לכל חודש ולפי קטגוריה. בטלפון אפשר לשמור אותו או לשלוח בוואטסאפ." },
   { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת 🔔", b: "מפעילים פעם אחת ובוחרים שעה, ובכל יום בשעה הזו, אם לא הוספתם כלום באותו יום, מגיעה התראה לטלפון. לחיצה עליה פותחת ישר את חלון ההוספה. באייפון זה עובד מהאתר ששמור במסך הבית." },
-  { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "מחיקת חודשים והתנתקות, במקום אחד ותמיד עם שאלת אישור. ליד כל דבר שצריך הסבר יש כפתור ⓘ." },
+  { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "מחיקת חודשים, התנתקות ו<b>מחיקת החשבון</b>, במקום אחד ותמיד עם שאלת אישור. ליד כל דבר שצריך הסבר יש כפתור ⓘ. בתחתית: מדיניות הפרטיות והצהרת הנגישות." },
   { t: null, e: "👆", h: "עוד כמה טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן. בתוך עמוד בהגדרות, החלקה ימינה מחזירה לתפריט." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
 ];
@@ -7986,6 +8037,23 @@ window.ispendPushTouch = async function (day) {
   try { await sb.from("push_subs").update({ last_add: day }).eq("user_id", USER_ID); } catch (e) {}
 };
 // a tap on the reminder opens the add window (sw.js opens ./?add)
+/* deleting the account: asks twice, then the server removes the sign-in and everything tied to it */
+window.ispendDeleteAccount = async function () {
+  const sheet = typeof SHEET_MODE !== "undefined" && SHEET_MODE;
+  const a = await askDialog({ kick: "מחיקת החשבון", title: "למחוק את החשבון לצמיתות?", text: "כל התנועות, ההגדרות, התזכורות ושם המשתמש יימחקו מהאתר, ואי אפשר לשחזר אותם." + (sheet ? "<br><b>הגיליונות שלך ב-Google לא נמחקים.</b>" : "<br>אפשר קודם להוריד את כל התנועות לאקסל מההגדרות."),
+    buttons: [{ label: "כן, להמשיך", value: "go", cls: "danger" }, { label: "ביטול", value: null, cls: "plain" }] });
+  if (a !== "go") return;
+  const b = await askDialog({ kick: "אישור אחרון", title: "המחיקה סופית", text: "לחיצה על ״מחיקה לצמיתות״ תמחק את החשבון עכשיו.", buttons: [{ label: "מחיקה לצמיתות", value: "del", cls: "danger" }, { label: "ביטול", value: null, cls: "plain" }] });
+  if (b !== "del") return;
+  try {
+    const r = await fetch(SUPA_URL + "/functions/v1/delete-account", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ confirm: "DELETE" }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) throw new Error(j.error || r.status);
+    try { localStorage.clear(); } catch (e) {}
+    try { await sb.auth.signOut(); } catch (e) {}
+    toast("החשבון נמחק.", 2000); setTimeout(() => location.reload(), 1600);
+  } catch (e) { toast("המחיקה נכשלה. נסו שוב בעוד רגע.", 4000); }
+};
 /* 9: businesses the site does not know get a name and a category from the server (shared memory, else the AI) */
 const AI_FN = SUPA_URL + "/functions/v1/classify-merchant";
 window.ispendClassify = async function (names, cats) {
@@ -8000,7 +8068,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261026224711";
+const BUILD_ID = "20261026235719";
 let updToast = null;
 async function checkUpdate() {
   try {
