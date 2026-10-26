@@ -1,3 +1,4 @@
+-- run by GitHub Actions on push
 -- iSpend: a reminder time for each phone. Run once: SQL Editor -> New query -> paste -> Run.
 alter table public.push_subs add column if not exists remind_at text not null default '21:00';
 -- the server now looks every 15 minutes, so a time like 20:30 works too
