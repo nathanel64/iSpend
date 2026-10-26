@@ -33,23 +33,28 @@ jobs:
           { echo "sql<<EOF"; echo "$sql"; echo "EOF"; echo "fns<<EOF"; echo "$fns"; echo "EOF"; echo "files<<EOF"; echo "$files"; echo "EOF"; } >> "$GITHUB_OUTPUT"
       - name: Run SQL
         if: steps.ch.outputs.sql != ''
+        env:
+          SQL_FILES: ${{ steps.ch.outputs.sql }}
         run: |
-          for f in ${{ steps.ch.outputs.sql }}; do
+          for f in $SQL_FILES; do
             [ -f "$f" ] || continue
             echo "== $f"
             body=$(jq -Rs '{query: .}' "$f")
             code=$(curl -sS -o out.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$body")
             cat out.json; echo
-            [ "$code" -lt 300 ] || { echo "SQL failed ($code): $f"; exit 1; }
+            [ "$code" -lt 300 ] || { echo "::error title=SQL failed::$f $code $(head -c 300 out.json)"; exit 1; }
           done
       - name: Deploy functions
         if: steps.ch.outputs.fns != ''
+        env:
+          FNS: ${{ steps.ch.outputs.fns }}
         run: |
-          for fn in ${{ steps.ch.outputs.fns }}; do
+          for fn in $FNS; do
             [ -d "supabase/functions/$fn" ] || continue
             echo "== $fn"
-            supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api
+            supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api > dep.txt 2>&1 || { echo "::error title=deploy $fn::$(tail -c 400 dep.txt | tr '\n' ' ')"; exit 1; }
+            echo "::notice title=deployed::$fn"
           done
       - name: Report the business memory
         if: contains(steps.ch.outputs.files, 'supabase/checks/')

@@ -1,3 +1,4 @@
+// iSpend
 // iSpend: deletes the signed-in person's account (Supabase Edge Function "delete-account").
 // Removing the sign-in removes everything tied to it: profile, transactions, reminder phones, AI usage
 // (every table points to the account with "on delete cascade"). A linked Google Sheet is not touched.

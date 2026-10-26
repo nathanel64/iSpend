@@ -1,3 +1,4 @@
+// iSpend
 // iSpend: names and sorts businesses the site does not know (Supabase Edge Function "classify-merchant").
 // POST { names: [raw...], cats: [...] }      -> { results: { raw: { name, cat } } }   (from the shared memory, else the AI)
 // POST { learn: [{ raw, name, cat }] }        -> a person's own correction, kept for everyone
