@@ -30,12 +30,17 @@ ${names.map((n, i) => `${i}. ${n}`).join("\n")}`;
     if (!r.ok) throw new Error("claude " + r.status + " " + (await r.text()).slice(0, 200));
     const j = await r.json(); text = (j.content || []).map((c: { text?: string }) => c.text || "").join("");
   } else if (gk) {
-    const model = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${gk}`, {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } })
-    });
-    if (!r.ok) throw new Error("gemini " + r.status + " " + (await r.text()).slice(0, 200));
+    // the newest fast model first (the alias follows Google's releases), older names as a fallback
+    const models = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
+    let r: Response | null = null, last = "";
+    for (const model of models) {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${gk}`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } })
+      });
+      if (r.ok) break; last = model + " " + r.status + " " + (await r.text()).slice(0, 160); if (r.status !== 404) break;
+    }
+    if (!r || !r.ok) throw new Error("gemini " + last);
     const j = await r.json(); text = j.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
   } else throw new Error("no AI key");
   const m = text.match(/\[[\s\S]*\]/); if (!m) return [];
