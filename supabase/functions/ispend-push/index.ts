@@ -1,3 +1,4 @@
+// iSpend
 // deployed automatically from GitHub (.github/workflows/supabase.yml)
 // iSpend: evening reminders (Supabase Edge Function "ispend-push").
 // GET  ?vapid=1  -> the public key the phone subscribes with (the key pair is made on first use and kept in push_keys)

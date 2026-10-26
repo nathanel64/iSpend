@@ -27,8 +27,10 @@ jobs:
           else
             files=$(git diff --name-only HEAD~1 HEAD -- supabase)
           fi
-          echo "sql<<EOF" >> $GITHUB_OUTPUT; echo "$files" | grep -E '^supabase/sql/.*\.sql$' | sort || true; echo "EOF" >> $GITHUB_OUTPUT
-          echo "fns<<EOF" >> $GITHUB_OUTPUT; echo "$files" | grep -oE '^supabase/functions/[^/]+' | sort -u | sed 's#supabase/functions/##' || true; echo "EOF" >> $GITHUB_OUTPUT
+          sql=$(echo "$files" | grep -E '^supabase/sql/.*\.sql$' | sort || true)
+          fns=$(echo "$files" | grep -oE '^supabase/functions/[^/]+' | sort -u | sed 's#supabase/functions/##' || true)
+          echo "files changed: $files"
+          { echo "sql<<EOF"; echo "$sql"; echo "EOF"; echo "fns<<EOF"; echo "$fns"; echo "EOF"; } >> "$GITHUB_OUTPUT"
       - name: Run SQL
         if: steps.ch.outputs.sql != ''
         run: |
