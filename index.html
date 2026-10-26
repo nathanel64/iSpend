@@ -2,10 +2,11 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://script.google.com https://script.googleusercontent.com https://cdn.jsdelivr.net; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://script.google.com https://script.googleusercontent.com https://cdn.jsdelivr.net; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" id="vp" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* not inside someone else's page (a hidden frame could trick taps) */if (window.top !== window.self) { try { window.top.location = window.self.location; } catch (e) { document.documentElement.style.display = "none"; } }</script>
 <script>/* iPhone: stop the jump-zoom when a field gets focus (iOS still lets people pinch to zoom); elsewhere zoom stays fully free */if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) document.getElementById("vp").content += ", maximum-scale=1";</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%235b4cf0%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%239a52d6%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2218%22%20fill%3D%22url%28%23bg%29%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2218%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-opacity%3D%22.22%22%20stroke-width%3D%226%22/%3E%3Cpath%20d%3D%22M32%2014%20A18%2018%200%201%201%2014.6%2036.6%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2214.6%22%20cy%3D%2236.6%22%20r%3D%223%22%20fill%3D%22%23ffd36e%22/%3E%3Cpath%20d%3D%22M24%2037%20L29.5%2031.5%20L33.5%2035%20L40%2027.5%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3Cpath%20d%3D%22M35.5%2027%20H40.5%20V32%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -1770,6 +1771,8 @@ function showLogin() {
       const user = g("authUser").value.trim(), pass = g("authPass").value, name = g("authName").value.trim();
       const msg = t => { g("authMsg").textContent = t; };
       if (user.length < 2) return msg("שם משתמש של 2 תווים לפחות.");
+      if (mode === "signup" && !/^[A-Za-z0-9א-ת_.\-]+$/.test(user)) return msg("שם משתמש יכול להכיל אותיות, ספרות, נקודה, מקף וקו תחתון בלבד.");
+      if (mode === "signup" && /[<>]/.test(name)) return msg("השם לא יכול להכיל את הסימנים < או >.");
       if (pass.length < 6) return msg("סיסמה של 6 תווים לפחות.");
       if (mode === "signup") {
         // new accounts: a stronger password (older accounts keep signing in as before)
@@ -2959,6 +2962,8 @@ document.getElementById("startDay").value = startDay;
 if (now.getDate() < startDay) shift(-1);
 
 /* ---------- helpers ---------- */
+// a short buzz, only after the person has touched the page (browsers block it before that)
+const buzz = pat => { try { if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(pat); } catch (e) {} };
 // the page language and direction, for screen readers (the Apps Script host does not set them)
 document.documentElement.lang = "he"; document.documentElement.dir = "rtl";
 const $ = id => document.getElementById(id);
@@ -4283,7 +4288,7 @@ function flyCoin(from, tries = 0) {
         pulse("bump", 700);
         const r = document.createElement("div"); r.className = "coin-ripple"; document.body.appendChild(r);
         r.animate([{ transform: `translate(${to.x}px,${to.y}px) scale(.6)`, opacity: .9 }, { transform: `translate(${to.x}px,${to.y}px) scale(3.2)`, opacity: 0 }], { duration: 650, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => r.remove();
-        try { navigator.vibrate && navigator.vibrate(10); } catch (e) {}
+        try { navigator.vibrate && buzz(10); } catch (e) {}
       };
     }
   } catch (e) {}
@@ -4471,7 +4476,7 @@ function stageFx(fill) {
     sw.animate([{ strokeDashoffset: 10, opacity: 0 }, { opacity: .95, offset: .15 }, { opacity: .95, offset: .8 }, { strokeDashoffset: -(end - 10), opacity: 0 }], { duration: 1100, easing: "cubic-bezier(.4,0,.2,1)" });
     ["statusBig"].forEach(id => { const el = $(id); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); });
     ["statusPlus", "ringPill"].forEach(id => { const el = $(id); if (el && !el.hidden) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); } });
-    try { navigator.vibrate && navigator.vibrate([10, 60, 10]); } catch (e) {}
+    try { navigator.vibrate && buzz([10, 60, 10]); } catch (e) {}
   }, 450);
 }
 function renderCats(f) {
@@ -5575,8 +5580,22 @@ $("yearPick").addEventListener("click", e => { const b = e.target.closest("[data
 $("tabAdmin").onclick = () => showView("admin");
 draftCats = CATS.map(n => ({ name: n, fixed: FIXED.has(n), orig: n })); draftPay = PAY.slice(); draftPayOrig = PAY.slice();
 
+// Google Sheets runs text that starts with "=", "+" or "@" as a formula. Text the site writes (a business name from
+// a bank file, a description) is stored as plain text there, so a crafted name can't become a formula in the sheet.
+function guardSheetWrites() {
+  if (!mcp || mcp.__guarded || (typeof SHEET_MODE !== "undefined" && !SHEET_MODE)) return;
+  const OK = /^=DATE\(\d{4},\d{1,2},\d{1,2}\)$/;
+  const safe = v => typeof v === "string" && /^[=+@\-\t\r]/.test(v) && !OK.test(v) && !/^-?\d[\d.,]*$/.test(v) ? "'" + v : v;
+  const call = mcp.callTool.bind(mcp);
+  mcp.callTool = (srv, name, args, opts) => {
+    if ((name === "append_values" || name === "update_values") && args && Array.isArray(args.values)) args = { ...args, values: args.values.map(r => Array.isArray(r) ? r.map(safe) : r) };
+    return call(srv, name, args, opts);
+  };
+  mcp.__guarded = true;
+}
 async function boot() {
   mcp = await startApp();
+  guardSheetWrites();
   if (!mcp) { $("foot").textContent = "פתחו את העמוד ב-claude.ai כדי לראות את הנתונים מהגיליון."; return; }
   for (const [key, range] of Object.entries(SOURCES)) {
     mcp.watchTool(SERVER, "get_values", { spreadsheetId: SHEET_ID, range }, ev => {
@@ -5661,7 +5680,7 @@ function dragStart(sw, x, y) {
   // lift: the card pops up, the row it left closes smoothly
   g.classList.add("lift");
   sw.style.height = sw.offsetHeight + "px"; void sw.offsetHeight; sw.classList.add("drag-src"); sw.style.height = "0px";
-  try { navigator.vibrate && navigator.vibrate(15); } catch (e) {}
+  try { navigator.vibrate && buzz(15); } catch (e) {}
   // one frame loop: the card glides after the finger (no jumps), the page scrolls near the edges, the slot follows
   const loop = () => {
     const d = txDrag; if (!d) return;
@@ -5697,7 +5716,7 @@ function dragTarget() {
   grp.style.paddingBottom = d.H + "px";
   const tag = d.g.querySelector(".drag-to");
   if (d.to !== d.from) { tag.hidden = false; tag.textContent = "← יעבור ל" + dragDayLabel(d.to); } else tag.hidden = true;
-  try { navigator.vibrate && navigator.vibrate(5); } catch (e) {}
+  try { navigator.vibrate && buzz(5); } catch (e) {}
 }
 function clearSlots(except) {
   document.querySelectorAll("#days .day-grp").forEach(gEl => { if (gEl === except) return; gEl.style.paddingBottom = ""; gEl.querySelectorAll(":scope > .tx-sw").forEach(r => { r.style.transform = ""; r.dataset.shift = 0; }); });
@@ -5948,7 +5967,7 @@ $("voiceStop").onclick = () => { if (rec) { try { rec.stop(); } catch (e) {} } e
 {
   let lp = null, fired = false;
   const fab = $("fab");
-  fab.addEventListener("touchstart", () => { fired = false; lp = setTimeout(() => { lp = null; fired = true; try { navigator.vibrate && navigator.vibrate(15); } catch (e) {} openAdd(); startVoice(); }, 550); }, { passive: true });
+  fab.addEventListener("touchstart", () => { fired = false; lp = setTimeout(() => { lp = null; fired = true; try { navigator.vibrate && buzz(15); } catch (e) {} openAdd(); startVoice(); }, 550); }, { passive: true });
   ["touchend", "touchcancel", "touchmove"].forEach(ev => fab.addEventListener(ev, () => { if (lp) { clearTimeout(lp); lp = null; } }, { passive: true }));
   fab.addEventListener("click", e => { if (fired) { e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
 }
@@ -5971,7 +5990,7 @@ function instShown() {
   const can = addKind === "exp" && (!editTx || editTx.del.key === "apple");
   $("instField").style.visibility = can ? "" : "hidden";
   if (!can) $("addInst").value = "1";
-  const n = +$("addInst").value, a = parseFloat($("addAmount").value) || 0;
+  const n = +$("addInst").value, a = parseFloat(String($("addAmount").value).replace(/[,\s₪]/g, "")) || 0;
   $("instHint").hidden = !(can && n > 1);
   if (can && n > 1) $("instHint").textContent = `הסכום הוא המחיר המלא. ${n} תשלומים של ${fmt2(Math.round(a / n * 100) / 100)}, כל חודש עד ${MONTHS[addMonths(parseDate($("addDate").value) || today, n - 1).getMonth()]}.`;
 }
@@ -5979,7 +5998,10 @@ $("addInst").addEventListener("change", instShown);
 $("addAmount").addEventListener("input", instShown);
 $("addDate").addEventListener("change", instShown);
 let editTx = null;
+// each opening of the add window gets a number: a save that finishes late closes only its own window
+let addSeq = 0;
 function openAdd() {
+  addSeq++;
   editTx = null; $("addMore").hidden = false;
   $("addTitle").textContent = "הוספת תנועה"; $("addCard").disabled = false;
   $("addCard").innerHTML = PAY.map(c => `<option>${esc(c)}</option>`).join("");
@@ -6343,7 +6365,9 @@ function showSaved(row, kind) {
 document.addEventListener("visibilitychange", () => { if (document.hidden) hideSaved(true); });
 $("addForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const amount = Math.round((parseFloat($("addAmount").value) || 0) * 100) / 100;
+  const mySeq = addSeq, mine = () => addSeq === mySeq;
+  // "12,500", "₪45" or " 45 " all mean the number the person typed
+  const amount = Math.round((parseFloat(String($("addAmount").value).replace(/[,\s₪]/g, "")) || 0) * 100) / 100;
   const desc = $("addDesc").value.trim();
   const date = $("addDate").value;
   if (amount <= 0) { $("addMsg").textContent = "הזינו סכום גדול מאפס."; $("addAmount").focus(); return; }
@@ -6354,11 +6378,11 @@ $("addForm").addEventListener("submit", async e => {
     const btn = $("addSave"); btn.disabled = true; btn.textContent = "שומר…"; $("addMsg").textContent = "";
     try {
       await saveEdit(editTx, amount, desc, date, $("addCat").value, $("addCard").value, addKind);
-      openTx = null; confirmTx = null; closeAdd(); afterData();
+      openTx = null; confirmTx = null; if (mine()) closeAdd(); afterData();
       try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
     } catch (err) {
-      $("addMsg").textContent = err && err.code === "changed" ? "הגיליון השתנה. רעננו ונסו שוב." : writeError(err);
-      btn.disabled = false; btn.textContent = "שמירת שינויים";
+      const why = err && err.code === "changed" ? "הגיליון השתנה. רעננו ונסו שוב." : writeError(err);
+      if (mine()) { $("addMsg").textContent = why; btn.disabled = false; btn.textContent = "שמירת שינויים"; } else toast("השינוי לא נשמר: " + why, 4000);
     }
     return;
   }
@@ -6371,7 +6395,7 @@ $("addForm").addEventListener("submit", async e => {
     try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
     const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1); if (startMonthPref != null && mIdxOf(d) < startMonthPref) setStartMonth(mIdxOf(d));
     const fr = $("fab").getBoundingClientRect();
-    closeAdd(); afterData(); btn.disabled = false; btn.textContent = "שמירה";
+    if (mine()) { closeAdd(); btn.disabled = false; btn.textContent = "שמירה"; } afterData();
     if (addKind === "exp") requestAnimationFrame(() => flyCoin({ x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 })); againAfterSave();
     toast("אין חיבור. ההוצאה נשמרה בטלפון ותישלח לבד כשהאינטרנט יחזור ☁");
   };
@@ -6382,19 +6406,19 @@ $("addForm").addEventListener("submit", async e => {
     try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
     const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1); if (startMonthPref != null && mIdxOf(d) < startMonthPref) setStartMonth(mIdxOf(d));
     const fr = $("fab").getBoundingClientRect();
-    closeAdd(); afterData();
+    if (mine()) closeAdd(); afterData();
     if (addKind === "exp") requestAnimationFrame(() => flyCoin({ x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 }));
     if (!addAgain) showSaved(row, addKind);
-    againAfterSave();
+    if (mine()) againAfterSave(); else addAgain = false;
     try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
   } catch (err) {
     const c = err && err.code;
     if (isOfflineErr(err)) return keepLocal();
-    $("addMsg").textContent = c === "approval_required" || c === "not_in_manifest" ? "צריך לאשר לאתר לכתוב לגיליון. לחצו שוב על שמירה ואשרו."
+    const why = c === "approval_required" || c === "not_in_manifest" ? "צריך לאשר לאתר לכתוב לגיליון. לחצו שוב על שמירה ואשרו."
       : c === "server_unavailable" || c === "upstream_error" ? "לא בטוח שהשמירה עברה. רעננו את העמוד ובדקו לפני שמנסים שוב."
       : c === "needs_reauth" ? "החיבור פג. התחברו מחדש."
       : "השמירה נכשלה. נסו שוב.";
-    btn.disabled = false; btn.textContent = "שמירה";
+    if (mine()) { $("addMsg").textContent = why; btn.disabled = false; btn.textContent = "שמירה"; } else toast(why, 4500);
   }
 });
 
@@ -6716,7 +6740,7 @@ function startArrange() {
   if (arranging) return; arranging = true; document.body.classList.add("arrange");
   const d = document.createElement("button"); d.className = "arr-done"; d.type = "button"; d.textContent = "סיום"; d.onclick = endArrange; document.body.append(d);
   drawArrange();
-  try { navigator.vibrate && navigator.vibrate(15); } catch (e) {}
+  try { navigator.vibrate && buzz(15); } catch (e) {}
 }
 function endArrange() {
   if (!arranging) return; arranging = false; document.body.classList.remove("arrange");
@@ -6971,7 +6995,7 @@ boot();
     const linked = typeof SHEET_MODE !== "undefined" ? SHEET_MODE : true;
     const nMonths = Math.max(1, ck - FIRST_MONTH + 1 - [...hiddenMonths].filter(k => k >= FIRST_MONTH && k <= ck).length);
     const nTx = txAll.filter(t => !t.gen || t.gen === 1).length;
-    $("setProf").innerHTML = `<div class="av">${esc(name.trim().charAt(0) || "?")}</div><div><b>${esc(name)}</b><small>${[user, linked ? "מחובר לגיליונות שלך" : ""].filter(Boolean).join(" · ")}</small>
+    $("setProf").innerHTML = `<div class="av">${esc(name.trim().charAt(0) || "?")}</div><div><b>${esc(name)}</b><small>${esc([user, linked ? "מחובר לגיליונות שלך" : ""].filter(Boolean).join(" · "))}</small>
       <div class="stats"><span>מאז ${MONTHS[FIRST_MONTH % 12]} ${Math.floor(FIRST_MONTH / 12)}</span><span>${nMonths === 1 ? "חודש אחד" : nMonths + " חודשים"}</span><span>${nTx === 1 ? "תנועה אחת" : nTx.toLocaleString("he-IL") + " תנועות"}</span></div></div>`;
     const sl = salaryFor(cy, cm, true);
     s("sal", (sl.amount ? fmt(sl.amount) + " ב" + MONTHS[cm] : "עוד לא הוזנה משכורת") + " · חיוב ב-" + startDay + " לחודש");
@@ -7234,7 +7258,9 @@ $("selOff").onclick = () => setSelMode(false);
 let impState = null;
 function loadXlsxLib() {
   if (window.XLSX) return Promise.resolve(window.XLSX);
-  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"; s.onload = () => res(window.XLSX); s.onerror = () => rej(new Error("lib")); document.head.appendChild(s); });
+  // the current SheetJS build (security fixes) from its own site; the older npm copy if that one can't load
+  const one = src => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = () => window.XLSX ? res(window.XLSX) : rej(new Error("lib")); s.onerror = () => { s.remove(); rej(new Error("lib")); }; document.head.appendChild(s); });
+  return one("https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js").catch(() => one("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"));
 }
 function csvRows(text) {
   const sep = (text.split("\n")[0].match(/\t/) ? "\t" : (text.split("\n")[0].split(";").length > text.split("\n")[0].split(",").length ? ";" : ","));
@@ -7259,7 +7285,7 @@ async function readStatement(file) {
   return wb.SheetNames.map(n => X.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }));
 }
 const IMP_COLS = {
-  date: [/תאריך\s*(ה?עסקה|ה?רכישה)/, /^תאריך$/, /תאריך/],
+  date: [/תאריך\s*(ה?עסקה|ה?רכישה)/, /^תאריך$/, /תאריך/, /transaction\s*date|purchase\s*date/i, /^date$/i, /date/i],
   merchant: [/שם\s*בית\s*ה?עסק/, /בית\s*ה?עסק/, /שם\s*ה?עסק/, /תיאור\s*ה?פעולה/, /^תיאור|^פירוט|^הפעולה|^פעולה/, /description|merchant|payee/i],
   amount: [/סכום\s*(ה?חיוב|לחיוב)/, /סכום\s*ב?ש"?ח/, /סכום\s*(ה?עסקה)?$/, /^חובה|^חיוב$/, /סכום/, /amount|debit/i],
   credit: [/^זכות|credit/i],
@@ -7389,7 +7415,7 @@ async function doImport() {
   const b = $("impGo"); b.disabled = true; b.textContent = "מייבא…";
   const stamp = Date.now(), rows = items.map((x, k) => [iso(x.d), x.amt, x.name, st.pay, x.cat, x.inc ? "הכנסה" : "הוצאה", "ייבוא", "i-" + stamp + "-" + k, ""]);
   try {
-    for (let i = 0; i < rows.length; i += 100) await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: rows.slice(i, i + 100) });
+    for (let i = 0; i < rows.length; i += 100) { if (rows.length > 100) b.textContent = `מייבא… ${Math.min(i + 100, rows.length)} מתוך ${rows.length}`; await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: rows.slice(i, i + 100) }); }
     data.apple = [...(data.apple || []), ...rows];
     closeImport(); afterData();
     toast(`יובאו ${rows.length} תנועות ✓`, 3200);
@@ -7623,7 +7649,7 @@ $("selDel").onclick = async () => {
   ["addDesc", "addCat", "addCard", "addDate", "addInst"].forEach(id => { const el = $(id); if (el) el.addEventListener("focus", () => show(false)); });
   pad.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
-    try { navigator.vibrate && navigator.vibrate(5); } catch (x) {}
+    try { navigator.vibrate && buzz(5); } catch (x) {}
     let v = inp.value || "";
     if (b.dataset.add) { set(String(Math.round(((parseFloat(v) || 0) + +b.dataset.add) * 100) / 100)); return; }
     const k = b.dataset.k;
@@ -7785,7 +7811,7 @@ function tourLift(el) {
   return () => r.classList.remove("tour-lift");
 }
 const TOUR = [
-  { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + USER_NAME : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
+  { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + esc(USER_NAME) : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. <b>לחיצה עליו</b> פותחת פירוט: משכורת, קבועות, משתנות והחזרים. מתחתיו: כמה אפשר להוציא היום. הכפתור <b>״התלוש של החודש״</b> מתחת פותח תלוש: מה נכנס, מה ירד לפי סוג, וכמה נשאר." },
   { t: "#fab", h: "הוספת הוצאה", b: "הכפתור הזה פותח את חלון ההוספה. לחיצה ארוכה עליו פותחת אותו ישר בהקשבה, כדי להוסיף בקול. בלי קליטה? ההוצאה נשמרת בטלפון ונשלחת כשהחיבור חוזר. ככה נראה החלון:" },
   { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים כאן, ומתחת מקלידים את הסכום. בטלפון יש מקשים גדולים משלנו, וכפתורים כמו ״+50״ שמוסיפים לסכום בלחיצה." },
@@ -8069,7 +8095,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261027002231";
+const BUILD_ID = "20261027011116";
 let updToast = null;
 async function checkUpdate() {
   try {
