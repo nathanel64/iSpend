@@ -1,0 +1,51 @@
+# Sends what changes under supabase/ to the Supabase project on every push:
+#   supabase/functions/<name>/  -> deployed as an Edge Function
+#   supabase/sql/*.sql          -> each new or changed file is run once on the database (the files are written to be safe to re-run)
+# Needs one repository secret: SUPABASE_ACCESS_TOKEN (Supabase -> Account -> Access Tokens).
+name: Supabase
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/**"]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: kgggpqoaporqkxcdngqn
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Changed files
+        id: ch
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! git rev-parse HEAD~1 >/dev/null 2>&1; then
+            files=$(git ls-files supabase)
+          else
+            files=$(git diff --name-only HEAD~1 HEAD -- supabase)
+          fi
+          echo "sql<<EOF" >> $GITHUB_OUTPUT; echo "$files" | grep -E '^supabase/sql/.*\.sql$' | sort || true; echo "EOF" >> $GITHUB_OUTPUT
+          echo "fns<<EOF" >> $GITHUB_OUTPUT; echo "$files" | grep -oE '^supabase/functions/[^/]+' | sort -u | sed 's#supabase/functions/##' || true; echo "EOF" >> $GITHUB_OUTPUT
+      - name: Run SQL
+        if: steps.ch.outputs.sql != ''
+        run: |
+          for f in ${{ steps.ch.outputs.sql }}; do
+            [ -f "$f" ] || continue
+            echo "== $f"
+            body=$(jq -Rs '{query: .}' "$f")
+            code=$(curl -sS -o out.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$body")
+            cat out.json; echo
+            [ "$code" -lt 300 ] || { echo "SQL failed ($code): $f"; exit 1; }
+          done
+      - name: Deploy functions
+        if: steps.ch.outputs.fns != ''
+        run: |
+          for fn in ${{ steps.ch.outputs.fns }}; do
+            [ -d "supabase/functions/$fn" ] || continue
+            echo "== $fn"
+            supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api
+          done
