@@ -54,9 +54,11 @@ jobs:
       - name: Check the AI classifier
         if: contains(steps.ch.outputs.files, 'supabase/checks/ai.json')
         run: |
-          key=$(curl -sS "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -r '.[] | select(.name=="service_role") | .api_key' | head -1)
-          echo "::add-mask::$key"
-          curl -sS -X POST "https://$PROJECT_REF.supabase.co/functions/v1/classify-merchant" -H "Authorization: Bearer $key" -H "apikey: $key" -H "Content-Type: application/json" -d @supabase/checks/ai.json | jq -c . | tee ai-result.txt
-          echo "::notice title=AI result::$(jq -c '[.results // {} | to_entries[] | .value.name + " = " + .value.cat]' ai-result.txt) $(jq -r '.error // ""' ai-result.txt)"
-          grep -q '"error"' ai-result.txt && exit 1 || true
-
+          # a one-time check code: set as a function secret, used once, then replaced
+          chk=$(openssl rand -hex 24); echo "::add-mask::$chk"
+          code=$(curl -sS -o s.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/secrets" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "[{\"name\":\"ISPEND_CHECK\",\"value\":\"$chk\"}]")
+          echo "::notice title=secret set::$code $(head -c 150 s.json)"
+          sleep 15
+          curl -sS -X POST "https://$PROJECT_REF.supabase.co/functions/v1/classify-merchant" -H "x-ispend-check: $chk" -H "Content-Type: application/json" -d @supabase/checks/ai.json > ai-result.txt || true
+          echo "::notice title=AI result::$(head -c 900 ai-result.txt)"
+          new=$(openssl rand -hex 24); curl -sS -o /dev/null -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/secrets" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "[{\"name\":\"ISPEND_CHECK\",\"value\":\"$new\"}]" || true

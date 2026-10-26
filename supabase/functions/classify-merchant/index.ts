@@ -59,7 +59,7 @@ Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   // a signed-in person, or the project's own server key (used by the automatic check in GitHub)
-  const admin = token && token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const chk = Deno.env.get("ISPEND_CHECK"), admin = (token && token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) || (!!chk && chk.length > 20 && req.headers.get("x-ispend-check") === chk);
   if (!admin) { const { data: u } = await sb.auth.getUser(token); if (!u?.user) return json({ error: "not signed in" }, 401); }
   let body: { names?: string[]; cats?: string[]; learn?: { raw: string; name: string; cat: string }[] } = {};
   try { body = await req.json(); } catch (_) { /* empty */ }
