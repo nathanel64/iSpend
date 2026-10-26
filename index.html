@@ -1582,23 +1582,30 @@ body.arrange .arr-open { display: none !important; }
 .imp-go { width: 100%; }
 
 /* ===== 1-3 (trial) ===== */
-.chal { background: linear-gradient(140deg, color-mix(in srgb, var(--brand) 14%, var(--surface)), var(--surface) 70%); display: flex; flex-direction: column; gap: 6px; }
+.fun { background: linear-gradient(150deg, color-mix(in srgb, var(--brand) 12%, var(--surface)), var(--surface) 60%); display: flex; flex-direction: column; gap: 10px; }
+.fun h2 { margin: 0; }
+.fun-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: color-mix(in srgb, var(--ink) 6%, transparent); border-radius: 12px; padding: 3px; }
+.fun-tabs button { border: 0; background: none; font: 600 .8rem var(--font-body); color: var(--muted); padding: 7px 10px; border-radius: 9px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fun-tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(20, 14, 40, .12); }
+.fun-tabs .ft-n { font-size: .7rem; color: var(--brand); }
+.fun-empty { font-size: .85rem; color: var(--muted); text-align: center; padding: 14px 6px; }
+.chal { display: flex; flex-direction: column; gap: 5px; }
+.chal[hidden], .buy-card[hidden], .bdg-card[hidden] { display: none; }
 .ch-top { display: flex; justify-content: space-between; font-size: .8rem; } .ch-k { font-weight: 700; color: var(--brand); } .ch-d { color: var(--muted); }
-.ch-t { font-size: 1.12rem; font-weight: 800; text-wrap: balance; } .ch-s { font-size: .8rem; color: var(--muted); }
+.ch-t { font-size: 1.05rem; font-weight: 800; text-wrap: balance; } .ch-s { font-size: .8rem; color: var(--muted); }
 .ch-btns { display: flex; gap: 8px; margin-top: 6px; } .ch-btns .btn { flex: 1; }
 .ch-bar { height: 8px; border-radius: 5px; background: var(--line); overflow: hidden; margin-top: 6px; } .ch-bar i { display: block; height: 100%; border-radius: 5px; background: var(--brand); transition: width .6s; }
 .ch-bar.good i { background: var(--good); } .ch-bar.warn i { background: var(--warn); } .ch-bar.bad i { background: var(--bad); }
 .ch-st { font-size: .84rem; font-weight: 700; } .ch-st.good { color: var(--good); } .ch-st.warn { color: var(--warn); } .ch-st.bad { color: var(--bad); }
 .ch-done { font-size: .76rem; color: var(--muted); }
 .bdg-row { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: none; } .bdg-row::-webkit-scrollbar { display: none; }
-.bdg { flex: 0 0 auto; width: 74px; border: 0; background: none; font: inherit; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; padding: 0; }
-.bdg-e { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem; background: var(--bg); filter: grayscale(1); opacity: .55; border: 2px dashed var(--line); }
+.bdg { flex: 0 0 auto; width: 64px; border: 0; background: none; font: inherit; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; padding: 0; }
+.bdg-e { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; font-size: 1.4rem; background: var(--bg); filter: grayscale(1); opacity: .55; border: 2px dashed var(--line); }
 .bdg.on .bdg-e { filter: none; opacity: 1; border: 0; background: radial-gradient(circle at 35% 30%, #fff6d6, #f6c95a 60%, #d99a22); box-shadow: 0 6px 14px -6px rgba(200, 140, 20, .7), inset 0 -3px 0 rgba(0, 0, 0, .12); }
 .bdg-t { font-size: .7rem; text-align: center; line-height: 1.2; color: var(--muted); } .bdg.on .bdg-t { color: var(--ink); font-weight: 600; }
-.buy-card h2 { display: block; font-size: 1rem; } .buy-sum { color: var(--good); }
-.buy-k { font-size: .8rem; color: var(--muted); margin: -2px 0 8px; }
+.buy-h { font-size: .9rem; font-weight: 600; margin-bottom: 8px; } .buy-sum { color: var(--good); font-weight: 800; }
 .buy-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.buy { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; background: var(--bg); border-radius: 14px; padding: 10px; overflow: hidden; }
+.buy { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 6px; background: var(--bg); border-radius: 12px; padding: 7px 9px; overflow: hidden; }
 .buy i { position: absolute; inset: auto 0 0 auto; height: 3px; width: var(--p); background: var(--good); border-radius: 2px; }
 .buy.far i { background: var(--brand); }
 .buy-e { font-size: 1.3rem; } .buy-t { font-size: .8rem; line-height: 1.25; min-width: 0; } .buy b { font-size: .95rem; color: var(--good); } .buy.far b { color: var(--muted); font-weight: 600; }
@@ -7352,8 +7359,7 @@ function chalScore(c, ws) {
 }
 function renderChal() {
   const card = $("chalCard"); if (!card) return;
-  if (viewIdx() !== curYM()[0] * 12 + curYM()[1]) { card.hidden = true; return; }
-  card.hidden = false;
+  if (viewIdx() !== curYM()[0] * 12 + curYM()[1]) { card.innerHTML = `<div class="fun-empty">🎯 האתגר מחכה בחודש הנוכחי</div>`; return; }
   const s = chalState(), opts = chalOptions(), c = s.on ? s.c : opts[s.idx % opts.length];
   const ws = weekStart(today), left = 6 - today.getDay(), sc = chalScore(c, ws);
   const done = lsGet("chalHist", []).filter(h => h.ok).length;
@@ -7402,8 +7408,8 @@ function badgeList() {
 function renderBadges() {
   const card = $("badgeCard"); if (!card) return;
   const L = badgeList(), n = L.filter(b => b.ok).length;
-  card.innerHTML = `<h2>התגים שלך <span class="side num">${n} מתוך ${L.length}</span></h2>
-    <div class="bdg-row">${L.map((b, i) => `<button type="button" class="bdg ${b.ok ? "on" : ""}" data-bdg="${i}" aria-label="${esc(b.t)}${b.ok ? "" : " (עוד לא)"}"><span class="bdg-e">${b.ok ? b.e : "🔒"}</span><span class="bdg-t">${esc(b.t)}</span></button>`).join("")}</div>`;
+  const tb = document.querySelector('[data-fun="bdg"] .ft-n'); if (tb) tb.textContent = n + "/" + L.length;
+  card.innerHTML = `<div class="bdg-row">${L.map((b, i) => `<button type="button" class="bdg ${b.ok ? "on" : ""}" data-bdg="${i}" aria-label="${esc(b.t)}${b.ok ? "" : " (עוד לא)"}"><span class="bdg-e">${b.ok ? b.e : "🔒"}</span><span class="bdg-t">${esc(b.t)}</span></button>`).join("")}</div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-bdg]"); if (!b) return;
@@ -7419,11 +7425,9 @@ function renderBuy() {
   const left = sal.amount + f.income - f.fixed - f.variable;
   let yr = 0; for (let k = Math.max(FIRST_MONTH, cy * 12); k < cy * 12 + cm; k++) { if (hiddenMonths.has(k)) continue; const y = Math.floor(k / 12), m = k % 12, g = monthFigures(y, m), s = salaryFor(y, m, false); if (s.amount) yr += s.amount + g.income - g.fixed - g.variable; }
   const goals = lsGet("buyGoals", BUY_DEF);
-  if (left <= 0 && yr <= 0) { card.hidden = true; return; }
-  card.hidden = false;
+  if (left <= 0 && yr <= 0) { card.innerHTML = `<div class="fun-empty">🐷 כשיישאר כסף בסוף חודש, תראו כאן מה אפשר לקנות בו</div>`; return; }
   const base = left > 0 ? left : yr;
-  card.innerHTML = `<h2>${left > 0 ? `ב${MONTHS[pm]} נשארו לך <span class="buy-sum num">${fmt(left)}</span>` : `השנה נשארו לך <span class="buy-sum num">${fmt(yr)}</span>`}</h2>
-    <div class="buy-k">זה כמו:</div>
+  card.innerHTML = `<div class="buy-h">${left > 0 ? `ב${MONTHS[pm]} נשארו לך <span class="buy-sum num">${fmt(left)}</span>` : `השנה נשארו לך <span class="buy-sum num">${fmt(yr)}</span>`} · זה כמו:</div>
     <div class="buy-grid">${goals.map(g => { const n = Math.floor(base / g.p), pc = Math.min(100, base / g.p * 100); return `<div class="buy ${n ? "" : "far"}"><span class="buy-e">${g.e}</span><span class="buy-t">${esc(g.t)}</span><b class="num">${n ? "×" + n : Math.round(pc) + "%"}</b><i style="--p:${n ? 100 : pc.toFixed(0)}%"></i></div>`; }).join("")}</div>
     ${left > 0 && yr > left ? `<div class="buy-yr">ומתחילת השנה: ${fmt(yr)}${goals[0] ? ` · ${Math.floor(yr / goals[0].p)} × ${esc(goals[0].t)}` : ""}</div>` : ""}
     <button type="button" class="buy-edit" id="buyEdit">עריכת המטרות</button>`;
@@ -7443,10 +7447,23 @@ document.addEventListener("click", e => {
 let pushTouched = "";
 function pushTouch() { const d = iso(today); if (pushTouched === d || !window.ispendPushTouch) return; if (tx.some(t => iso(t.date) === d)) { pushTouched = d; window.ispendPushTouch(d); } }
 function renderTrial() { try { pushTouch(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
+// one card at the bottom of the home screen, with three tabs
+let funTab = lsGet("funTab", "chal");
+function showFunTab(t) {
+  funTab = t; try { localStorage.setItem("funTab", JSON.stringify(t)); } catch (e) {}
+  document.querySelectorAll("#funCard [data-fun]").forEach(b => b.setAttribute("aria-selected", b.dataset.fun === t));
+  [["chal", "chalCard"], ["buy", "buyCard"], ["bdg", "badgeCard"]].forEach(([k, id]) => { const el = $(id); if (el) el.hidden = k !== t; });
+}
+function placeFun() { const c = $("funCard"), end = $("flowView").querySelector(":scope > .arr-open"); if (c && end && c.nextElementSibling !== end) end.before(c); }
 if (TRIAL_ON) {
-  const st = $("status");
-  st.insertAdjacentHTML("afterend", `<section class="card chal" id="chalCard" hidden></section><section class="card buy-card" id="buyCard" hidden></section><section class="card bdg-card" id="badgeCard"></section>`);
+  $("flowView").querySelector(":scope > .arr-open").insertAdjacentHTML("beforebegin", `<section class="card fun" id="funCard">
+    <h2>אתגרים ותגים</h2>
+    <div class="fun-tabs" role="tablist"><button type="button" role="tab" data-fun="chal">🎯 אתגר</button><button type="button" role="tab" data-fun="buy">🐷 מה לקנות</button><button type="button" role="tab" data-fun="bdg">🏅 תגים <span class="ft-n num"></span></button></div>
+    <div class="chal" id="chalCard"></div><div class="buy-card" id="buyCard" hidden></div><div class="bdg-card" id="badgeCard" hidden></div></section>`);
+  $("funCard").addEventListener("click", e => { const b = e.target.closest("[data-fun]"); if (b) showFunTab(b.dataset.fun); });
+  showFunTab(["chal", "buy", "bdg"].includes(funTab) ? funTab : "chal");
   const r0 = render; render = function () { const out = r0.apply(this, arguments); renderTrial(); return out; };
+  const a0 = applyLayout; applyLayout = function () { const out = a0.apply(this, arguments); placeFun(); return out; };
 }
 
 // coming back to the home screen (from another screen, or tapping "בית" again) shows the current month,
@@ -7686,7 +7703,7 @@ const TOUR = [
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "לוחצים על המיקרופון ואומרים הכול במשפט אחד: סכום, על מה ובמה שילמתם. למשל ״45 שקל שווארמה במקס״, או ״קיבלתי 300 מאבא״. הסכום, התיאור, הקטגוריה ואמצעי התשלום מתמלאים לבד, ואתם רק בודקים ולוחצים שמירה." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. תקרה לכל קטגוריה (כמה מותר להוציא בחודש) קובעים בהגדרות, ליד הקטגוריה, וטבעת סביב העיגול מתמלאת. בכפתור ״תקרות״ משנים אותה רק לחודש מסוים." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כל אמצעי תשלום הוא כרטיס בארנק, עם הסכום שיצא ממנו החודש. לחיצה שולפת כרטיס, לחיצה נוספת הופכת אותו ומראה על מה הוצאת בו, ו'כל התנועות' מציג רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
-  { t: "#chalCard", opt: true, e: "🎯", h: "אתגר, תגים ומטרות", b: "כל שבוע מחכה כאן <b>אתגר</b> לפי ההרגלים שלכם (״שבוע בלי…״ או ״עד ₪X על…״). לוחצים ״אני בפנים״ ועוקבים אחרי ההתקדמות. מתחת: <b>מה אפשר לקנות</b> במה שנשאר בחודש שעבר, ו<b>התגים</b> שאספתם. לחיצה על תג מסבירה איך משיגים אותו." },
+  { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "בתחתית מסך הבית, חלון אחד עם שלוש לשוניות: <b>אתגר</b> שבועי לפי ההרגלים שלכם (״שבוע בלי…״ או ״עד ₪X על…״, לוחצים ״אני בפנים״ ועוקבים), <b>מה אפשר לקנות</b> במה שנשאר בחודש שעבר, ו<b>התגים</b> שאספתם. לחיצה על תג מסבירה איך משיגים אותו." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, לוח, השוואה, תחזית, קבועות ועוד. חיובים קבועים מוצגים כ<b>כרטיסים</b> שמקבלים חותמת ״שולם״ כשהם יורדים, ועסקאות בתשלומים כ<b>כרטיסיית ניקובים</b>: חור לכל תשלום ששולם." },
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות לפי ימים, וליד כל יום סימון אם היה יקר או חסכוני מיום רגיל. <b>חיפוש</b> חכם כמו ״סופר מעל 200״, <b>סינון</b> לפי סוג, קטגוריה, כרטיס, סכום ותאריכים, ו<b>בחירה</b> של כמה תנועות כדי לשנות להן קטגוריה או למחוק יחד." },
@@ -7933,7 +7950,7 @@ window.ispendPushTouch = async function (day) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261026174355";
+const BUILD_ID = "20261026175529";
 let updToast = null;
 async function checkUpdate() {
   try {
