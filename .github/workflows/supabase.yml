@@ -57,5 +57,6 @@ jobs:
           key=$(curl -sS "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -r '.[] | select(.name=="service_role") | .api_key' | head -1)
           echo "::add-mask::$key"
           curl -sS -X POST "https://$PROJECT_REF.supabase.co/functions/v1/classify-merchant" -H "Authorization: Bearer $key" -H "apikey: $key" -H "Content-Type: application/json" -d @supabase/checks/ai.json | jq -c . | tee ai-result.txt
+          echo "::notice title=AI result::$(jq -c '[.results // {} | to_entries[] | .value.name + " = " + .value.cat]' ai-result.txt) $(jq -r '.error // ""' ai-result.txt)"
           grep -q '"error"' ai-result.txt && exit 1 || true
 
