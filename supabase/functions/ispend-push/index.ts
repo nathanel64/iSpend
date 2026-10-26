@@ -1,7 +1,7 @@
 // iSpend: evening reminders (Supabase Edge Function "ispend-push").
 // GET  ?vapid=1  -> the public key the phone subscribes with (the key pair is made on first use and kept in push_keys)
 // POST ?test=1   -> a test push to the signed-in user
-// POST (hourly, from cron) -> at 21:00 Israel time, a reminder to everyone who added nothing today
+// POST (every 15 minutes, from cron) -> at each person's chosen time (Israel time, 21:00 if not chosen), a reminder if nothing was added that day
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -21,7 +21,7 @@ function israelNow() {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })
     .formatToParts(new Date()).map(x => [x.type, x.value]));
   const hour = +p.hour % 24, minute = +p.minute;
-  return { day: `${p.year}-${p.month}-${p.day}`, hour, sinceMidnight: new Date(Date.now() - (hour * 60 + minute) * 60000) };
+  return { day: `${p.year}-${p.month}-${p.day}`, hour, mins: hour * 60 + minute, sinceMidnight: new Date(Date.now() - (hour * 60 + minute) * 60000) };
 }
 const MSG = { title: "היו היום הוצאות? 🧾", body: "עוד לא הוספת כלום היום. לחיצה פותחת ישר את חלון ההוספה.", url: "./?add" };
 
@@ -47,12 +47,13 @@ Deno.serve(async req => {
     return json({ sent });
   }
 
-  // the hourly run: only at 21:00 Israel time, once a day
+  // the run every 15 minutes: each phone at its own time, once a day (a time missed by more than two hours waits for tomorrow)
   const now = israelNow();
-  if (now.hour !== 21) return json({ skip: "not 21:00", hour: now.hour });
-  const { data: subs } = await sb.from("push_subs").select("endpoint, sub, user_id, last_add, last_sent");
+  const { data: subs } = await sb.from("push_subs").select("endpoint, sub, user_id, last_add, last_sent, remind_at");
   let sent = 0;
   for (const s of subs || []) {
+    const m = String(s.remind_at || "21:00").match(/^(\d{1,2}):(\d{2})/), at = m ? +m[1] * 60 + +m[2] : 21 * 60;
+    if (now.mins < at || now.mins > at + 120) continue;
     if (s.last_sent === now.day || s.last_add === now.day) continue;
     // anything that reached the account today (Apple Pay included) counts as added
     const { count } = await sb.from("tx").select("id", { count: "exact", head: true }).eq("user_id", s.user_id).gte("created_at", now.sinceMidnight.toISOString());

@@ -1631,6 +1631,12 @@ body { margin: 0; }
 .auth .btn { padding: 13px; font-size: 1rem; }
 .auth-msg { min-height: 1.2em; margin: 0; font-size: .85rem; color: var(--bad); }
 .auth-note { margin: 0; font-size: .78rem; color: var(--muted); text-align: center; }
+/* reminder time */
+.rt-quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.rt-q { border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 700 .95rem var(--font-body); padding: 9px 14px; border-radius: 12px; cursor: pointer; font-variant-numeric: tabular-nums; direction: ltr; }
+.rt-q.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+.rt-own { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .88rem; color: var(--muted); }
+.rt-own input { font: 700 16px var(--font-body); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; background: var(--bg); color: var(--ink); direction: ltr; }
 /* guided tour */
 .tour { position: fixed; inset: 0; z-index: 70; }
 .tour-dim { position: absolute; inset: 0; background: rgba(18, 17, 23, .6); transition: opacity .35s ease; }
@@ -6807,7 +6813,7 @@ boot();
     <div class="set-gh">החשבון</div>
     <div class="set-grp" data-g="me">
       <div class="set-row" style="cursor:default">${ico("moon", 250)}<span class="set-rt"><b>מראה</b></span><span id="setLook"></span></div>
-      <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת ערב</b><small>ב-21:00, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev">‹</span></button>
+      <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת יומית</b><small>בשעה שתבחר, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev">‹</span></button>
       <button type="button" class="set-row" data-act="xlsx">${ico("xls", 140)}<span class="set-rt"><b>הורדה לאקסל</b><small>כל התנועות, סיכום חודשי ולפי קטגוריה</small></span><span class="set-chev">‹</span></button>
     </div>
     <div class="set-gh bad" data-gh="danger">אזור זהירות</div>
@@ -7692,7 +7698,7 @@ const TOUR = [
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "<b>קטגוריות ותקרות</b>: לחיצה על קטגוריה פותחת חלון קטן לשם, אייקון וצבע, ״קבועה״ ותקרה לכל חודש. כאן גם אמצעי התשלום והכרטיסים מהארנק." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay מכניס כל תשלום באייפון לבד. הגדרה חד-פעמית של דקה. ו<b>ייבוא מקובץ</b> מכניס בבת אחת פירוט שהורדתם מהבנק או מחברת האשראי (אקסל או CSV): העמודות מזוהות לבד, ומה שכבר קיים לא נכנס פעמיים." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "קובץ אקסל מסודר עם כל התנועות (כולל עמודת חודש), סיכום לכל חודש ולפי קטגוריה. בטלפון אפשר לשמור אותו או לשלוח בוואטסאפ." },
-  { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת ערב 🔔", b: "מפעילים פעם אחת, ובכל ערב ב-21:00, אם לא הוספתם כלום באותו יום, מגיעה התראה לטלפון. לחיצה עליה פותחת ישר את חלון ההוספה. באייפון זה עובד מהאתר ששמור במסך הבית." },
+  { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת 🔔", b: "מפעילים פעם אחת ובוחרים שעה, ובכל יום בשעה הזו, אם לא הוספתם כלום באותו יום, מגיעה התראה לטלפון. לחיצה עליה פותחת ישר את חלון ההוספה. באייפון זה עובד מהאתר ששמור במסך הבית." },
   { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "מחיקת חודשים והתנתקות, במקום אחד ותמיד עם שאלת אישור. ליד כל דבר שצריך הסבר יש כפתור ⓘ." },
   { t: null, e: "👆", h: "עוד כמה טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן. בתוך עמוד בהגדרות, החלקה ימינה מחזירה לתפריט." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
@@ -7854,7 +7860,29 @@ const pushOn = () => { try { return localStorage.getItem(pushKey()) === "1"; } c
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const pushOK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-function updRemindPill() { const p = document.getElementById("remindPill"); if (p) { p.textContent = pushOn() ? "פועלת" : "כבויה"; p.className = "set-pill " + (pushOn() ? "on" : "off"); } }
+const pushAt = () => { try { return localStorage.getItem("pushAt-" + USER_ID) || "21:00"; } catch (e) { return "21:00"; } };
+function updRemindPill() { const p = document.getElementById("remindPill"); if (p) { p.textContent = pushOn() ? "פועלת · " + pushAt() : "כבויה"; p.className = "set-pill " + (pushOn() ? "on" : "off"); } }
+// choose the time: a few quick options and a free time (every quarter hour)
+function pickRemindTime(btnLabel) {
+  return new Promise(res => {
+    const cur = pushAt(), quick = ["19:00", "20:00", "21:00", "22:00", "23:00"];
+    openObj(`<div class="obj-card" role="dialog" aria-modal="true" aria-label="שעת התזכורת"><h3>באיזו שעה להזכיר? 🔔</h3>
+      <p class="note">ההתראה מגיעה רק בימים שבהם עוד לא הוספת כלום עד השעה הזו.</p>
+      <div class="rt-quick">${quick.map(t => `<button type="button" class="rt-q${t === cur ? " on" : ""}" data-t="${t}">${t}</button>`).join("")}</div>
+      <label class="rt-own"><span>או שעה אחרת</span><input type="time" id="rtTime" step="900" value="${cur}"></label></div>
+      <div class="obj-btns"><button type="button" class="ob-main" id="rtOk">${btnLabel}</button><button type="button" id="rtNo">ביטול</button></div>`);
+    const w = document.getElementById("objWrap"), inp = document.getElementById("rtTime");
+    w.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { inp.value = b.dataset.t; w.querySelectorAll("[data-t]").forEach(x => x.classList.toggle("on", x === b)); });
+    inp.oninput = () => w.querySelectorAll("[data-t]").forEach(x => x.classList.toggle("on", x.dataset.t === inp.value));
+    document.getElementById("rtOk").onclick = () => { const m = (inp.value || "").match(/^(\d{1,2}):(\d{2})/); const q = m ? Math.round(+m[2] / 15) * 15 : 0; const t = m ? String((+m[1] + (q === 60 ? 1 : 0)) % 24).padStart(2, "0") + ":" + String(q % 60).padStart(2, "0") : "21:00"; closeObj(); res(t); };
+    document.getElementById("rtNo").onclick = () => { closeObj(); res(null); };
+  });
+}
+async function saveRemindTime(t) {
+  const { error } = await sb.from("push_subs").update({ remind_at: t }).eq("user_id", USER_ID);
+  if (error) { toast("כדי לבחור שעה צריך להריץ פעם אחת את push-time.sql ב-Supabase. בינתיים התזכורת ב-21:00.", 5200); return false; }
+  try { localStorage.setItem("pushAt-" + USER_ID, t); } catch (e) {} updRemindPill(); return true;
+}
 setInterval(updRemindPill, 1500);
 const b64u = s => { const p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, c => c.charCodeAt(0)); };
 async function pushReg() { const r = await navigator.serviceWorker.register("sw.js"); await navigator.serviceWorker.ready; return r; }
@@ -7866,8 +7894,9 @@ window.ispendRemind = async function () {
       buttons: [{ label: "הבנתי", value: null, cls: "plain" }] }); return;
   }
   if (pushOn()) {
-    const v = await askDialog({ kick: "תזכורת ערב", title: "התזכורת פועלת", text: "בכל ערב ב-21:00, אם לא הוספת כלום באותו יום, תגיע התראה לטלפון הזה.",
-      buttons: [{ label: "שליחת התראת ניסיון", value: "test", cls: "plain" }, { label: "כיבוי התזכורת", value: "off", cls: "ghost" }, { label: "סגירה", value: null, cls: "ghost" }] });
+    const v = await askDialog({ kick: "תזכורת", title: "התזכורת פועלת · " + pushAt(), text: "בכל יום ב-" + pushAt() + ", אם לא הוספת כלום באותו יום, תגיע התראה לטלפון הזה.",
+      buttons: [{ label: "שינוי השעה", value: "time", cls: "plain" }, { label: "שליחת התראת ניסיון", value: "test", cls: "ghost" }, { label: "כיבוי התזכורת", value: "off", cls: "ghost" }, { label: "סגירה", value: null, cls: "ghost" }] });
+    if (v === "time") { const t = await pickRemindTime("שמירה"); if (t && await saveRemindTime(t)) toast("התזכורת תגיע ב-" + t + " ✓", 2400); }
     if (v === "test") { try { const r = await fetch(PUSH_FN + "?test=1", { method: "POST", headers: await authHeaders(), body: "{}" }); const j = await r.json(); toast(j.sent ? "נשלחה התראת ניסיון 🔔" : "ההתראה לא נשלחה. נסו לכבות ולהדליק שוב.", 3000); } catch (e) { toast("לא הצלחתי לשלוח. בדקו את החיבור.", 3000); } }
     if (v === "off") {
       try { const r = await navigator.serviceWorker.getRegistration(); const sub = r && await r.pushManager.getSubscription(); if (sub) { await sb.from("push_subs").delete().eq("endpoint", sub.endpoint); await sub.unsubscribe(); } } catch (e) {}
@@ -7875,6 +7904,7 @@ window.ispendRemind = async function () {
     }
     return;
   }
+  const at = await pickRemindTime("הפעלת התזכורת"); if (!at) return;
   let perm = Notification.permission;
   if (perm !== "granted") perm = await Notification.requestPermission();
   if (perm !== "granted") { toast("בלי אישור להתראות אי אפשר לשלוח תזכורת. אפשר לאשר בהגדרות הטלפון.", 4200); return; }
@@ -7888,7 +7918,8 @@ window.ispendRemind = async function () {
     const { error } = await sb.from("push_subs").upsert({ user_id: USER_ID, endpoint: sub.endpoint, sub: sub.toJSON(), last_add: (typeof tx !== "undefined" && tx.some(t => iso(t.date) === today_)) ? today_ : null }, { onConflict: "endpoint" });
     if (error) throw error;
     try { localStorage.setItem(pushKey(), "1"); } catch (e) {}
-    updRemindPill(); toast("התזכורת הופעלה ✓ נתראה ב-21:00", 2800);
+    const okT = await saveRemindTime(at);
+    updRemindPill(); if (okT) toast("התזכורת הופעלה ✓ נתראה ב-" + at, 2800);
   } catch (e) {
     toast(e && e.message === "server" ? "השרת של התזכורות עוד לא מוכן. צריך להשלים את ההגדרה ב-Supabase." : "ההפעלה נכשלה. נסו שוב.", 4200);
   }
@@ -7902,7 +7933,7 @@ window.ispendPushTouch = async function (day) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261026173324";
+const BUILD_ID = "20261026174355";
 let updToast = null;
 async function checkUpdate() {
   try {
