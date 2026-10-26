@@ -51,14 +51,9 @@ jobs:
             echo "== $fn"
             supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api
           done
-      - name: Check the AI classifier
-        if: contains(steps.ch.outputs.files, 'supabase/checks/ai.json')
+      - name: Report the business memory
+        if: contains(steps.ch.outputs.files, 'supabase/checks/')
         run: |
-          # a one-time check code: set as a function secret, used once, then replaced
-          chk=$(openssl rand -hex 24); echo "::add-mask::$chk"
-          code=$(curl -sS -o s.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/secrets" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "[{\"name\":\"ISPEND_CHECK\",\"value\":\"$chk\"}]")
-          echo "::notice title=secret set::$code $(head -c 150 s.json)"
-          sleep 15
-          curl -sS -X POST "https://$PROJECT_REF.supabase.co/functions/v1/classify-merchant" -H "x-ispend-check: $chk" -H "Content-Type: application/json" -d @supabase/checks/ai.json > ai-result.txt || true
-          echo "::notice title=AI result::$(head -c 900 ai-result.txt)"
-          new=$(openssl rand -hex 24); curl -sS -o /dev/null -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/secrets" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "[{\"name\":\"ISPEND_CHECK\",\"value\":\"$new\"}]" || true
+          q='select source, count(*) as n, max(updated_at) as last, (array_agg(raw || '' = '' || coalesce(name,) ||  /  || coalesce(cat,) order by updated_at desc))[1:6] as sample from public.merchant_cache group by source'
+          curl -sS -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$(jq -n --arg q "$q" '{query:$q}')" > r.json
+          echo "::notice title=merchant_cache::$(head -c 1500 r.json)"
