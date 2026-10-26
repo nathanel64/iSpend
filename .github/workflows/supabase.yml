@@ -54,6 +54,5 @@ jobs:
       - name: Report the business memory
         if: contains(steps.ch.outputs.files, 'supabase/checks/')
         run: |
-          q='select source, count(*) as n, max(updated_at) as last, (array_agg(raw || '' = '' || coalesce(name,) ||  /  || coalesce(cat,) order by updated_at desc))[1:6] as sample from public.merchant_cache group by source'
-          curl -sS -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$(jq -n --arg q "$q" '{query:$q}')" > r.json
+          curl -sS -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$(jq -Rs '{query: .}' supabase/checks/report.sql)" > r.json
           echo "::notice title=merchant_cache::$(head -c 1500 r.json)"
