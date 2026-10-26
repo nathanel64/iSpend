@@ -2794,6 +2794,9 @@ CATEGORY_RULES.unshift(["תחבורה ודלק", ["פז ", "דלק", "סונול
 ISSUER_CATS.forEach(r => { r[1] = r[0] === "דלק" || r[0] === "תחבורה" ? "תחבורה ודלק" : (CAT_REMAP[r[1]] || r[1]); });
 BUSINESS_TYPES.forEach(r => { r[1] = ["דלק", "חניה", "מונית", "שטיפת רכב", "מוסך"].includes(r[0]) ? "תחבורה ודלק" : r[0] === "ווינר" ? "אחר" : r[1] === "מתנות" ? "קניות" : (CAT_REMAP[r[1]] || r[1]); });
 let merchantRules = {}; // learned from the viewer's edits: raw name → {name, cat}
+// 9: names the server (shared memory or the AI) gave to businesses the site did not know, kept on this device
+const aiKey = s => String(s || "").toLowerCase().replace(/[0-9*#_.,'"()\/\\|:;!?+\-]+/g, " ").replace(/\s+/g, " ").trim();
+let aiMerch = {}; try { aiMerch = JSON.parse(localStorage.getItem("aiMerch") || "{}") || {}; } catch (e) {}
 const normMerchant = raw => " " + String(raw || "").toLowerCase().replace(/[׳'`"]/g, "").replace(/\s+/g, " ").trim() + " ";
 function recognizeMerchant(raw) {
   const key = String(raw || "").trim();
@@ -2802,6 +2805,9 @@ function recognizeMerchant(raw) {
   const n = normMerchant(key);
   // long names match anywhere; short ones only at the start of a word ("fox" must not match "firefox")
   for (const [word, name, cat] of MERCHANTS) if (word.trim().length >= 5 ? n.includes(word) : n.includes(" " + word)) return { name, cat };
+  // the server's answer for this name (the AI, or someone's correction)
+  const ai = aiMerch[aiKey(key)];
+  if (ai && (ai.name || ai.cat)) return { name: ai.name || tidyMerchant(key), cat: CATS.includes(ai.cat) ? ai.cat : (businessType(key) || {}).cat || "", ai: true };
   // a business we don't know by name: say in Hebrew what kind of place it is (a Hebrew name is already readable, so it stays)
   const t = businessType(key);
   if (t) return { name: hasHebrew(key) ? tidyMerchant(key) : t.name, cat: t.cat, kind: true };
@@ -4681,7 +4687,30 @@ function maybeWeekRecap() {
     openRecap(w.r);
   }, 1400);
 }
+// unknown businesses go to the server in one batch after the data loads; each name is asked once (a failure waits a week)
+let aiBusy = false;
+async function aiClassify() {
+  if (aiBusy || !window.ispendClassify || !tx.length) return;
+  let asked = {}; try { asked = JSON.parse(localStorage.getItem("aiAsked") || "{}") || {}; } catch (e) {}
+  const now = Date.now(), want = [];
+  tx.forEach(t => {
+    const raw = t.rawMerchant; if (!raw || t.income || merchantRules[raw.trim()]) return;
+    if (!(t.source === "applepay" || (t.del && t.del.key === "bank") || (t.del && t.del.raw && t.del.raw[6] === "ייבוא"))) return;
+    const k = aiKey(raw); if (!k || aiMerch[k] || (asked[k] && now - asked[k] < 7 * 864e5)) return;
+    const hit = recognizeMerchant(raw); if (hit && !hit.kind && hit.cat && t.category !== "לא מסווג") return;
+    if (!want.includes(raw)) want.push(raw);
+  });
+  if (!want.length) return;
+  aiBusy = true;
+  try {
+    const res = await window.ispendClassify(want.slice(0, 60), CATS.filter(c => c !== "הכנסה"));
+    let n = 0; want.slice(0, 60).forEach(r => { const k = aiKey(r); asked[k] = now; const a = res && res[r]; if (a) { aiMerch[k] = { name: a.name, cat: a.cat }; n++; } });
+    try { localStorage.setItem("aiMerch", JSON.stringify(aiMerch)); localStorage.setItem("aiAsked", JSON.stringify(asked)); } catch (e) {}
+    if (n) { afterData(); toast(`✨ ${n} עסקים קיבלו שם וקטגוריה`, 2600); }
+  } catch (e) {} finally { aiBusy = false; }
+}
 function afterData() {
+  setTimeout(aiClassify, 2500);
   maybeQuickAdd();
   if (data.manual !== null || data.apple !== null || data.bank !== null) hideBanner();
   build();
@@ -6060,6 +6089,7 @@ async function saveEdit(t, amount, desc, date, cat, card, kind) {
   if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && (desc !== t.merchant || cat !== t.category)) {
     const next = { ...merchantRules, [t.rawMerchant]: { name: desc, cat } };
     try { await writeRange("'הגדרות'!L2:N201", pad(Object.entries(next).map(([k, r]) => [k, r.name, r.cat]), 200, 3)); merchantRules = next; } catch (e) {}
+    if (window.ispendLearn) window.ispendLearn(t.rawMerchant, desc, cat);
   }
   view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
 }
@@ -7274,6 +7304,16 @@ function openImport() {
         impState = { file: f.name, ...p, pay, flip: false }; impBuild();
         $("impMsg").textContent = impState.items.length ? "" : "הקובץ נקרא, אבל לא נמצאו בו תנועות.";
         $("impPickTxt").textContent = "קובץ אחר"; impRender();
+        // names nobody knows yet: ask the server, and refresh the rows the viewer did not touch
+        if (window.ispendClassify) {
+          const st0 = impState, unk = [...new Set(st0.items.filter(x => !x.inc && (x.cat === "לא מסווג" || !recognizeMerchant(x.raw) || recognizeMerchant(x.raw).kind)).map(x => x.raw))].slice(0, 60);
+          if (unk.length) window.ispendClassify(unk, CATS.filter(c => c !== "הכנסה")).then(res => {
+            if (impState !== st0 || !res) return; let n = 0;
+            st0.items.forEach(x => { const a = res[x.raw]; if (!a || x.touched) return; aiMerch[aiKey(x.raw)] = { name: a.name, cat: a.cat }; if (a.name) x.name = a.name; if (CATS.includes(a.cat)) x.cat = a.cat; n++; });
+            try { localStorage.setItem("aiMerch", JSON.stringify(aiMerch)); } catch (e) {}
+            if (n) impRender();
+          }).catch(() => {});
+        }
       } catch (err) { $("impMsg").textContent = err && err.message === "lib" ? "לא הצלחתי לטעון את קורא האקסל. בדקו את החיבור, או שמרו את הקובץ כ-CSV." : "לא הצלחתי לקרוא את הקובץ."; }
       e.target.value = "";
     };
@@ -7283,7 +7323,7 @@ function openImport() {
       else if (t.id === "impFlip") { st.flip = t.checked; impBuild(); impRender(); }
       else if (t.id === "impPay") st.pay = t.value;
       else if (t.dataset.k != null) { st.items[+t.dataset.k].on = t.checked; impRender(); }
-      else if (t.dataset.cat != null) st.items[+t.dataset.cat].cat = t.value;
+      else if (t.dataset.cat != null) { st.items[+t.dataset.cat].cat = t.value; st.items[+t.dataset.cat].touched = true; }
     });
     $("impGo").onclick = doImport;
   }
@@ -7946,11 +7986,21 @@ window.ispendPushTouch = async function (day) {
   try { await sb.from("push_subs").update({ last_add: day }).eq("user_id", USER_ID); } catch (e) {}
 };
 // a tap on the reminder opens the add window (sw.js opens ./?add)
+/* 9: businesses the site does not know get a name and a category from the server (shared memory, else the AI) */
+const AI_FN = SUPA_URL + "/functions/v1/classify-merchant";
+window.ispendClassify = async function (names, cats) {
+  const r = await fetch(AI_FN, { method: "POST", headers: await authHeaders(), body: JSON.stringify({ names, cats }) });
+  if (!r.ok) throw new Error("ai " + r.status);
+  const j = await r.json(); if (j.error && !Object.keys(j.results || {}).length) throw new Error(j.error); return j.results || {};
+};
+window.ispendLearn = async function (raw, name, cat) {
+  try { await fetch(AI_FN, { method: "POST", headers: await authHeaders(), body: JSON.stringify({ learn: [{ raw, name, cat }] }) }); } catch (e) {}
+};
 </script>
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261026175529";
+const BUILD_ID = "20261026224711";
 let updToast = null;
 async function checkUpdate() {
   try {
