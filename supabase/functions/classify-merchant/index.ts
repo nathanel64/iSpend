@@ -34,10 +34,13 @@ ${names.map((n, i) => `${i}. ${n}`).join("\n")}`;
     const models = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
     let r: Response | null = null, last = "";
     for (const model of models) {
-      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${gk}`, {
-        method: "POST", headers: { "content-type": "application/json" },
+      // the key goes in a header: both the older "AIza…" keys and the newer "AQ.…" ones are accepted there
+      const req = (h: Record<string, string>) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST", headers: { "content-type": "application/json", ...h },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } })
       });
+      r = await req({ "x-goog-api-key": gk });
+      if (r.status === 401 || r.status === 403) { const r2 = await req({ Authorization: "Bearer " + gk }); if (r2.ok) r = r2; }
       if (r.ok) break; last = model + " " + r.status + " " + (await r.text()).slice(0, 160); if (r.status !== 404) break;
     }
     if (!r || !r.ok) throw new Error("gemini " + last);
