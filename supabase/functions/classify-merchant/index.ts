@@ -69,10 +69,16 @@ Deno.serve(async req => {
   try { body = await req.json(); } catch (_) { /* empty */ }
 
   if (Array.isArray(body.learn)) {
-    // a person's correction fills a name nobody answered yet; it never overwrites what others already see
-    const rows = body.learn.slice(0, 20).filter(x => x && x.raw && keyOf(x.raw) && clean(x.name)).map(x => ({ raw_key: keyOf(x.raw), raw: clean(x.raw, 120), name: clean(x.name), cat: clean(x.cat), source: "user", updated_at: new Date().toISOString() }));
-    if (rows.length) await sb.from("merchant_cache").upsert(rows, { onConflict: "raw_key", ignoreDuplicates: true });
-    return json({ ok: rows.length });
+    // a correction is a vote; it changes what everyone sees only when two different people agree
+    const items = body.learn.slice(0, 20).filter(x => x && x.raw && keyOf(x.raw) && clean(x.name));
+    let promoted = 0;
+    for (const x of items) {
+      const k = keyOf(x.raw), name = clean(x.name), cat = clean(x.cat);
+      await sb.from("merchant_votes").upsert({ raw_key: k, user_id: uid, name, cat, updated_at: new Date().toISOString() });
+      const { count } = await sb.from("merchant_votes").select("user_id", { count: "exact", head: true }).eq("raw_key", k).eq("name", name).eq("cat", cat);
+      if ((count || 0) >= 2) { await sb.from("merchant_cache").upsert({ raw_key: k, raw: clean(x.raw, 120), name, cat, source: "users", updated_at: new Date().toISOString() }); promoted++; }
+    }
+    return json({ ok: items.length, promoted });
   }
 
   const names = [...new Set((body.names || []).map(n => String(n || "").trim()).filter(Boolean))].slice(0, 60);
