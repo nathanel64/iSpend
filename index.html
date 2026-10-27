@@ -15,9 +15,12 @@
 <meta name="apple-mobile-web-app-title" content="iSpend">
 <link rel="manifest" href="manifest.webmanifest">
 <script>window.ISPEND_PUSH = true;</script>
-<title>iSpend</title>
+<title>iSpend · ניהול הוצאות</title>
+<meta name="description" content="iSpend: לראות לאן הולך הכסף כל חודש, לעקוב אחרי הוצאות והכנסות ולהתחיל לחסוך.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'"></noscript>
 <style>
 /* Layout: a phone-first cash-flow app. One status card (what's left this month), then this week's budget, the month's weeks, fixed vs. variable categories, and the itemised list. */
 :root {
@@ -309,7 +312,7 @@ body.arrange .auto-empty { display: block !important; }
 .set-ic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .set-rt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .set-rt b { font-weight: 600; font-size: .95rem; }
-.set-rt small { color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-rt small { color: var(--muted); font-size: .78rem; overflow-wrap: anywhere; }
 .set-chev { color: var(--muted); font-size: 1.25rem; line-height: 1; }
 /* chevrons point left (forward in Hebrew): kept out of the right-to-left mirroring */
 .set-chev, .chev, .chv { display: inline-block; direction: ltr; unicode-bidi: isolate; }
@@ -526,7 +529,7 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .hl { background: var(--bg); border-radius: 14px; padding: 10px 12px; min-width: 0; }
 .hl .k { font-size: .75rem; color: var(--muted); }
 .hl .v { font-weight: 700; }
-.hl .d { font-size: .8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl .d { font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
 .cs-head { display: flex; align-items: center; gap: 10px; }
 .cs-sum { display: flex; gap: 8px; flex-wrap: wrap; }
 .cs-sum span { background: var(--bg); border-radius: 999px; padding: 4px 12px; font-size: .85rem; }
@@ -1510,7 +1513,7 @@ body.arrange .arr-open { display: none !important; }
 .tk-main .ic { width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto; }
 .tk-m { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tk-m bdi { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tk-m small { font-size: .74rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-m small { font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; }
 .tk-tag { font-size: .66rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--muted); margin-inline-start: 4px; }
 .tk-stub { border-inline-start: 2px dashed color-mix(in srgb, var(--ink) 18%, transparent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px; position: relative; overflow: hidden; }
 .tk-stub b { font-size: .98rem; white-space: nowrap; }
@@ -1640,6 +1643,14 @@ body.arrange .arr-open { display: none !important; }
 .tk-tag { color: color-mix(in srgb, var(--ink) 72%, var(--surface)); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nav button:not([aria-pressed="true"]) { color: #c4c0ce; } }
 :root[data-theme="dark"] .nav button:not([aria-pressed="true"]) { color: #c4c0ce; }
+.skip { position: fixed; top: -80px; inset-inline-start: 12px; z-index: 100; background: var(--surface); color: var(--brand-text); padding: 12px 16px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 18px rgba(0,0,0,.18); }
+.skip:focus { top: max(12px, env(safe-area-inset-top)); }
+#main:focus { outline: none; }
+/* small buttons get a finger-sized touch area (44px) without changing how they look */
+:where(#prev, #next, .fold-btn, #refreshBtn, #copyPayTok, .set-back, .set-info-btn, #tourAgain, button.x, button.del, #rcClose, #salClose, #flClose, #impX, .m-act, #capEditBtn, #selBtn, #fltBtn) { position: relative; }
+:where(#prev, #next, .fold-btn, #refreshBtn, #copyPayTok, .set-back, .set-info-btn, #tourAgain, button.x, button.del, #rcClose, #salClose, #flClose, #impX, .m-act, #capEditBtn, #selBtn, #fltBtn)::before { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+#prev, #next { min-width: 44px; min-height: 44px; }
+.set-legal a, .auth-legal a { display: inline-block; padding: 12px 6px; }
 /* a visible keyboard focus everywhere */
 :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible { outline: 2.5px solid var(--brand-text); outline-offset: 2px; }
 </style>
@@ -1736,7 +1747,7 @@ body { margin: 0; }
       <div class="field"><label for="authUser">שם משתמש</label><input id="authUser" autocomplete="username" maxlength="15" autocapitalize="off" spellcheck="false"></div>
       <div class="field" id="nameField" hidden><label for="authName">איך לקרוא לך? (לברכה)</label><input id="authName" autocomplete="given-name" maxlength="20"></div>
       <div class="field"><label for="authPass">סיסמה</label><input id="authPass" type="password" autocomplete="current-password"></div>
-      <p class="auth-msg" id="authMsg"></p>
+      <p class="auth-msg" id="authMsg" role="alert" aria-live="assertive"></p>
       <button class="btn" type="submit" id="authGo">כניסה</button>
       <p class="auth-note" id="authNote">אין אפשרות לשחזר סיסמה, אז כדאי לשמור אותה.</p>
       <p class="auth-legal"><a href="privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a> · <a href="accessibility.html" target="_blank" rel="noopener">הצהרת נגישות</a></p>
@@ -2026,7 +2037,8 @@ function makeSupaAdapter(uid) {
 <script>(function () { try { const h = document.documentElement, ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); if (ios) h.classList.add("ios"); if (navigator.standalone || matchMedia("(display-mode: standalone)").matches) h.classList.add("pwa"); } catch (e) {} })();</script>
 <div class="splash" id="splash" aria-hidden="true"><div class="sp-logo"><svg viewBox="0 0 64 64" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lgS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b4cf0"/><stop offset="1" stop-color="#9a52d6"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#lgS)"/><circle cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="6"/><circle class="sp-arc" cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" transform="rotate(-90 32 32)"/><g class="sp-coin"><circle cx="32" cy="14" r="3" fill="#ffd36e"/></g><path d="M24 37 L29.5 31.5 L33.5 35 L40 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M35.5 27 H40.5 V32" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="sp-name">iSpend</div></div>
 
-<div class="wrap" dir="rtl" lang="he">
+<a class="skip" href="#main">דלג לתוכן</a>
+<div class="wrap" id="main" role="main" tabindex="-1" dir="rtl" lang="he">
   <header class="top" id="monthBar">
     <div class="mini" id="miniBar" aria-hidden="true"><div class="mb-t"><span id="mbLbl"></span><b class="num" id="mbVal"></b></div><span class="mb-today num" id="mbToday"></span><div class="mb-bar"><i id="mbFill"></i></div></div>
     <span class="brand-logo" title="iSpend"><svg viewBox="0 0 64 64" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lgH" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b4cf0"/><stop offset="1" stop-color="#9a52d6"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#lgH)"/><circle cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="6"/><path d="M32 14 A18 18 0 1 1 14.6 36.6" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><circle cx="14.6" cy="36.6" r="3" fill="#ffd36e"/><path d="M24 37 L29.5 31.5 L33.5 35 L40 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M35.5 27 H40.5 V32" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -4757,7 +4769,7 @@ async function aiCheckNow() {
   const r = await aiClassify(true);
   const known = Object.keys(aiMerch).length;
   const text = r.busy ? "בדיקה כבר רצה. נסו שוב בעוד רגע."
-    : r.error ? (/no AI key/.test(r.error) ? "השרת עוד לא קיבל מפתח בינה מלאכותית (GEMINI_API_KEY ב-Supabase)." : /daily limit/.test(r.error) ? "הגעתם למכסה היומית של עסקים חדשים. מחר אפשר להמשיך." : "השרת החזיר שגיאה: " + esc(r.error).slice(0, 160))
+    : r.error ? (/no AI key/.test(r.error) ? "השרת עוד לא קיבל מפתח בינה מלאכותית (GEMINI_API_KEY ב-Supabase)." : /daily limit/.test(r.error) ? "הגעתם למכסה היומית של עסקים חדשים. מחר אפשר להמשיך." : "הסיווג לא הצליח הפעם. נסו שוב בעוד כמה דקות.")
     : !r.want ? "כל העסקים שלכם כבר מוכרים לאתר, אין מה לסווג. ✓" : `נשלחו ${r.want} עסקים, ${r.got} קיבלו שם וקטגוריה.`;
   await askDialog({ kick: "סיווג עסקים חכם", title: r.error ? "משהו לא עבד" : "הבדיקה הסתיימה", text: text + `<br><span style="color:var(--muted);font-size:.85em">${known} עסקים בזיכרון במכשיר הזה</span>`, buttons: [{ label: "סגירה", value: null, cls: "plain" }] });
 }
@@ -5360,6 +5372,7 @@ function renderMonthsChart(months) {
   });
   box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="הכנסות מול הוצאות לפי חודש">${g}</svg><p class="chart-hint">לחיצה על חודש מציגה את הסיכום שלו</p>`;
   bindTips(box);
+  chartAlt(box, "הכנסות מול הוצאות לפי חודש");
   // 9: a month of the chart opens that month
   box.onclick = e => { const r = e.target.closest("[data-mo]"); if (!r) return; const k = +r.dataset.mo; try { tipOff(box); } catch (x) {} openGaugeInfo(Math.floor(k / 12), k % 12, true); };
 }
@@ -5391,6 +5404,7 @@ function renderDonut(months) {
   g += `<text x="${cxy}" y="${cxy + 18}" text-anchor="middle" font-size="19" font-weight="700" fill="var(--ink)">${fmt(total)}</text>`;
   box.innerHTML = `<svg viewBox="0 0 ${S} ${S}" style="min-width:0;max-width:200px" role="img" aria-label="הוצאות לפי קטגוריה">${g}</svg>`;
   bindTips(box);
+  chartAlt(box, "הוצאות לפי קטגוריה, סך הכול " + fmt(total));
   $("catLegend").innerHTML = rows.map(([name, v, c]) => `<button type="button" data-cat="${esc(name)}" aria-label="כל ההוצאות של ${esc(name)}">${catIcon(name, true)}<span class="n">${esc(name)}</span><b class="num">${fmt(v)}</b><span class="p num">${Math.round(v / total * 100)}%</span><span class="chev" aria-hidden="true">‹</span></button>`).join("");
 }
 
@@ -7260,7 +7274,7 @@ function loadXlsxLib() {
   if (window.XLSX) return Promise.resolve(window.XLSX);
   // the current SheetJS build (security fixes) from its own site; the older npm copy if that one can't load
   const one = src => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = () => window.XLSX ? res(window.XLSX) : rej(new Error("lib")); s.onerror = () => { s.remove(); rej(new Error("lib")); }; document.head.appendChild(s); });
-  return one("https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js").catch(() => one("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"));
+  return one("https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js");
 }
 function csvRows(text) {
   const sep = (text.split("\n")[0].match(/\t/) ? "\t" : (text.split("\n")[0].split(";").length > text.split("\n")[0].split(",").length ? ";" : ","));
@@ -7783,6 +7797,61 @@ async function exportXlsx(row) {
     say("הקובץ ירד ✓"); setTimeout(() => say(was), 3000);
   } catch (e) { console.error(e); say("לא הצלחתי להכין את הקובץ. נסו שוב."); setTimeout(() => say(was), 4000); }
 }
+
+/* ===== accessibility: dialogs take focus, keep it, and give it back; buttons made of divs answer the keyboard ===== */
+(function a11y() {
+  const FOC = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const shown = el => !el.closest("[hidden]") && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+  const focusables = d => [...d.querySelectorAll(FOC)].filter(x => shown(x) && !x.closest('[aria-hidden="true"]'));
+  const openDialogs = () => [...document.querySelectorAll('[aria-modal="true"]')].filter(shown);
+  // the top dialog: the one drawn above the rest (later in the page wins a tie)
+  const top = () => { const L = openDialogs(); if (!L.length) return null;
+    const z = el => { let n = el, m = 0; while (n && n !== document.body) { const v = parseInt(getComputedStyle(n).zIndex, 10); if (!isNaN(v)) m = Math.max(m, v); n = n.parentElement; } return m; };
+    return L.reduce((a, b) => z(b) >= z(a) ? b : a); };
+  const openers = new Map(); let last = null, queued = false;
+  function sync() {
+    queued = false;
+    const d = top();
+    if (d === last) return;
+    if (d && !openers.has(d)) openers.set(d, document.activeElement && document.activeElement !== document.body && !d.contains(document.activeElement) ? document.activeElement : last);
+    if (d && !d.contains(document.activeElement)) setTimeout(() => { if (top() !== d || d.contains(document.activeElement)) return;
+      const f = focusables(d)[0]; if (f) f.focus({ preventScroll: true }); else { if (!d.hasAttribute("tabindex")) d.setAttribute("tabindex", "-1"); d.focus({ preventScroll: true }); } }, 80);
+    if (last && (!document.contains(last) || !shown(last))) {
+      // a dialog closed: focus goes back where it came from
+      const back = openers.get(last); openers.delete(last);
+      const lost = () => { const a = document.activeElement; return !a || a === document.body || !document.contains(a) || !shown(a); };
+      if (back && document.contains(back) && shown(back) && (!d || d.contains(back)))
+        setTimeout(() => { if (lost()) try { back.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    }
+    last = d;
+  }
+  new MutationObserver(() => { if (!queued) { queued = true; requestAnimationFrame(sync); } })
+    .observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["hidden", "class", "aria-hidden"] });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Tab") {
+      const d = top(); if (!d) return;
+      const L = focusables(d); if (!L.length) { e.preventDefault(); return; }
+      const a = L[0], z = L[L.length - 1], cur = document.activeElement;
+      if (!d.contains(cur)) { e.preventDefault(); (e.shiftKey ? z : a).focus(); }
+      else if (e.shiftKey && cur === a) { e.preventDefault(); z.focus(); }
+      else if (!e.shiftKey && cur === z) { e.preventDefault(); a.focus(); }
+      return;
+    }
+    // Enter / Space on a div that plays a button
+    if ((e.key === "Enter" || e.key === " ") && !e.defaultPrevented) {
+      const t = e.target;
+      if (t && t.matches && t.matches('[role="button"]:not(button):not(a)')) { e.preventDefault(); t.click(); }
+    }
+  });
+  // form messages are read aloud when they change
+  document.querySelectorAll('[id$="Msg"]').forEach(m => { if (!m.hasAttribute("role") && !m.hasAttribute("aria-live")) m.setAttribute("aria-live", "polite"); });
+})();
+/* charts: a screen reader hears the numbers behind the picture */
+function chartAlt(box, base) {
+  const svg = box && box.querySelector("svg[role=img]"); if (!svg) return;
+  const parts = [...box.querySelectorAll("[data-tip]")].map(x => { const d = document.createElement("div"); d.innerHTML = x.dataset.tip.replace(/<br\s*\/?>/gi, ", "); return d.textContent.trim(); }).filter(Boolean);
+  svg.setAttribute("aria-label", base + (parts.length ? ": " + parts.join("; ") : ""));
+}
 </script>
 
 <script>
@@ -8095,7 +8164,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261027011116";
+const BUILD_ID = "20261027080657";
 let updToast = null;
 async function checkUpdate() {
   try {

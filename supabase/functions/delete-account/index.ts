@@ -22,6 +22,6 @@ Deno.serve(async req => {
   for (const t of ["push_subs", "ai_usage", "tx"]) await sb.from(t).delete().eq("user_id", id);
   await sb.from("profiles").delete().eq("id", id);
   const { error } = await sb.auth.admin.deleteUser(id);
-  if (error) return json({ error: error.message }, 500);
+  if (error) { console.error("delete failed", error); return json({ error: "delete failed" }, 500); }
   return json({ ok: true });
 });

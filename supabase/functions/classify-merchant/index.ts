@@ -103,7 +103,7 @@ Deno.serve(async req => {
       const rows = missing.map((n, i) => ({ raw_key: keyOf(n), raw: clean(n, 120), name: ans[i].name, cat: ans[i].cat, source: "ai", updated_at: new Date().toISOString() }));
       await sb.from("merchant_cache").upsert(rows, { onConflict: "raw_key", ignoreDuplicates: true });
       missing.forEach((n, i) => { results[n] = ans[i]; });
-    } catch (e) { return json({ results, error: String((e as Error).message || e).slice(0, 200) }); }
+    } catch (e) { console.error("classify failed", e); return json({ results, error: /no AI key/.test(String((e as Error)?.message)) ? "no AI key" : "ai failed" }); }
   }
   return json({ results });
 });

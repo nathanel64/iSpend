@@ -12,11 +12,11 @@ const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 async function keys() {
-  const { data } = await sb.from("push_keys").select("public_key, private_key").eq("id", 1).maybeSingle();
+  const { data } = await sb.from("push_keys").select("public_key, private_key, cron_secret").eq("id", 1).maybeSingle();
   if (data) return data;
   const k = webpush.generateVAPIDKeys();
   await sb.from("push_keys").upsert({ id: 1, public_key: k.publicKey, private_key: k.privateKey });
-  const again = await sb.from("push_keys").select("public_key, private_key").eq("id", 1).single();
+  const again = await sb.from("push_keys").select("public_key, private_key, cron_secret").eq("id", 1).single();
   return again.data!;
 }
 function israelNow() {
@@ -25,6 +25,8 @@ function israelNow() {
   const hour = +p.hour % 24, minute = +p.minute;
   return { day: `${p.year}-${p.month}-${p.day}`, hour, mins: hour * 60 + minute, sinceMidnight: new Date(Date.now() - (hour * 60 + minute) * 60000) };
 }
+// only real push services (Apple, Google, Mozilla, Microsoft) get a message
+const PUSH_HOST = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com|[a-z0-9.-]+\.push\.apple\.com)\//;
 const MSG = { title: "היו היום הוצאות? 🧾", body: "עוד לא הוספת כלום היום. לחיצה פותחת ישר את חלון ההוספה.", url: "./?add" };
 
 Deno.serve(async req => {
@@ -35,6 +37,7 @@ Deno.serve(async req => {
   webpush.setVapidDetails("mailto:ispend@users.noreply.github.com", k.public_key, k.private_key);
 
   const send = async (s: { endpoint: string; sub: unknown }, msg: object) => {
+    if (!PUSH_HOST.test(s.endpoint)) return false;
     try { await webpush.sendNotification(s.sub as any, JSON.stringify(msg)); return true; }
     catch (e) { const c = (e as { statusCode?: number }).statusCode; if (c === 404 || c === 410) await sb.from("push_subs").delete().eq("endpoint", s.endpoint); return false; }
   };
@@ -49,6 +52,8 @@ Deno.serve(async req => {
     return json({ sent });
   }
 
+  // the run every 15 minutes: only the database's own scheduler knows this secret
+  if (!k.cron_secret || req.headers.get("x-ispend-cron") !== k.cron_secret) return json({ error: "forbidden" }, 403);
   // the run every 15 minutes: each phone at its own time, once a day (a time missed by more than two hours waits for tomorrow)
   const now = israelNow();
   const { data: subs } = await sb.from("push_subs").select("endpoint, sub, user_id, last_add, last_sent, remind_at");
