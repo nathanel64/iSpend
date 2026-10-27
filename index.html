@@ -7662,7 +7662,8 @@ $("selDel").onclick = async () => {
   inp.addEventListener("click", () => show(true));
   ["addDesc", "addCat", "addCard", "addDate", "addInst"].forEach(id => { const el = $(id); if (el) el.addEventListener("focus", () => show(false)); });
   pad.addEventListener("click", e => {
-    const b = e.target.closest("button"); if (!b) return;
+    // only the number keys type; "המשך לתיאור" sits in the same pad and has its own job
+    const b = e.target.closest("button[data-k], button[data-add]"); if (!b) return;
     try { navigator.vibrate && buzz(5); } catch (x) {}
     let v = inp.value || "";
     if (b.dataset.add) { set(String(Math.round(((parseFloat(v) || 0) + +b.dataset.add) * 100) / 100)); return; }
@@ -8164,7 +8165,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261027080657";
+const BUILD_ID = "20261027082308";
 let updToast = null;
 async function checkUpdate() {
   try {
