@@ -1651,6 +1651,16 @@ body.arrange .arr-open { display: none !important; }
 :where(#prev, #next, .fold-btn, #refreshBtn, #copyPayTok, .set-back, .set-info-btn, #tourAgain, button.x, button.del, #rcClose, #salClose, #flClose, #impX, .m-act, #capEditBtn, #selBtn, #fltBtn)::before { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 #prev, #next { min-width: 44px; min-height: 44px; }
 .set-legal a, .auth-legal a { display: inline-block; padding: 12px 6px; }
+.sb-list { display: flex; flex-direction: column; }
+.sb-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; border: 0; background: none; padding: 10px 2px; border-top: 1px solid var(--line); min-height: 52px; }
+.sb-row:first-child { border-top: 0; }
+.sb-row.is-gone { opacity: .62; }
+.sb-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sb-m bdi { font-weight: 600; overflow-wrap: anywhere; } .sb-m small { color: var(--muted); font-size: .74rem; }
+.sb-n { font-size: .76rem; color: var(--muted); } .sb-n.up { color: var(--bad); font-weight: 600; } .sb-n.down { color: var(--good); font-weight: 600; } .sb-n.gone { color: var(--warn); font-weight: 600; }
+.sb-a { font-weight: 600; white-space: nowrap; }
+.sb-empty { margin: 0; font-size: .84rem; color: var(--muted); }
+.sb-foot { margin: 8px 0 0; font-size: .74rem; color: var(--muted); }
 /* a visible keyboard focus everywhere */
 :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible { outline: 2.5px solid var(--brand-text); outline-offset: 2px; }
 </style>
@@ -2135,6 +2145,11 @@ function makeSupaAdapter(uid) {
   <section class="card" id="fixCard" data-k="fix" hidden>
     <h2><span>חיובים קבועים החודש</span><span class="side num" id="fixSide"></span></h2>
     <div class="fx-list" id="fixList"></div>
+  </section>
+  <section class="card" id="subsCard" data-k="subs" hidden>
+    <h2><span>מנויים וחיובים חוזרים</span><span class="side num" id="subsSide"></span></h2>
+    <div class="sb-list" id="subsList"></div>
+    <p class="sb-foot" id="subsFoot"></p>
   </section>
   <section class="card" id="cmpCard" data-k="cmp" hidden>
     <h2><span>הוצאות לפי קטגוריות <span class="up-when">מול <span id="cmpPrev"></span></span></span><span class="side num" id="cmpSide"></span></h2>
@@ -3250,6 +3265,7 @@ function render() {
   try { renderInstallments(); } catch (e) { console.error(e); }
   try { renderUpcoming(isCurrent); } catch (e) { console.error(e); }
   try { renderFixed(f, isCurrent); } catch (e) { console.error(e); }
+  try { renderSubs(); } catch (e) { console.error(e); }
   try { renderCal(f, isCurrent); } catch (e) { console.error(e); }
   try { renderCmp(f, isCurrent, elapsed); } catch (e) { console.error(e); }
   try { renderFc(f, isCurrent, { incomeExpected, goal, fixedExpected, elapsed, days, daysLeft }); } catch (e) { console.error(e); }
@@ -4348,6 +4364,8 @@ function vibeCands() {
   { const { n } = streakInfo(); if (n >= 2) out.push({ lvl: "good", e: "🔥", t: `<b>${n} ימים</b> ברצף בלי הוצאות משתנות`, go: () => showView("tx") }); }
   // charges coming up
   if (upSoon) out.push({ lvl: "info", e: "🗓️", t: `ב-${dd(upSoon.date)} יורדים <b>${fmt(upSoon.sum)}</b> בתשלומים ובקבועות`, go: () => { const u = $("upCard"); if (u) u.scrollIntoView({ behavior: "smooth", block: "center" }); } });
+  // a subscription that got more expensive this month
+  try { findSubs().filter(x => x.nowCharged && x.change > 0).slice(0, 1).forEach(x => out.push({ lvl: "warn", e: "💸", t: `<b>${esc(x.name)}</b> התייקר: ${fmt2(x.amt)} במקום ${fmt2(x.prev)}`, go: () => { showView("ana"); setTimeout(() => { const c = $("subsCard"); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }, 250); } })); } catch (e) {}
   const rank = { bad: 0, warn: 1, good: 2, info: 3 };
   return out.sort((a, b) => rank[a.lvl] - rank[b.lvl]);
 }
@@ -4728,6 +4746,7 @@ function weekSlides() {
   return { slides, key: iso(ws) };
 }
 function maybeWeekRecap() {
+  if (wantsWeek) return;
   if (weekTried || data.settings === null || !(data.manual !== null || data.apple !== null) || !splashGone) return;
   const w = recapWeek(); if (!w) return; // more data may still be on its way
   weekTried = true; if (weekSeen === w.key) return;
@@ -6708,8 +6727,8 @@ document.querySelectorAll("[data-theme-set]").forEach(b => b.onclick = async () 
 }
 
 /* 1: arrange the home and analysis screens: order, which screen, hide. Kept on this device and in the settings (V5) */
-const ARR_NAMES = { ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "הארנק שלך", fix: "חיובים קבועים", cal: "לוח החודש", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
-const ARR_DEFAULT = { flow: ["ins", "cats", "pay", "inst"], ana: ["week", "cal", "cmp", "merch", "fc", "fix", "burn", "up"], hidden: [] };
+const ARR_NAMES = { subs: "מנויים וחיובים חוזרים", ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "הארנק שלך", fix: "חיובים קבועים", cal: "לוח החודש", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
+const ARR_DEFAULT = { flow: ["ins", "cats", "pay", "inst"], ana: ["week", "cal", "cmp", "merch", "fc", "fix", "subs", "burn", "up"], hidden: [] };
 var layout = null, arranging = false;
 function normLayout(l) {
   if (!l) l = ARR_DEFAULT;
@@ -6937,6 +6956,7 @@ boot();
     <div class="set-grp" data-g="me">
       <div class="set-row" style="cursor:default">${ico("moon", 250)}<span class="set-rt"><b>מראה</b></span><span id="setLook"></span></div>
       <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת יומית</b><small>בשעה שתבחר, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="weekly">${ico("grid", 200)}<span class="set-rt"><b>סיכום שבועי</b><small>ביום ראשון בבוקר: כמה יצא בשבוע שעבר ועל מה</small></span><span class="set-pill" id="weeklyPill"${window.ISPEND_PUSH ? "" : " hidden"}></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="xlsx">${ico("xls", 140)}<span class="set-rt"><b>הורדה לאקסל</b><small>כל התנועות, סיכום חודשי ולפי קטגוריה</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
     </div>
     <div class="set-gh bad" data-gh="danger">אזור זהירות</div>
@@ -6984,6 +7004,7 @@ boot();
     if (r.dataset.act === "import") { openImport(); return; }
     if (r.dataset.act === "aicheck") { aiCheckNow(); return; }
     if (r.dataset.act === "delacct") { if (window.ispendDeleteAccount) window.ispendDeleteAccount(); return; }
+    if (r.dataset.act === "weekly") { if (window.ispendWeekly) window.ispendWeekly(); else openWeekNow(); return; }
     if (r.dataset.act === "remind") { if (window.ispendRemind) window.ispendRemind(); return; }
     if (r.dataset.act === "logout") {
       const ok = await askDialog({ kick: "החשבון", title: "להתנתק?", text: "אפשר להתחבר שוב בכל רגע עם שם המשתמש והסיסמה.", buttons: [{ label: "כן, להתנתק", value: 1, cls: "danger" }, { label: "ביטול", value: null, cls: "ghost" }] });
@@ -7213,7 +7234,7 @@ function markEmpty() {
 (function anaExtras() {
   const av = $("anaView"); if (!av) return;
   av.insertAdjacentHTML("afterbegin", `<div class="ana-jump" id="anaJump" role="navigation" aria-label="קפיצה לכרטיס"></div><section class="card ana-sum" id="anaSum" hidden><h2>המסקנה של החודש</h2><div id="anaSumRows"></div></section>`);
-  const SHORT = { week: "שבועי", cal: "לוח", cmp: "השוואה", merch: "עסקים", fc: "תחזית", fix: "קבועות", burn: "מצטבר", up: "חודש הבא", ins: "תובנות", cats: "קטגוריות", pay: "אמצעי תשלום", inst: "תשלומים" };
+  const SHORT = { week: "שבועי", cal: "לוח", cmp: "השוואה", merch: "עסקים", fc: "תחזית", fix: "קבועות", subs: "מנויים", burn: "מצטבר", up: "חודש הבא", ins: "תובנות", cats: "קטגוריות", pay: "אמצעי תשלום", inst: "תשלומים" };
   $("anaJump").addEventListener("click", e => {
     const b = e.target.closest("[data-j]"); if (!b) return;
     const el = arrEl(b.dataset.j); if (!el) return;
@@ -7579,7 +7600,7 @@ document.addEventListener("click", e => {
 let pushTouched = "";
 function pushTouch() { const d = iso(today); if (pushTouched === d || !window.ispendPushTouch) return; if (tx.some(t => iso(t.date) === d && !t.gen && (t.source === "manual" || t.source === "applepay"))) { pushTouched = d; window.ispendPushTouch(d); } }
 // only what you added yourself (by hand or Apple Pay) stops the evening reminder; charges the bank or card company sent in do not
-function renderTrial() { try { pushTouch(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
+function renderTrial() { try { pushTouch(); } catch (e) {} try { weekStatsTouch(); } catch (e) {} try { maybeWeekLink(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
 // one card at the bottom of the home screen, with three tabs
 let funTab = lsGet("funTab", "chal");
 function showFunTab(t) {
@@ -7800,6 +7821,92 @@ async function exportXlsx(row) {
   } catch (e) { console.error(e); say("לא הצלחתי להכין את הקובץ. נסו שוב."); setTimeout(() => say(was), 4000); }
 }
 
+
+/* 6: subscriptions and other repeat charges, found on their own: the same business, about the same amount,
+   on about the same day, at least three months running. A price rise or a charge that stopped stands out. */
+let subsCache = null, subsKey = "";
+function findSubs() {
+  const key = tx.length + "|" + iso(today); if (subsCache && subsKey === key) return subsCache;
+  const mi = d => d.getFullYear() * 12 + d.getMonth(), nowM = mi(today), from = new Date(today.getFullYear(), today.getMonth() - 8, 1);
+  const by = new Map();
+  tx.forEach(t => { if (t.income || t.refund || t.gen || t.inst || !(t.amount > 0) || t.date < from || t.date > today) return; const k = mKey(t); if (!k) return; if (!by.has(k)) by.set(k, []); by.get(k).push(t); });
+  const out = [];
+  by.forEach(list => {
+    list.sort((a, b) => a.date - b.date);
+    const months = new Map(); list.forEach(t => { const m = mi(t.date); if (!months.has(m)) months.set(m, []); months.get(m).push(t); });
+    if (months.size < 3 || [...months.values()].some(a => a.length > 2)) return; // a place you go to often is not a subscription
+    const ms = [...months.keys()].sort((a, b) => a - b);
+    if (months.size / (ms[ms.length - 1] - ms[0] + 1) < .75) return;
+    const amts = ms.map(m => months.get(m).reduce((s, t) => s + t.amount, 0)), recent = amts.slice(-4);
+    if (Math.max(...recent) > Math.min(...recent) * 1.4 + 2) return;
+    const days = ms.map(m => months.get(m)[0].date.getDate()), day = Math.round(days.reduce((a, b) => a + b, 0) / days.length);
+    if (days.some(d => Math.min(Math.abs(d - day), 30 - Math.abs(d - day)) > 7)) return;
+    const last = list[list.length - 1], amt = amts[amts.length - 1], prev = amts.length > 1 ? amts[amts.length - 2] : null;
+    const change = prev != null && Math.abs(amt - prev) >= Math.max(1, prev * .03) ? amt - prev : 0;
+    const gone = (today - last.date) / 864e5 > 45;
+    out.push({ name: last.merchant, cat: last.category, amt, prev, change, day, n: months.size, since: list[0].date, last: last.date, gone, nowCharged: mi(last.date) === nowM });
+  });
+  out.sort((a, b) => (a.gone - b.gone) || (b.change > 0) - (a.change > 0) || b.amt - a.amt);
+  subsCache = out; subsKey = key; return out;
+}
+function renderSubs() {
+  const card = $("subsCard"); if (!card) return;
+  const list = findSubs(), live = list.filter(x => !x.gone);
+  card.hidden = layout.hidden.includes("subs");
+  if (!list.length) {
+    $("subsSide").textContent = ""; $("subsFoot").textContent = "";
+    $("subsList").innerHTML = `<p class="sb-empty">עוד לא נמצאו מנויים. האתר מחפש חיובים שחוזרים כל חודש באותו סכום בערך, ביום דומה, ומציג אותם כאן אחרי 3 חודשים כאלה. מנוי שהתייקר יסומן באדום.</p>`;
+    return;
+  }
+  const month = live.reduce((s, x) => s + x.amt, 0);
+  $("subsSide").textContent = live.length ? `≈ ${fmt(month)} בחודש` : "";
+  $("subsList").innerHTML = list.map(x => {
+    const note = x.gone ? `<span class="sb-n gone">לא חויב מאז ${dd(x.last)}. בוטל?</span>`
+      : x.change > 0 ? `<span class="sb-n up">▲ התייקר ב-${fmt2(x.change)} · היה ${fmt2(x.prev)}</span>`
+      : x.change < 0 ? `<span class="sb-n down">▼ הוזל ב-${fmt2(-x.change)} · היה ${fmt2(x.prev)}</span>`
+      : `<span class="sb-n">בשנה: ${fmt(x.amt * 12)}</span>`;
+    return `<button type="button" class="sb-row${x.gone ? " is-gone" : ""}" data-sub="${esc(x.name)}">${catIcon(x.cat, true)}
+      <span class="sb-m"><bdi>${esc(x.name)}</bdi><small>כל חודש, בסביבות ה-${x.day} · כבר ${x.n} חודשים</small>${note}</span>
+      <span class="sb-a num">${fmt2(x.amt)}</span></button>`;
+  }).join("");
+  $("subsFoot").textContent = live.length ? `ביחד ${fmt(month * 12)} בשנה. נמצא לפי חיובים שחזרו לפחות 3 חודשים באותו סכום בערך. לחיצה מציגה את כל החיובים.` : "";
+}
+$("subsList").addEventListener("click", e => {
+  const b = e.target.closest("[data-sub]"); if (!b) return;
+  const q = $("txSearch"); q.value = b.dataset.sub; q.dispatchEvent(new Event("input", { bubbles: true })); showView("tx"); scrollTo(0, 0);
+});
+
+/* 7: the Sunday summary. The phone keeps the server up to date with last week's and this week's numbers,
+   so the notification on Sunday morning can say them; a tap on it (./?week) opens last week's summary here. */
+function weekNums(ws) {
+  const a = ws, b = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + 6), a2 = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 7), b2 = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 1);
+  const val = t => t.refund ? -t.amount : t.amount, inR = (t, x, y) => t.date >= x && t.date <= y && !t.income;
+  const wk = tx.filter(t => inR(t, a, b)), total = Math.round(wk.reduce((s, t) => s + val(t), 0)), ptotal = Math.round(tx.filter(t => inR(t, a2, b2)).reduce((s, t) => s + val(t), 0));
+  const by = new Map(); wk.forEach(t => by.set(t.category, (by.get(t.category) || 0) + val(t)));
+  const top = [...by.entries()].filter(e => e[1] > 0).sort((x, y) => y[1] - x[1])[0];
+  return { ws: iso(a), total, ptotal, top: top ? top[0] : "", n: wk.length };
+}
+let weekStatsSent = "";
+function weekStatsTouch() {
+  if (!window.ispendWeekStats || !tx.length) return;
+  const cur = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay()), prev = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() - 7);
+  const st = { prev: weekNums(prev), cur: weekNums(cur) }, key = JSON.stringify(st);
+  if (key === weekStatsSent) return; weekStatsSent = key; window.ispendWeekStats(st);
+}
+const wantsWeek = (() => { try { return new URLSearchParams(location.search).has("week"); } catch (e) { return false; } })();
+let weekLinkDone = false;
+function maybeWeekLink() {
+  if (weekLinkDone || !wantsWeek || !(data.manual !== null || data.apple !== null) || !tx.length) return;
+  weekLinkDone = true;
+  try { const u = new URL(location.href); u.searchParams.delete("week"); history.replaceState(null, "", u.pathname + u.search + u.hash); } catch (e) {}
+  setTimeout(() => {
+    const w = recapWeek();
+    if (!w) { toast("בשבוע שעבר היו פחות משלוש רכישות, אז אין סיכום הפעם.", 3200); return; }
+    weekSeen = w.key; try { localStorage.setItem("weekRecap", w.key); } catch (e) {}
+    weekTried = true; openRecap(w.r);
+  }, 900);
+}
+window.openWeekNow = () => { const w = recapWeek(); if (!w) { toast("בשבוע שעבר היו פחות משלוש רכישות, אז אין סיכום הפעם.", 3200); return; } openRecap(w.r); };
 /* ===== accessibility: dialogs take focus, keep it, and give it back; buttons made of divs answer the keyboard ===== */
 (function a11y() {
   const FOC = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -7895,6 +8002,7 @@ const TOUR = [
   { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "בתחתית מסך הבית, חלון אחד עם שלוש לשוניות: <b>אתגר</b> שבועי לפי ההרגלים שלכם (״שבוע בלי…״ או ״עד ₪X על…״, לוחצים ״אני בפנים״ ועוקבים), <b>מה אפשר לקנות</b> במה שנשאר בחודש שעבר, ו<b>התגים</b> שאספתם. לחיצה על תג מסבירה איך משיגים אותו." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, לוח, השוואה, תחזית, קבועות ועוד. חיובים קבועים מוצגים כ<b>כרטיסים</b> שמקבלים חותמת ״שולם״ כשהם יורדים, ועסקאות בתשלומים כ<b>כרטיסיית ניקובים</b>: חור לכל תשלום ששולם." },
+  { t: "#subsCard", view: "ana", card: true, opt: true, e: "🔁", h: "מנויים וחיובים חוזרים", b: "האתר מוצא לבד חיובים שחוזרים כל חודש באותו סכום בערך, כמו נטפליקס או חדר כושר. מנוי שהתייקר מסומן באדום וקופץ גם בשורה העליונה של מסך הבית, ומנוי שהפסיק לרדת מסומן ״בוטל?״. לחיצה על מנוי מציגה את כל החיובים שלו." },
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות לפי ימים, וליד כל יום סימון אם היה יקר או חסכוני מיום רגיל. <b>חיפוש</b> חכם כמו ״סופר מעל 200״, <b>סינון</b> לפי סוג, קטגוריה, כרטיס, סכום ותאריכים, ו<b>בחירה</b> של כמה תנועות כדי לשנות להן קטגוריה או למחוק יחד." },
   { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה פותחת את ה<b>קבלה</b> שלה, עם עריכה ומחיקה. <b>החלקה ימינה</b> מראה את הכפתורים ישר מהרשימה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה. לחיצה על חודש בגרף פותחת חלון עם הסיכום שלו. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
@@ -7905,6 +8013,7 @@ const TOUR = [
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay מכניס כל תשלום באייפון לבד. הגדרה חד-פעמית של דקה. <b>סיווג עסקים חכם</b> נותן שם וקטגוריה לעסקים שהאתר לא מכיר. ו<b>ייבוא מקובץ</b> מכניס בבת אחת פירוט שהורדתם מהבנק או מחברת האשראי (אקסל או CSV): העמודות מזוהות לבד, ומה שכבר קיים לא נכנס פעמיים." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "קובץ אקסל מסודר עם כל התנועות (כולל עמודת חודש), סיכום לכל חודש ולפי קטגוריה. בטלפון אפשר לשמור אותו או לשלוח בוואטסאפ." },
   { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת 🔔", b: "מפעילים פעם אחת ובוחרים שעה, ובכל יום בשעה הזו, אם לא הוספתם כלום באותו יום, מגיעה התראה לטלפון. לחיצה עליה פותחת ישר את חלון ההוספה. באייפון זה עובד מהאתר ששמור במסך הבית." },
+  { t: '#setMenu [data-act="weekly"]', view: "admin", opt: true, h: "סיכום שבועי 📊", b: "בכל יום ראשון ב-8:30 מגיעה התראה עם השבוע שעבר: כמה יצא, לעומת השבוע שלפניו ועל מה הלך הכי הרבה. לחיצה עליה פותחת את הסיכום המלא." },
   { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "מחיקת חודשים, התנתקות ו<b>מחיקת החשבון</b>, במקום אחד ותמיד עם שאלת אישור. ליד כל דבר שצריך הסבר יש כפתור ⓘ. בתחתית: מדיניות הפרטיות והצהרת הנגישות." },
   { t: null, e: "👆", h: "עוד כמה טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן. בתוך עמוד בהגדרות, החלקה ימינה מחזירה לתפריט." },
   { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
@@ -8134,6 +8243,33 @@ window.ispendPushTouch = async function (day) {
   if (!pushOn()) return;
   try { await sb.from("push_subs").update({ last_add: day }).eq("user_id", USER_ID); } catch (e) {}
 };
+/* the Sunday summary: the phone tells the server last week's numbers, and each phone can turn it off */
+window.ispendWeekStats = async function (st) {
+  if (!pushOn()) return;
+  try { await sb.from("push_subs").update({ week_stats: st }).eq("user_id", USER_ID); } catch (e) {}
+};
+const weeklyOn = () => { try { return localStorage.getItem("weekly-" + USER_ID) !== "0"; } catch (e) { return true; } };
+function updWeeklyPill() { const p = document.getElementById("weeklyPill"); if (p) { const on = pushOn() && weeklyOn(); p.textContent = on ? "פועל · ראשון 8:30" : "כבוי"; p.className = "set-pill " + (on ? "on" : "off"); } }
+setInterval(updWeeklyPill, 1500);
+window.ispendWeekly = async function () {
+  if (!pushOn()) {
+    const v = await askDialog({ kick: "סיכום שבועי", title: "הסיכום מגיע כהתראה", text: "בכל יום ראשון ב-8:30 תגיע התראה עם השבוע שעבר: כמה יצא, לעומת השבוע שלפניו ועל מה הלך הכי הרבה. הוא מגיע לטלפון שבו הפעלת התראות.",
+      buttons: [{ label: "הפעלת התראות", value: "on", cls: "plain" }, { label: "הצגת השבוע שעבר", value: "show", cls: "ghost" }, { label: "סגירה", value: null, cls: "ghost" }] });
+    if (v === "on") await window.ispendRemind();
+    if (v === "show") window.openWeekNow();
+    return;
+  }
+  const on = weeklyOn();
+  const v = await askDialog({ kick: "סיכום שבועי", title: on ? "הסיכום פועל · ראשון 8:30" : "הסיכום כבוי", text: on ? "בכל יום ראשון ב-8:30 תגיע התראה עם השבוע שעבר. לחיצה עליה פותחת את הסיכום המלא." : "התזכורת היומית ממשיכה לפעול. אפשר להדליק את הסיכום בכל רגע.",
+    buttons: [{ label: "הצגת השבוע שעבר", value: "show", cls: "plain" }, on ? { label: "שליחת התראת ניסיון", value: "test", cls: "ghost" } : null, { label: on ? "כיבוי הסיכום" : "הדלקת הסיכום", value: "flip", cls: "ghost" }, { label: "סגירה", value: null, cls: "ghost" }].filter(Boolean) });
+  if (v === "show") window.openWeekNow();
+  if (v === "test") { try { const r = await fetch(PUSH_FN + "?test=week", { method: "POST", headers: await authHeaders(), body: "{}" }); const j = await r.json(); toast(j.sent ? "נשלחה התראת ניסיון 📊" : "ההתראה לא נשלחה. נסו לכבות ולהדליק את התזכורת.", 3000); } catch (e) { toast("לא הצלחתי לשלוח. בדקו את החיבור.", 3000); } }
+  if (v === "flip") {
+    const { error } = await sb.from("push_subs").update({ weekly: !on }).eq("user_id", USER_ID);
+    if (error) { toast("השמירה נכשלה. נסו שוב.", 3000); return; }
+    try { localStorage.setItem("weekly-" + USER_ID, on ? "0" : "1"); } catch (e) {} updWeeklyPill(); toast(on ? "הסיכום השבועי כובה" : "הסיכום השבועי הופעל ✓", 2200);
+  }
+};
 // a tap on the reminder opens the add window (sw.js opens ./?add)
 /* deleting the account: asks twice, then the server removes the sign-in and everything tied to it */
 window.ispendDeleteAccount = async function () {
@@ -8166,7 +8302,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261027082930";
+const BUILD_ID = "20261027113440";
 let updToast = null;
 async function checkUpdate() {
   try {

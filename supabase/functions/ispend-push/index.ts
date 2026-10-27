@@ -27,6 +27,18 @@ function israelNow() {
 }
 // only real push services (Apple, Google, Mozilla, Microsoft) get a message
 const PUSH_HOST = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com|[a-z0-9.-]+\.push\.apple\.com)\//;
+// the Sunday that opened the week which just ended (Israel weeks run Sunday to Saturday)
+function lastSunday(day: string) { const d = new Date(day + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - d.getUTCDay() - 7); return d.toISOString().slice(0, 10); }
+const shek = (v: number) => "₪" + Math.round(v).toLocaleString("en-US");
+// the phone sends its own numbers when the site is open; if they are not for last week, the message stays general
+function weeklyMsg(s: { week_stats?: unknown }, ws: string) {
+  const st = s.week_stats as Record<string, { ws?: string; total?: number; ptotal?: number; top?: string }> | null;
+  const w = st && [st.prev, st.cur].find(x => x && x.ws === ws);
+  if (!w || typeof w.total !== "number") return { title: "הסיכום השבועי מוכן 📊", body: "לחיצה פותחת את הסיכום של השבוע שעבר.", url: "./?week", tag: "ispend-week" };
+  const d = (w.total || 0) - (w.ptotal || 0), cmp = w.ptotal ? (Math.abs(d) < 20 ? "בערך כמו השבוע שלפניו" : d < 0 ? `${shek(-d)} פחות מהשבוע שלפניו 👏` : `${shek(d)} יותר מהשבוע שלפניו`) : "";
+  const top = w.top ? `הכי הרבה הלך על ${String(w.top).slice(0, 30)}.` : "";
+  return { title: `השבוע שעבר: ${shek(w.total || 0)} 📊`, body: [cmp, top].filter(Boolean).join(" · ") + " לחיצה פותחת את הסיכום.", url: "./?week", tag: "ispend-week" };
+}
 const MSG = { title: "היו היום הוצאות? 🧾", body: "עוד לא הוספת כלום היום. לחיצה פותחת ישר את חלון ההוספה.", url: "./?add" };
 
 Deno.serve(async req => {
@@ -47,8 +59,9 @@ Deno.serve(async req => {
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     const { data: u } = await sb.auth.getUser(token);
     if (!u?.user) return json({ error: "not signed in" }, 401);
-    const { data: subs } = await sb.from("push_subs").select("endpoint, sub").eq("user_id", u.user.id);
-    let sent = 0; for (const s of subs || []) if (await send(s, { title: "iSpend 🔔", body: "ככה תיראה התזכורת של הערב.", url: "./?add", tag: "ispend-test" })) sent++;
+    const { data: subs } = await sb.from("push_subs").select("endpoint, sub, week_stats").eq("user_id", u.user.id);
+    const weekTest = url.searchParams.get("test") === "week";
+    let sent = 0; for (const s of subs || []) if (await send(s, weekTest ? weeklyMsg(s as { week_stats?: unknown }, lastSunday(israelNow().day)) : { title: "iSpend 🔔", body: "ככה תיראה התזכורת של הערב.", url: "./?add", tag: "ispend-test" })) sent++;
     return json({ sent });
   }
 
@@ -56,8 +69,17 @@ Deno.serve(async req => {
   if (!k.cron_secret || req.headers.get("x-ispend-cron") !== k.cron_secret) return json({ error: "forbidden" }, 403);
   // the run every 15 minutes: each phone at its own time, once a day (a time missed by more than two hours waits for tomorrow)
   const now = israelNow();
-  const { data: subs } = await sb.from("push_subs").select("endpoint, sub, user_id, last_add, last_sent, remind_at");
+  const { data: subs } = await sb.from("push_subs").select("endpoint, sub, user_id, last_add, last_sent, remind_at, weekly, week_stats, week_sent");
   let sent = 0;
+  // Sunday 08:30–10:30: last week in one notification
+  const sunday = new Date(now.day + "T12:00:00Z").getUTCDay() === 0;
+  if (sunday && now.mins >= 8 * 60 + 30 && now.mins <= 10 * 60 + 30) {
+    const ws = lastSunday(now.day);
+    for (const s of subs || []) {
+      if (s.weekly === false || s.week_sent === now.day) continue;
+      if (await send(s, weeklyMsg(s, ws))) { sent++; await sb.from("push_subs").update({ week_sent: now.day }).eq("endpoint", s.endpoint); }
+    }
+  }
   for (const s of subs || []) {
     const m = String(s.remind_at || "21:00").match(/^(\d{1,2}):(\d{2})/), at = m ? +m[1] * 60 + +m[2] : 21 * 60;
     if (now.mins < at || now.mins > at + 120) continue;
