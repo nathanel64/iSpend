@@ -1,8 +1,8 @@
 select json_build_object(
-  'policies', (select json_agg(json_build_object('t', tablename, 'p', policyname, 'cmd', cmd, 'roles', roles, 'q', qual, 'w', with_check)) from pg_policies where schemaname = 'public'),
-  'rls', (select json_agg(json_build_object('t', relname, 'rls', relrowsecurity)) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r'),
-  'grants_anon', (select json_agg(distinct table_name || ':' || privilege_type) from information_schema.role_table_grants where table_schema = 'public' and grantee = 'anon'),
-  'funcs', (select json_agg(json_build_object('f', p.proname, 'secdef', p.prosecdef, 'exec_anon', has_function_privilege('anon', p.oid, 'execute'))) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'),
-  'cache', (select json_agg(json_build_object('s', source, 'n', n)) from (select source, count(*) n from public.merchant_cache group by source) x),
-  'pushsubs', (select count(*) from public.push_subs)
+  'cron_has_secret', (select command like '%x-ispend-cron%' from cron.job where jobname = 'ispend-evening'),
+  'secret_set', (select cron_secret is not null and length(cron_secret) > 40 from public.push_keys where id = 1),
+  'endpoint_check', (select count(*) from pg_constraint where conname = 'push_endpoint_ok'),
+  'recent_calls', (select json_agg(json_build_object('at', created, 'status', status_code) order by created desc) from (select created, status_code from net._http_response order by created desc limit 4) x),
+  'pushsubs', (select count(*) from public.push_subs),
+  'cache', (select json_agg(json_build_object('s', source, 'n', n)) from (select source, count(*) n from public.merchant_cache group by source) x)
 ) as r;
