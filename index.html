@@ -7577,7 +7577,8 @@ document.addEventListener("click", e => {
   };
 });
 let pushTouched = "";
-function pushTouch() { const d = iso(today); if (pushTouched === d || !window.ispendPushTouch) return; if (tx.some(t => iso(t.date) === d)) { pushTouched = d; window.ispendPushTouch(d); } }
+function pushTouch() { const d = iso(today); if (pushTouched === d || !window.ispendPushTouch) return; if (tx.some(t => iso(t.date) === d && !t.gen && (t.source === "manual" || t.source === "applepay"))) { pushTouched = d; window.ispendPushTouch(d); } }
+// only what you added yourself (by hand or Apple Pay) stops the evening reminder; charges the bank or card company sent in do not
 function renderTrial() { try { pushTouch(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
 // one card at the bottom of the home screen, with three tabs
 let funTab = lsGet("funTab", "chal");
@@ -8120,7 +8121,7 @@ window.ispendRemind = async function () {
     const { key } = await kr.json();
     const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(key) });
     const d = new Date(), today_ = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    const { error } = await sb.from("push_subs").upsert({ user_id: USER_ID, endpoint: sub.endpoint, sub: sub.toJSON(), last_add: (typeof tx !== "undefined" && tx.some(t => iso(t.date) === today_)) ? today_ : null }, { onConflict: "endpoint" });
+    const { error } = await sb.from("push_subs").upsert({ user_id: USER_ID, endpoint: sub.endpoint, sub: sub.toJSON(), last_add: (typeof tx !== "undefined" && tx.some(t => iso(t.date) === today_ && !t.gen && (t.source === "manual" || t.source === "applepay"))) ? today_ : null }, { onConflict: "endpoint" });
     if (error) throw error;
     try { localStorage.setItem(pushKey(), "1"); } catch (e) {}
     const okT = await saveRemindTime(at);
@@ -8165,7 +8166,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261027082308";
+const BUILD_ID = "20261027082930";
 let updToast = null;
 async function checkUpdate() {
   try {
