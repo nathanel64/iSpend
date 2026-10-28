@@ -1589,6 +1589,10 @@ body.arrange .arr-open { display: none !important; }
 .imp-row b { grid-area: a; font-size: .9rem; white-space: nowrap; } .imp-row b.in { color: var(--good); }
 .imp-row select { grid-area: s; font-size: .76rem; padding: 4px 6px; justify-self: start; }
 .imp-row.dup { opacity: .55; }
+.imp-srcs { display: flex; flex-direction: column; gap: 6px; max-height: 30vh; overflow-y: auto; }
+.imp-src { display: flex; align-items: center; gap: 10px; background: color-mix(in srgb, var(--ink) 4%, transparent); border-radius: 12px; padding: 6px 10px; }
+.imp-sn { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: .84rem; } .imp-sn bdi { overflow-wrap: anywhere; } .imp-sn small { color: var(--muted); font-size: .72rem; }
+.imp-src select { font: inherit; font-size: .8rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 6px 8px; max-width: 46%; }
 .imp-msg { font-size: .84rem; color: var(--bad); min-height: 1em; }
 .imp-go { width: 100%; }
 
@@ -7301,11 +7305,11 @@ async function readStatement(file) {
   if (/\.(csv|txt|tsv)$/.test(name)) {
     const buf = await file.arrayBuffer(); let text = new TextDecoder("utf-8").decode(buf);
     if (!/[א-ת]/.test(text)) { try { text = new TextDecoder("windows-1255").decode(buf); } catch (e) {} }
-    return [csvRows(text.replace(/^﻿/, ""))];
+    return [{ name: "", rows: csvRows(text.replace(/^﻿/, "")) }];
   }
   const X = await loadXlsxLib();
   const wb = X.read(await file.arrayBuffer(), { type: "array", cellDates: true });
-  return wb.SheetNames.map(n => X.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }));
+  return wb.SheetNames.map(n => ({ name: n, rows: X.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) }));
 }
 const IMP_COLS = {
   date: [/תאריך\s*(ה?עסקה|ה?רכישה)/, /^תאריך$/, /תאריך/, /transaction\s*date|purchase\s*date/i, /^date$/i, /date/i],
@@ -7332,50 +7336,84 @@ function impDate(v) {
   return parseDate(v);
 }
 function impAmount(v) { if (typeof v === "number") return v; const s = String(v || "").trim(); if (!s) return null; const neg = /^-|-$|^\(.*\)$|−/.test(s); const n = parseAmount(s.replace(/-$/, "")); return n === null ? null : (neg ? -Math.abs(n) : n); }
-function impParse(sheets) {
-  // the sheet and the row that look most like a statement header
-  let best = null;
-  sheets.forEach((rows, si) => rows.slice(0, 40).forEach((r, ri) => {
-    const g = impGuess(r); const sc = (g.date != null) * 2 + (g.amount != null) * 2 + (g.merchant != null);
-    if (sc >= 4 && (!best || sc > best.sc)) best = { sc, si, ri, g };
-  }));
-  if (!best) return null;
-  const rows = sheets[best.si];
-  return { header: rows[best.ri].map(x => String(x || "").trim()), body: rows.slice(best.ri + 1), map: best.g };
+// a sheet named after a month ("ינואר 2026", "01-2026", "2026-01") tells the year of dates written without one
+const HEB_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+function sheetMonth(name) {
+  const n = String(name || ""); let m = HEB_MONTHS.findIndex(x => n.includes(x)), y = (n.match(/20\d\d/) || [])[0];
+  if (m < 0) { const a = n.match(/\b(\d{1,2})[./_\- ](20\d\d)\b/) || n.match(/\b(20\d\d)[./_\- ](\d{1,2})\b/); if (a) { const [p1, p2] = a[1].length === 4 ? [a[2], a[1]] : [a[1], a[2]]; m = +p1 - 1; y = p2; } }
+  if (!y && m >= 0) { const s2 = n.match(/\b(\d\d)\b/); if (s2) y = "20" + s2[1]; }
+  return m >= 0 && m < 12 ? { m, y: y ? +y : null } : null;
+}
+// one file can hold many statements (a sheet per month or per card): each sheet with a header row becomes a source;
+// a sheet with rows but no header of its own borrows the one before it, if its dates sit in the same column
+function impParse(sheets, file) {
+  const out = []; let prev = null;
+  sheets.forEach(({ name, rows }) => {
+    let best = null;
+    rows.slice(0, 40).forEach((r, ri) => { const g = impGuess(r); const sc = (g.date != null) * 2 + (g.amount != null) * 2 + (g.merchant != null); if (sc >= 4 && (!best || sc > best.sc)) best = { sc, ri, g }; });
+    let src = null;
+    if (best) src = { header: rows[best.ri].map(x => String(x || "").trim()), body: rows.slice(best.ri + 1), map: best.g };
+    else if (prev) { const sample = rows.filter(r => r.some(c => String(c).trim())).slice(0, 10); if (sample.length && sample.filter(r => impDate(r[prev.map.date])).length >= Math.ceil(sample.length / 2)) src = { header: prev.header, body: rows, map: { ...prev.map } }; }
+    if (!src) return;
+    const digits = (String(name).match(/\d{4}/) || file.match(/\d{4}/) || [""])[0];
+    src.file = file; src.sheet = name; src.hint = sheetMonth(name); src.flip = false;
+    src.pay = PAY.find(x => digits && !/^20\d\d$/.test(digits) && x.includes(digits)) || PAY.find(x => String(name).includes(x) || file.includes(x)) || PAY[0];
+    out.push(src); prev = src;
+  });
+  return out;
 }
 function impBuild() {
-  const st = impState, m = st.map, out = [];
-  st.body.forEach((r, i) => {
-    if (m.date == null || m.amount == null) return;
-    const d = impDate(r[m.date]); if (!d || d.getFullYear() < 2000) return;
-    let amt = impAmount(r[m.amount]); const cr = m.credit != null ? impAmount(r[m.credit]) : null;
-    if ((amt === null || amt === 0) && cr) amt = -Math.abs(cr);
-    if (amt === null || amt === 0) return;
-    if (st.flip) amt = -amt;
-    const raw = String(m.merchant != null ? r[m.merchant] : "").trim() || "ללא תיאור";
-    if (/^סה"?כ|^total/i.test(raw)) return;
-    const hit = recognizeMerchant(raw), name = (hit && hit.name) || tidyMerchant(raw);
-    // money in: from a bank file it is income; on a card it is a refund that belongs to the purchase's category
-    const inc = amt < 0, guess = (hit && hit.cat) || smartCategory(raw) || smartCategory(name) || impCatHint(m.cat != null ? r[m.cat] : "") || "לא מסווג";
-    const cat = inc ? (m.credit != null ? "הכנסה" : guess) : guess;
-    const a = Math.abs(Math.round(amt * 100) / 100);
-    // already in the site: the same amount within a day, by the same name or the same card
-    const dup = tx.some(t => Math.abs(t.amount - a) < 0.01 && Math.abs(t.date - d) <= 864e5 && (!!t.income || !!t.refund) === inc && (impSame(t.rawMerchant, raw) || impSame(t.merchant, name)));
-    out.push({ i, d, raw, name, amt: a, inc, cat, dup, on: !dup });
+  const st = impState, out = [], seen = new Set();
+  st.sources.forEach((src, si) => {
+    const m = src.map;
+    src.body.forEach((r, i) => {
+      if (m.date == null || m.amount == null) return;
+      let d = null; const rawD = r[m.date];
+      // "15/01" with no year: the year of the sheet's month
+      const short = String(rawD || "").trim().match(/^(\d{1,2})[./-](\d{1,2})$/);
+      if (short && src.hint) d = new Date(src.hint.y || today.getFullYear(), +short[2] - 1, +short[1]);
+      else d = impDate(rawD);
+      if (!d || isNaN(d) || d.getFullYear() < 2000) return;
+      let amt = impAmount(r[m.amount]); const cr = m.credit != null ? impAmount(r[m.credit]) : null;
+      if ((amt === null || amt === 0) && cr) amt = -Math.abs(cr);
+      if (amt === null || amt === 0) return;
+      if (src.flip) amt = -amt;
+      const raw = String(m.merchant != null ? r[m.merchant] : "").trim() || "ללא תיאור";
+      if (/^סה"?כ|^total/i.test(raw)) return;
+      const hit = recognizeMerchant(raw), name = (hit && hit.name) || tidyMerchant(raw);
+      // money in: from a bank file it is income; on a card it is a refund that belongs to the purchase's category
+      const inc = amt < 0, guess = (hit && hit.cat) || smartCategory(raw) || smartCategory(name) || impCatHint(m.cat != null ? r[m.cat] : "") || "לא מסווג";
+      const cat = inc ? (m.credit != null ? "הכנסה" : guess) : guess;
+      const a = Math.abs(Math.round(amt * 100) / 100);
+      // already in the site: the same amount within a day, by the same name or the same card
+      const dup = tx.some(t => Math.abs(t.amount - a) < 0.01 && Math.abs(t.date - d) <= 864e5 && (!!t.income || !!t.refund) === inc && (impSame(t.rawMerchant, raw) || impSame(t.merchant, name)));
+      // the same row in two of the chosen files or sheets (say a merged file and one of its months)
+      const key = iso(d) + "|" + a + "|" + raw.replace(/\s+/g, " ").toLowerCase(), twice = seen.has(key); seen.add(key);
+      const old = st.items && st.items.find(x => x.key === key && x.s === si);
+      out.push({ s: si, i, d, raw, name: old ? old.name : name, amt: a, inc, cat: old && old.touched ? old.cat : cat, touched: old && old.touched, dup: dup || twice, twice, key, on: old ? old.on : !(dup || twice) });
+    });
   });
   st.items = out;
 }
 function impRender() {
   const st = impState, box = $("impBody");
   if (!st || !st.items) return;
-  const sel = st.items.filter(x => x.on), opt = (k, label) => `<label class="imp-map"><span>${label}</span><select data-map="${k}"><option value="">—</option>${st.header.map((h, i) => `<option value="${i}"${st.map[k] === i ? " selected" : ""}>${esc(h || "עמודה " + (i + 1))}</option>`).join("")}</select></label>`;
-  const dups = st.items.filter(x => x.dup).length, sum = sel.reduce((s, x) => s + (x.inc ? 0 : x.amt), 0);
-  box.innerHTML = `<div class="imp-file"><b><bdi>${esc(st.file)}</bdi></b><span>${st.items.length} שורות · ${dups ? dups + " כבר קיימות באתר" : "אין כפילויות"}</span></div>
-    <details class="imp-cols"><summary>העמודות שזוהו</summary><div class="imp-maps">${opt("date", "תאריך")}${opt("merchant", "עסק / תיאור")}${opt("amount", "סכום")}${opt("credit", "זכות (אם יש)")}</div>
-      <label class="imp-chk"><input type="checkbox" id="impFlip"${st.flip ? " checked" : ""}> הסימנים הפוכים בקובץ (הוצאות במינוס)</label></details>
-    <label class="imp-map wide"><span>אמצעי התשלום של הקובץ</span><select id="impPay">${PAY.map(p => `<option${p === st.pay ? " selected" : ""}>${esc(p)}</option>`).join("")}</select></label>
+  const src = st.sources[st.cur] || st.sources[0], many = st.sources.length > 1;
+  const sel = st.items.filter(x => x.on), opt = (k, label) => `<label class="imp-map"><span>${label}</span><select data-map="${k}"><option value="">—</option>${src.header.map((h, i) => `<option value="${i}"${src.map[k] === i ? " selected" : ""}>${esc(h || "עמודה " + (i + 1))}</option>`).join("")}</select></label>`;
+  const dups = st.items.filter(x => x.dup && !x.twice).length, twice = st.items.filter(x => x.twice).length, sum = sel.reduce((s, x) => s + (x.inc ? 0 : x.amt), 0);
+  const label = x => esc(x.file) + (x.sheet && (many || x.sheet !== "Sheet1") ? " · " + esc(x.sheet) : "");
+  const count = si => st.items.filter(x => x.s === si).length;
+  const files = new Set(st.sources.map(x => x.file)).size;
+  box.innerHTML = `<div class="imp-file"><b>${many ? (files === 1 ? `קובץ אחד · ${st.sources.length} גיליונות` : `${files} קבצים`) : `<bdi>${label(src)}</bdi>`}</b><span>${st.items.length} שורות · ${dups ? dups + " כבר קיימות באתר" : "אין כפילויות"}${twice ? ` · ${twice} מופיעות פעמיים` : ""}</span></div>
+    ${many ? `<div class="imp-srcs">${st.sources.map((x, si) => `<div class="imp-src"><span class="imp-sn"><bdi>${label(x)}</bdi><small>${count(si)} שורות${x.hint ? " · " + HEB_MONTHS[x.hint.m] + (x.hint.y ? " " + x.hint.y : "") : ""}</small></span>
+      <select data-spay="${si}" aria-label="אמצעי התשלום של ${label(x)}">${PAY.map(p => `<option${p === x.pay ? " selected" : ""}>${esc(p)}</option>`).join("")}</select></div>`).join("")}</div>`
+      : `<label class="imp-map wide"><span>אמצעי התשלום של הקובץ</span><select id="impPay">${PAY.map(p => `<option${p === src.pay ? " selected" : ""}>${esc(p)}</option>`).join("")}</select></label>`}
+    <details class="imp-cols"${st.colsOpen ? " open" : ""}><summary>העמודות שזוהו</summary>
+      ${many ? `<label class="imp-map wide"><span>של הגיליון</span><select id="impSrc">${st.sources.map((x, si) => `<option value="${si}"${si === st.cur ? " selected" : ""}>${label(x)}</option>`).join("")}</select></label>` : ""}
+      <div class="imp-maps">${opt("date", "תאריך")}${opt("merchant", "עסק / תיאור")}${opt("amount", "סכום")}${opt("credit", "זכות (אם יש)")}</div>
+      <label class="imp-chk"><input type="checkbox" id="impFlip"${src.flip ? " checked" : ""}> הסימנים הפוכים ${many ? "בגיליון הזה" : "בקובץ"} (הוצאות במינוס)</label></details>
     <div class="imp-list">${st.items.map((x, k) => `<label class="imp-row ${x.dup ? "dup" : ""}"><input type="checkbox" data-k="${k}"${x.on ? " checked" : ""}>
-      <span class="imp-m"><bdi>${esc(x.name)}</bdi><small>${x.d.getDate()}.${x.d.getMonth() + 1}.${String(x.d.getFullYear()).slice(2)}${x.dup ? " · כבר באתר" : ""}</small></span>
+      <span class="imp-m"><bdi>${esc(x.name)}</bdi><small>${x.d.getDate()}.${x.d.getMonth() + 1}.${String(x.d.getFullYear()).slice(2)}${many ? " · " + esc(st.sources[x.s].sheet || st.sources[x.s].file) : ""}${x.twice ? " · מופיעה פעמיים" : x.dup ? " · כבר באתר" : ""}</small></span>
       <select data-cat="${k}" aria-label="קטגוריה">${(x.inc ? ["הכנסה"] : []).concat(CATS.filter(c => c !== "הכנסה")).map(c => `<option${c === x.cat ? " selected" : ""}>${esc(c)}</option>`).join("")}${x.cat === "לא מסווג" ? "<option selected>לא מסווג</option>" : ""}</select>
       <b class="num ${x.inc ? "in" : ""}">${x.inc ? "+" : ""}${fmt2(x.amt)}</b></label>`).join("")}</div>`;
   $("impGo").disabled = !sel.length;
@@ -7386,49 +7424,54 @@ function openImport() {
     const bg = document.createElement("div"); bg.className = "sheet-bg"; bg.id = "impBg"; bg.hidden = true; bg.dir = "rtl"; bg.lang = "he"; bg.style.zIndex = 42;
     bg.innerHTML = `<div class="sheet imp-sheet" role="dialog" aria-modal="true" aria-labelledby="impTitle">
       <h3><span id="impTitle">ייבוא מקובץ</span><button class="x" type="button" id="impX" aria-label="סגירה">✕</button></h3>
-      <p class="imp-intro">מורידים מהאתר של הבנק או של חברת האשראי את פירוט התנועות (אקסל או CSV) ובוחרים אותו כאן. האתר מזהה את העמודות, מסווג, ומדלג על מה שכבר קיים.</p>
-      <label class="imp-pick"><input type="file" id="impFile" accept=".xlsx,.xls,.csv,.tsv,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4 M7 9l5-5 5 5 M5 20h14"/></svg><span id="impPickTxt">בחירת קובץ</span></label>
+      <p class="imp-intro">מורידים מהאתר של הבנק או של חברת האשראי את פירוט התנועות (אקסל או CSV) ובוחרים אותו כאן. אפשר לבחור כמה קבצים ביחד, וגם קובץ אחד עם גיליון לכל חודש. האתר מזהה את העמודות, מסווג, ומדלג על מה שכבר קיים.</p>
+      <label class="imp-pick"><input type="file" id="impFile" multiple accept=".xlsx,.xls,.csv,.tsv,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4 M7 9l5-5 5 5 M5 20h14"/></svg><span id="impPickTxt">בחירת קבצים</span></label>
       <div id="impBody"></div><div class="imp-msg" id="impMsg" role="status"></div>
       <button type="button" class="btn imp-go" id="impGo" disabled>ייבוא</button></div>`;
     document.body.appendChild(bg);
     bg.addEventListener("click", e => { if (e.target === bg) closeImport(); });
     $("impX").onclick = closeImport;
     $("impFile").onchange = async e => {
-      const f = e.target.files[0]; if (!f) return; $("impMsg").textContent = "קורא את הקובץ…"; $("impBody").innerHTML = "";
-      try {
-        const p = impParse(await readStatement(f));
-        if (!p) { $("impMsg").textContent = "לא מצאתי בקובץ עמודות של תאריך וסכום. נסו קובץ אחר (פירוט עסקאות)."; return; }
-        // the card in the file name or its last digits, else the most used
-        const digits = (f.name.match(/\d{4}/) || [""])[0];
-        const pay = PAY.find(x => digits && x.includes(digits)) || PAY.find(x => f.name.includes(x)) || PAY[0];
-        impState = { file: f.name, ...p, pay, flip: false }; impBuild();
-        $("impMsg").textContent = impState.items.length ? "" : "הקובץ נקרא, אבל לא נמצאו בו תנועות.";
-        $("impPickTxt").textContent = "קובץ אחר"; impRender();
-        // names nobody knows yet: ask the server, and refresh the rows the viewer did not touch
-        if (window.ispendClassify) {
-          const st0 = impState, unk = [...new Set(st0.items.filter(x => !x.inc && (x.cat === "לא מסווג" || !recognizeMerchant(x.raw) || recognizeMerchant(x.raw).kind)).map(x => x.raw))].slice(0, 60);
-          if (unk.length) window.ispendClassify(unk, CATS.filter(c => c !== "הכנסה")).then(res => {
-            if (impState !== st0 || !res) return; let n = 0;
-            st0.items.forEach(x => { const a = res[x.raw]; if (!a || x.touched) return; aiMerch[aiKey(x.raw)] = { name: aiClean(a.name), cat: aiClean(a.cat) }; if (a.name) x.name = aiClean(a.name); if (CATS.includes(a.cat)) x.cat = a.cat; n++; });
-            try { localStorage.setItem("aiMerch", JSON.stringify(aiMerch)); } catch (e) {}
-            if (n) impRender();
-          }).catch(() => {});
-        }
-      } catch (err) { $("impMsg").textContent = err && err.message === "lib" ? "לא הצלחתי לטעון את קורא האקסל. בדקו את החיבור, או שמרו את הקובץ כ-CSV." : "לא הצלחתי לקרוא את הקובץ."; }
+      const files = [...e.target.files]; if (!files.length) return;
+      $("impMsg").textContent = files.length > 1 ? `קורא ${files.length} קבצים…` : "קורא את הקובץ…";
+      const add = [], bad = [];
+      for (const f of files) {
+        try { const got = impParse(await readStatement(f), f.name); if (got.length) add.push(...got); else bad.push(f.name); }
+        catch (err) { if (err && err.message === "lib") { $("impMsg").textContent = "לא הצלחתי לטעון את קורא האקסל. בדקו את החיבור, או שמרו את הקובץ כ-CSV."; e.target.value = ""; return; } bad.push(f.name); }
+      }
       e.target.value = "";
+      if (!add.length) { $("impMsg").textContent = "לא מצאתי עמודות של תאריך וסכום ב" + (bad.length > 1 ? "קבצים" : "קובץ") + ". נסו קובץ של פירוט עסקאות."; return; }
+      // picking again adds to what is already on screen
+      if (!impState) impState = { sources: [], cur: 0, items: null };
+      impState.sources.push(...add); impBuild();
+      $("impMsg").textContent = bad.length ? "לא הצלחתי לקרוא את: " + bad.join(", ") : impState.items.length ? "" : "הקבצים נקראו, אבל לא נמצאו בהם תנועות.";
+      $("impPickTxt").textContent = "הוספת קבצים"; impRender();
+      // names nobody knows yet: ask the server, and refresh the rows the viewer did not touch
+      if (window.ispendClassify) {
+        const st0 = impState, unk = [...new Set(st0.items.filter(x => !x.inc && (x.cat === "לא מסווג" || !recognizeMerchant(x.raw) || recognizeMerchant(x.raw).kind)).map(x => x.raw))].slice(0, 60);
+        if (unk.length) window.ispendClassify(unk, CATS.filter(c => c !== "הכנסה")).then(res => {
+          if (impState !== st0 || !res) return; let n = 0;
+          st0.items.forEach(x => { const a = res[x.raw]; if (!a || x.touched) return; aiMerch[aiKey(x.raw)] = { name: aiClean(a.name), cat: aiClean(a.cat) }; if (a.name) x.name = aiClean(a.name); if (CATS.includes(a.cat)) x.cat = a.cat; n++; });
+          try { localStorage.setItem("aiMerch", JSON.stringify(aiMerch)); } catch (e) {}
+          if (n) impRender();
+        }).catch(() => {});
+      }
     };
     $("impBody").addEventListener("change", e => {
       const t = e.target, st = impState; if (!st) return;
-      if (t.dataset.map) { st.map[t.dataset.map] = t.value === "" ? undefined : +t.value; impBuild(); impRender(); }
-      else if (t.id === "impFlip") { st.flip = t.checked; impBuild(); impRender(); }
-      else if (t.id === "impPay") st.pay = t.value;
+      const src = st.sources[st.cur] || st.sources[0];
+      if (t.dataset.map) { src.map[t.dataset.map] = t.value === "" ? undefined : +t.value; st.colsOpen = true; impBuild(); impRender(); }
+      else if (t.id === "impFlip") { src.flip = t.checked; st.colsOpen = true; impBuild(); impRender(); }
+      else if (t.id === "impSrc") { st.cur = +t.value; st.colsOpen = true; impRender(); }
+      else if (t.id === "impPay") src.pay = t.value;
+      else if (t.dataset.spay != null) st.sources[+t.dataset.spay].pay = t.value;
       else if (t.dataset.k != null) { st.items[+t.dataset.k].on = t.checked; impRender(); }
       else if (t.dataset.cat != null) { st.items[+t.dataset.cat].cat = t.value; st.items[+t.dataset.cat].touched = true; }
     });
     $("impGo").onclick = doImport;
   }
-  impState = null; $("impBody").innerHTML = ""; $("impMsg").textContent = ""; $("impPickTxt").textContent = "בחירת קובץ"; $("impGo").disabled = true; $("impGo").textContent = "ייבוא";
+  impState = null; $("impBody").innerHTML = ""; $("impMsg").textContent = ""; $("impPickTxt").textContent = "בחירת קבצים"; $("impGo").disabled = true; $("impGo").textContent = "ייבוא";
   $("impBg").hidden = false;
 }
 function closeImport() { if ($("impBg")) $("impBg").hidden = true; }
@@ -7436,7 +7479,7 @@ async function doImport() {
   const st = impState; if (!st || !mcp) { $("impMsg").textContent = "אפשר לייבא רק כשיש חיבור לגיליון."; return; }
   const items = st.items.filter(x => x.on); if (!items.length) return;
   const b = $("impGo"); b.disabled = true; b.textContent = "מייבא…";
-  const stamp = Date.now(), rows = items.map((x, k) => [iso(x.d), x.amt, x.name, st.pay, x.cat, x.inc ? "הכנסה" : "הוצאה", "ייבוא", "i-" + stamp + "-" + k, ""]);
+  const stamp = Date.now(), rows = items.map((x, k) => [iso(x.d), x.amt, x.name, st.sources[x.s].pay, x.cat, x.inc ? "הכנסה" : "הוצאה", "ייבוא", "i-" + stamp + "-" + k, ""]);
   try {
     for (let i = 0; i < rows.length; i += 100) { if (rows.length > 100) b.textContent = `מייבא… ${Math.min(i + 100, rows.length)} מתוך ${rows.length}`; await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: rows.slice(i, i + 100) }); }
     data.apple = [...(data.apple || []), ...rows];
@@ -7943,7 +7986,7 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "מאיזה חודש אתם באתר, כמה חודשים וכמה תנועות. למעלה משמאל, ״סיור באתר״ מראה את הסיור הזה שוב. מתחתיו חיפוש בהגדרות: ״תקרה״, ״כהה״, ״יום חיוב״." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת לכל חודש (עם הממוצע של 3 האחרונים), יום החיוב בכרטיס ומאיזה חודש האתר מתחיל. ב״חודשים״ מסתירים חודש או מוחקים אותו." },
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "<b>קטגוריות ותקרות</b>: לחיצה על קטגוריה פותחת חלון קטן לשם, אייקון וצבע, ״קבועה״ ותקרה לכל חודש. כאן גם אמצעי התשלום והכרטיסים מהארנק." },
-  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay מכניס כל תשלום באייפון לבד. הגדרה חד-פעמית של דקה. <b>סיווג עסקים חכם</b> נותן שם וקטגוריה לעסקים שהאתר לא מכיר. ו<b>ייבוא מקובץ</b> מכניס בבת אחת פירוט שהורדתם מהבנק או מחברת האשראי (אקסל או CSV): העמודות מזוהות לבד, ומה שכבר קיים לא נכנס פעמיים." },
+  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay מכניס כל תשלום באייפון לבד. הגדרה חד-פעמית של דקה. <b>סיווג עסקים חכם</b> נותן שם וקטגוריה לעסקים שהאתר לא מכיר. ו<b>ייבוא מקובץ</b> מכניס בבת אחת פירוט שהורדתם מהבנק או מחברת האשראי (אקסל או CSV). אפשר כמה קבצים ביחד, וגם קובץ אחד עם גיליון לכל חודש: העמודות מזוהות לבד, ומה שכבר קיים לא נכנס פעמיים." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "קובץ אקסל מסודר עם כל התנועות (כולל עמודת חודש), סיכום לכל חודש ולפי קטגוריה. בטלפון אפשר לשמור אותו או לשלוח בוואטסאפ." },
   { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת 🔔", b: "מפעילים פעם אחת ובוחרים שעה, ובכל יום בשעה הזו, אם לא הוספתם כלום באותו יום, מגיעה התראה לטלפון. לחיצה עליה פותחת ישר את חלון ההוספה. באייפון זה עובד מהאתר ששמור במסך הבית." },
   { t: '#setMenu [data-act="weekly"]', view: "admin", opt: true, h: "סיכום שבועי 📊", b: "בכל יום ראשון ב-8:30 מגיעה התראה עם השבוע שעבר: כמה יצא, לעומת השבוע שלפניו ועל מה הלך הכי הרבה. לחיצה עליה פותחת את הסיכום המלא." },
@@ -8235,7 +8278,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261028020320";
+const BUILD_ID = "20261028022223";
 let updToast = null;
 async function checkUpdate() {
   try {
