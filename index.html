@@ -1655,6 +1655,44 @@ body.arrange .arr-open { display: none !important; }
 :where(#prev, #next, .fold-btn, #refreshBtn, #copyPayTok, .set-back, .set-info-btn, #tourAgain, button.x, button.del, #rcClose, #salClose, #flClose, #impX, .m-act, #capEditBtn, #selBtn, #fltBtn)::before { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 #prev, #next { min-width: 44px; min-height: 44px; }
 .set-legal a, .auth-legal a { display: inline-block; padding: 12px 6px; }
+/* the add window: one colour per kind (purple out, green in), pickers instead of lists, and on a phone two steps (the amount, then the rest) */
+#addForm { --k: var(--brand); --k-text: var(--brand-text); --ks: var(--brand-soft); }
+#addForm.inc { --k: var(--good); --k-text: var(--good); --ks: var(--good-soft); }
+#addForm { isolation: isolate; position: relative; }
+#addForm::before { content: ""; position: absolute; inset: 0 0 auto; height: 140px; border-radius: inherit; background: linear-gradient(180deg, var(--ks), transparent); pointer-events: none; z-index: -1; transition: background .35s; }
+#addForm .kind button[aria-pressed="true"] { color: var(--k-text); }
+#addForm .amount-in input { color: var(--k-text); font-weight: 700; transition: color .3s; }
+#addForm .amount-in.np-on { border-bottom-color: var(--k); }
+#addForm .np-quick button { background: var(--ks); color: var(--k-text); }
+#addForm .np-done, #addForm #addSave { background: var(--k); color: #fff; transition: background .3s; }
+#addForm .np-done:disabled { opacity: .45; }
+#addForm .add-acts .btn.ghost { color: var(--k-text); }
+.amt-mini { display: flex; align-items: center; justify-content: space-between; border: 0; background: var(--ks); border-radius: 14px; padding: 8px 14px; min-height: 48px; width: 100%; }
+.amt-mini[hidden] { display: none; }
+.amt-mini b { color: var(--k-text); font: 700 1.45rem var(--font-display); }
+.amt-mini span { color: var(--k-text); font-weight: 600; font-size: .84rem; }
+.pk { display: flex; flex-direction: column; gap: 8px; }
+.pk-l { font-size: .74rem; color: var(--muted); font-weight: 600; margin-bottom: -2px; }
+.pk-cats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pk-cats button { border: 1.5px solid transparent; background: var(--bg); border-radius: 15px; padding: 7px 2px 6px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: .7rem; line-height: 1.2; min-height: 60px; color: var(--ink); transition: transform .15s, background .2s; }
+.pk-cats button span { overflow-wrap: anywhere; text-align: center; padding: 0 2px; }
+.pk-cats button .ic { width: 28px; height: 28px; border-radius: 9px; } .pk-cats button .ic svg { width: 15px; height: 15px; }
+.pk-cats button[aria-pressed="true"] { border-color: var(--k); background: var(--ks); font-weight: 600; transform: scale(1.03); }
+.pk-cats .more .ic { background: var(--surface); display: grid; place-items: center; font-size: 1.1rem; color: var(--muted); }
+.pk-cards { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 3px 2px 6px; margin: 0 -2px; }
+.pk-cards::-webkit-scrollbar { display: none; }
+.pk-cards button { flex: none; width: 100px; height: 60px; border: 0; border-radius: 12px; color: #fff; text-align: start; padding: 8px 10px; font-size: .78rem; font-weight: 600; display: flex; align-items: flex-start; opacity: .5; transform: scale(.94); transition: opacity .2s, transform .2s, box-shadow .2s; }
+.pk-cards button bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-cards button[aria-pressed="true"] { opacity: 1; transform: none; box-shadow: 0 6px 16px rgba(30, 20, 80, .25); outline: 2.5px solid var(--surface); outline-offset: -5px; }
+.pk-days { display: flex; gap: 6px; flex-wrap: wrap; }
+.pk-days button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; font-size: .84rem; min-height: 38px; color: var(--ink); }
+.pk-days button[aria-pressed="true"] { background: var(--ks); border-color: var(--k); color: var(--k-text); font-weight: 600; }
+.pk-sel { display: none; }
+.add-sum { margin: 0; font-size: .8rem; color: var(--muted); text-align: center; min-height: 1.2em; }
+.add-sum b { color: var(--k-text); }
+#addForm.st1 .dt, #addForm.st2 .st1only { display: none !important; }
+#addForm.st2 .amount-in { display: none; }
+@media (prefers-reduced-motion: reduce) { #addForm *, #addForm::before { transition-duration: .01s !important; } }
 /* a visible keyboard focus everywhere */
 :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible { outline: 2.5px solid var(--brand-text); outline-offset: 2px; }
 </style>
@@ -2407,27 +2445,34 @@ function makeSupaAdapter(uid) {
       <button type="button" id="kExp" aria-pressed="true">הוצאה</button>
       <button type="button" id="kInc" aria-pressed="false">קיבלתי כסף</button>
     </div>
+    <button type="button" class="amt-mini" id="amtMini" hidden><b class="num" id="amtMiniV"></b><span>שינוי הסכום</span></button>
     <div class="amount-in"><span>₪</span><input id="addAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" aria-label="סכום"></div>
     <div class="numpad" id="numpad" hidden>
       <div class="np-quick"><button type="button" data-add="10">+10</button><button type="button" data-add="50">+50</button><button type="button" data-add="100">+100</button><button type="button" data-add="500">+500</button></div>
       <div class="np-keys"><button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k=".">.</button><button type="button" data-k="0">0</button><button type="button" data-k="del" aria-label="מחיקת ספרה">⌫</button></div>
       <button type="button" class="np-done" id="npDone">המשך לתיאור ›</button>
     </div>
-    <div class="quick-k" id="quickK" hidden>מהאחרונים, לחיצה אחת ממלאת הכול</div>
-    <div class="quick" id="quickChips" role="group" aria-label="הוספה מהירה מהאחרונים" hidden></div>
-    <div class="field"><label for="addDesc">תיאור</label><input id="addDesc" type="text" placeholder="למשל: קניות בסופר" autocomplete="off"></div>
-    <div class="two">
+    <div class="quick-k st1only" id="quickK" hidden>מהאחרונים, לחיצה אחת ממלאת הכול</div>
+    <div class="quick st1only" id="quickChips" role="group" aria-label="הוספה מהירה מהאחרונים" hidden></div>
+    <div class="field dt"><label for="addDesc">תיאור</label><input id="addDesc" type="text" placeholder="למשל: קניות בסופר" autocomplete="off"></div>
+    <div class="pk dt" id="pk">
+      <div class="pk-l">קטגוריה</div><div class="pk-cats" id="pkCats" role="group" aria-label="קטגוריה"></div>
+      <div class="pk-l" id="pkCardL">שולם עם</div><div class="pk-cards" id="pkCards" role="group" aria-label="אמצעי תשלום"></div>
+      <div class="pk-l">מתי</div><div class="pk-days" id="pkDays" role="group" aria-label="תאריך"></div>
+    </div>
+    <div class="two pk-sel">
       <div class="field"><label for="addCat">קטגוריה</label><select id="addCat"></select></div>
       <div class="field"><label for="addCard" id="addCardLbl">אמצעי תשלום</label><select id="addCard"></select></div>
     </div>
-    <div class="two">
+    <div class="two dt">
       <div class="field"><label for="addDate">תאריך</label><input id="addDate" type="date"><button type="button" class="date-reset" id="dateReset" hidden>כמו בהוספה הקודמת · <u>להיום</u></button></div>
       <div class="field" id="instField"><label for="addInst">תשלומים</label><select id="addInst"></select></div>
     </div>
-    <p class="note" id="instHint" style="margin:0" hidden></p>
-    <p class="note" id="addHint" style="margin:0" hidden>העברה מחבר על הוצאה משותפת? בחרו את הקטגוריה של ההוצאה והיא תקוזז ממנה. משכורת או הכנסה אחרת: בחרו "הכנסה".</p>
+    <p class="note dt" id="instHint" style="margin:0" hidden></p>
+    <p class="note dt" id="addHint" style="margin:0" hidden>העברה מחבר על הוצאה משותפת? בחרו את הקטגוריה של ההוצאה והיא תקוזז ממנה. משכורת או הכנסה אחרת: בחרו "הכנסה".</p>
     <p class="form-msg" id="addMsg"></p>
-    <div class="add-acts"><button type="submit" class="btn" id="addSave" style="padding:13px">שמירה</button><button type="submit" class="btn ghost" id="addMore" style="padding:13px">שמירה והוספת עוד</button></div>
+    <p class="add-sum dt" id="addSum" aria-live="polite"></p>
+    <div class="add-acts dt"><button type="submit" class="btn" id="addSave" style="padding:13px">שמירה</button><button type="submit" class="btn ghost" id="addMore" style="padding:13px">שמירה והוספת עוד</button></div>
   </form>
 </div>
 
@@ -4816,6 +4861,7 @@ async function flushPending() {
   flushing = true; let sent = 0;
   try {
     for (const row of list) {
+      if (sendingIds.has(row[7])) continue; // already on its way
       await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: [row] });
       writePending(readPending().filter(r => r[7] !== row[7])); sent++;
     }
@@ -6423,27 +6469,29 @@ $("addForm").addEventListener("submit", async e => {
     toast("אין חיבור. ההוצאה נשמרה בטלפון ותישלח לבד כשהאינטרנט יחזור ☁");
   };
   if (!navigator.onLine) return keepLocal();
+  // no waiting: the row shows at once (marked as on its way), the window closes, and the row goes out in the background.
+  // If sending fails it stays on the phone and goes out by itself later, like a save without a connection.
+  writePending([...readPending(), row]); data.apple = [...(data.apple || []), row]; sendingIds.add(row[7]);
+  try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
+  const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1); if (startMonthPref != null && mIdxOf(d) < startMonthPref) setStartMonth(mIdxOf(d));
+  const fr = $("fab").getBoundingClientRect();
+  if (mine()) { closeAdd(); btn.disabled = false; btn.textContent = "שמירה"; } afterData();
+  if (addKind === "exp") requestAnimationFrame(() => flyCoin({ x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 }));
+  if (!addAgain) showSaved(row, addKind);
+  if (mine()) againAfterSave(); else addAgain = false;
+  sendRow(row);
+});
+const sendingIds = new Set();
+async function sendRow(row) {
   try {
     await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: [row] });
-    data.apple = [...(data.apple || []), row];
-    try { sessionStorage.setItem("lastAddDate", JSON.stringify({ d: date, at: Date.now() })); } catch (e) {}
-    const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1); if (startMonthPref != null && mIdxOf(d) < startMonthPref) setStartMonth(mIdxOf(d));
-    const fr = $("fab").getBoundingClientRect();
-    if (mine()) closeAdd(); afterData();
-    if (addKind === "exp") requestAnimationFrame(() => flyCoin({ x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 }));
-    if (!addAgain) showSaved(row, addKind);
-    if (mine()) againAfterSave(); else addAgain = false;
+    writePending(readPending().filter(r => r[7] !== row[7])); afterData();
     try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
   } catch (err) {
     const c = err && err.code;
-    if (isOfflineErr(err)) return keepLocal();
-    const why = c === "approval_required" || c === "not_in_manifest" ? "צריך לאשר לאתר לכתוב לגיליון. לחצו שוב על שמירה ואשרו."
-      : c === "server_unavailable" || c === "upstream_error" ? "לא בטוח שהשמירה עברה. רעננו את העמוד ובדקו לפני שמנסים שוב."
-      : c === "needs_reauth" ? "החיבור פג. התחברו מחדש."
-      : "השמירה נכשלה. נסו שוב.";
-    if (mine()) { $("addMsg").textContent = why; btn.disabled = false; btn.textContent = "שמירה"; } else toast(why, 4500);
-  }
-});
+    if (!isOfflineErr(err)) toast(c === "needs_reauth" ? "החיבור לגיליון פג. ההוצאה שמורה בטלפון ותישלח אחרי שתתחברו מחדש." : "ההוצאה עוד לא נשלחה. היא שמורה בטלפון ותישלח לבד בעוד רגע ☁", 4200);
+  } finally { sendingIds.delete(row[7]); }
+}
 
 /* ---------- events ---------- */
 // 1: moving between months: the screen slides in from the side of the month you came from, and the gauge fills up again from zero
@@ -7703,13 +7751,70 @@ $("selDel").onclick = async () => {
   toast(`${done} ${done === 1 ? "תנועה נמחקה" : "תנועות נמחקו"}` + (done < order.length ? ` · ${order.length - done} לא נמחקו, רעננו ונסו שוב` : " ✓"), 3200);
 };
 
+
+/* the add window's pickers: categories as icons, payment methods as small cards, and dates as chips.
+   The selects and the date field stay the source of truth (voice, recent, editing all fill them), and the pickers follow them. */
+let pkSig = "", pkAllCats = false;
+const pkCardBg = name => {
+  if (name === bankName()) return "linear-gradient(135deg,#0d6e52,#27a77f)";
+  if (name === "מזומן") return "linear-gradient(135deg,#a85a14,#e09a3a)";
+  let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return `linear-gradient(135deg,hsl(${h} 45% 28%),hsl(${(h + 35) % 360} 55% 48%))`;
+};
+function addPickers(force) {
+  const form = $("addForm"); if (!form || $("sheetBg").hidden) return;
+  const cat = $("addCat"), card = $("addCard"), date = $("addDate"), amt = parseFloat(String($("addAmount").value).replace(/[,\s₪]/g, "")) || 0;
+  const cats = [...cat.options].map(o => o.value), cards = [...card.options].map(o => o.value);
+  const sig = [addKind, cat.value, cats.join(","), card.value, cards.join(","), date.value, amt, $("addInst").value, pkAllCats, $("addDesc").value].join("|");
+  if (!force && sig === pkSig) return; pkSig = sig;
+  form.classList.toggle("inc", addKind === "inc");
+  // the categories you use most first (the chosen one always shows); "עוד" opens the rest
+  const since = addDays(today, -120), use = new Map();
+  tx.forEach(t => { if (t.date >= since) use.set(t.category, (use.get(t.category) || 0) + 1); });
+  let shown = [...cats].sort((a, b) => (b === "הכנסה") - (a === "הכנסה") || (use.get(b) || 0) - (use.get(a) || 0));
+  const cut = !pkAllCats && shown.length > 8;
+  if (cut) { shown = shown.slice(0, 7); if (!shown.includes(cat.value) && cat.value) shown[6] = cat.value; }
+  $("pkCats").innerHTML = shown.map(c => `<button type="button" data-pc="${esc(c)}" aria-pressed="${c === cat.value}">${catIcon(c, true)}<span>${esc(c)}</span></button>`).join("")
+    + (cut ? `<button type="button" class="more" data-pc-more aria-label="כל הקטגוריות"><span class="ic">＋</span><span>עוד</span></button>` : "");
+  $("pkCardL").textContent = addKind === "inc" ? "התקבל ל" : "שולם עם";
+  $("pkCards").innerHTML = cards.map(c => `<button type="button" data-pcard="${esc(c)}" aria-pressed="${c === card.value}" style="background:${pkCardBg(c)}"><bdi>${esc(c)}</bdi></button>`).join("");
+  const sel = $("pkCards").querySelector('[aria-pressed="true"]'); if (sel && force) sel.scrollIntoView({ block: "nearest", inline: "nearest" });
+  // dates: today, yesterday, the day before; any other date stays in the date field below
+  const days = [0, 1, 2].map(n => [n, iso(addDays(today, -n))]), names = ["היום", "אתמול", "שלשום"];
+  $("pkDays").innerHTML = days.map(([n, d]) => `<button type="button" data-pday="${d}" aria-pressed="${date.value === d}">${names[n]}</button>`).join("")
+    + (date.value && !days.some(([, d]) => d === date.value) ? `<button type="button" aria-pressed="true" data-pday="${date.value}">${dd(parseDate(date.value))}</button>` : "");
+  // what is about to be saved, in one line
+  const n = +$("addInst").value || 1, desc = $("addDesc").value.trim();
+  $("amtMiniV").textContent = (addKind === "inc" ? "+" : "") + fmt2(amt);
+  $("addSum").innerHTML = amt ? `<b>${addKind === "inc" ? "+" : ""}${fmt2(n > 1 ? Math.round(amt / n * 100) / 100 : amt)}${n > 1 ? " × " + n : ""}</b> · ${esc(cat.value)} · ${esc(card.value)}${desc ? " · " + esc(desc.slice(0, 24)) : ""}` : "";
+  const nd = document.querySelector("#numpad .np-done"); if (nd) nd.disabled = !amt;
+}
+window.addPickers = addPickers;
+$("pkCats").addEventListener("click", e => {
+  if (e.target.closest("[data-pc-more]")) { pkAllCats = true; addPickers(true); return; }
+  const b = e.target.closest("[data-pc]"); if (!b) return;
+  $("addCat").value = b.dataset.pc; catTouched = true; $("addCat").dispatchEvent(new Event("change", { bubbles: true })); addPickers(true);
+});
+$("pkCards").addEventListener("click", e => { const b = e.target.closest("[data-pcard]"); if (!b) return; $("addCard").value = b.dataset.pcard; $("addCard").dispatchEvent(new Event("change", { bubbles: true })); addPickers(true); });
+$("pkDays").addEventListener("click", e => { const b = e.target.closest("[data-pday]"); if (!b) return; $("addDate").value = b.dataset.pday; $("addDate").dispatchEvent(new Event("change", { bubbles: true })); $("addDate").dispatchEvent(new Event("input", { bubbles: true })); addPickers(true); });
+// the fields change from many places (typing, voice, recent, the category guess): follow them while the window is open
+["input", "change"].forEach(ev => $("addForm").addEventListener(ev, () => requestAnimationFrame(() => addPickers())));
+setInterval(() => { if (!$("sheetBg").hidden) addPickers(); }, 300);
+{ const oa = openAdd; openAdd = function () { pkAllCats = false; const r = oa.apply(this, arguments); addPickers(true); return r; };
+  const oe = openEdit; openEdit = function () { pkAllCats = false; const r = oe.apply(this, arguments); addPickers(true); return r; };
+  const sk = setKind; setKind = function () { const r = sk.apply(this, arguments); addPickers(true); return r; }; }
+
 /* 11: number keys for the amount on a phone */
 (function numpad() {
   if (!matchMedia("(pointer: coarse)").matches) return;
   const inp = $("addAmount"), pad = $("numpad"), wrap = inp.closest(".amount-in");
   // a number field throws away "45." (not a number yet), so on a phone the amount is a plain text field fed by the keys
   inp.type = "text"; inp.setAttribute("inputmode", "none"); inp.readOnly = true; inp.removeAttribute("step"); inp.removeAttribute("min");
-  const show = on => { pad.hidden = !on; wrap.classList.toggle("np-on", on); };
+  const form = $("addForm");
+  const show = on => { pad.hidden = !on; wrap.classList.toggle("np-on", on); form.classList.toggle("st1", on); form.classList.toggle("st2", !on); $("amtMini").hidden = on; if (window.addPickers) addPickers(true); };
+  $("amtMini").onclick = () => { show(true); inp.focus({ preventScroll: true }); };
+  // a recent one fills everything: straight to the details, ready to save
+  $("quickChips").addEventListener("click", e => { if (e.target.closest("button")) setTimeout(() => { if (parseFloat(inp.value) > 0) show(false); }, 0); });
   const set = v => { inp.value = v; inp.dispatchEvent(new Event("input", { bubbles: true })); };
   inp.addEventListener("focus", () => show(true));
   inp.addEventListener("click", () => show(true));
@@ -7956,6 +8061,12 @@ function tourAddDemo() {
   openAdd(); setTimeout(() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0);
   const close = () => closeAdd(); close.keep = tourAddDemo; return close;
 }
+// the add window on its second step (the details), for the steps about them
+function tourAddDemo2() {
+  const close = tourAddDemo(); close.keep = tourAddDemo2;
+  setTimeout(() => { const f = document.getElementById("addForm"); if (f && f.classList.contains("st1")) { f.classList.replace("st1", "st2"); document.getElementById("numpad").hidden = true; document.getElementById("amtMini").hidden = false; document.querySelector("#addForm .amount-in").classList.remove("np-on"); } }, 0);
+  return close;
+}
 function tourLift(el) {
   // shows the long press: the first row lifts, glides down past the next one and back
   const r = el && el.querySelector(".tx-sw"); if (!r) return null;
@@ -7969,10 +8080,11 @@ const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + esc(USER_NAME) : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. <b>לחיצה עליו</b> פותחת פירוט: משכורת, קבועות, משתנות והחזרים. מתחתיו: כמה אפשר להוציא היום. הכפתור <b>״התלוש של החודש״</b> מתחת פותח תלוש: מה נכנס, מה ירד לפי סוג, וכמה נשאר." },
   { t: "#fab", h: "הוספת הוצאה", b: "הכפתור הזה פותח את חלון ההוספה. לחיצה ארוכה עליו פותחת אותו ישר בהקשבה, כדי להוסיף בקול. בלי קליטה? ההוצאה נשמרת בטלפון ונשלחת כשהחיבור חוזר. ככה נראה החלון:" },
-  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים כאן, ומתחת מקלידים את הסכום. בטלפון יש מקשים גדולים משלנו, וכפתורים כמו ״+50״ שמוסיפים לסכום בלחיצה." },
+  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים כאן, וכל החלון מתחלף: סגול להוצאה, ירוק לכסף שנכנס. מתחת מקלידים את הסכום. בטלפון יש מקשים גדולים משלנו, וכפתורים כמו ״+50״ שמוסיפים לסכום בלחיצה. ״המשך״ עובר לפרטים." },
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "לחיצה על הוצאה שכבר הוספתם ממלאת את כל הטופס בבת אחת." },
-  { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם, והקטגוריה נבחרת לפי כל המשפט (״קניות בסופר למתנה״ ← מתנות). אפשר לשנות אותה, ואמצעי התשלום שהכי בשימוש כבר מסומן." },
-  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo, h: "תאריך ותשלומים", b: "כשמוסיפים כמה ברצף, נשאר התאריך של הקודמת. בעסקה בתשלומים בוחרים כמה, וכל תשלום יורד ביום החיוב של החודש שלו. ״שמירה והוספת עוד״ שומר ופותח את החלון שוב, עם אותו כרטיס ותאריך. אחרי שמירה עולה למטה כרטיס קטן עם מה שנוסף, ויש כמה שניות ללחוץ ״ביטול״ אם טעיתם." },
+  { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "בשלב השני הסכום מופיע למעלה (לחיצה עליו מחזירה לשנות). כותבים מה קניתם, והקטגוריה נבחרת לפי כל המשפט (״קניות בסופר למתנה״ ← מתנות)." },
+  { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "הקטגוריות כאייקונים (הנפוצות אצלכם קודם, ו״עוד״ לכל השאר), אמצעי התשלום ככרטיסים מהארנק, והתאריך ב״היום / אתמול / שלשום״. מתחת שורה קטנה מסכמת מה עומד להישמר." },
+  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo2, h: "תאריך אחר ותשלומים", b: "כאן בוחרים כל תאריך אחר. כשמוסיפים כמה ברצף, נשאר התאריך של הקודמת. בעסקה בתשלומים בוחרים כמה, וכל תשלום יורד ביום החיוב של החודש שלו. השמירה מיידית: החלון נסגר מיד, וההוצאה נשלחת ברקע. ״שמירה והוספת עוד״ שומר ופותח את החלון שוב, עם אותו כרטיס ותאריך. אחרי שמירה עולה למטה כרטיס קטן עם מה שנוסף, ויש כמה שניות ללחוץ ״ביטול״ אם טעיתם." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "לוחצים על המיקרופון ואומרים הכול במשפט אחד: סכום, על מה ובמה שילמתם. למשל ״45 שקל שווארמה במקס״, או ״קיבלתי 300 מאבא״. הסכום, התיאור, הקטגוריה ואמצעי התשלום מתמלאים לבד, ואתם רק בודקים ולוחצים שמירה." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. תקרה לכל קטגוריה (כמה מותר להוציא בחודש) קובעים בהגדרות, ליד הקטגוריה, וטבעת סביב העיגול מתמלאת. בכפתור ״תקרות״ משנים אותה רק לחודש מסוים." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כל אמצעי תשלום הוא כרטיס בארנק, עם הסכום שיצא ממנו החודש. לחיצה שולפת כרטיס, לחיצה נוספת הופכת אותו ומראה על מה הוצאת בו, ו'כל התנועות' מציג רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
@@ -8278,7 +8390,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261028022223";
+const BUILD_ID = "20261028110029";
 let updToast = null;
 async function checkUpdate() {
   try {
