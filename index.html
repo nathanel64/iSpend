@@ -3484,7 +3484,7 @@ function renderInstallments() {
   renderInstSuggest();
   const card = $("instCard"), empty = !rows.length;
   if (!layout.hidden.includes("inst") && !arranging) {
-    if (empty && layout.flow.includes("inst")) { const end = $("anaView").querySelector(":scope > .arr-open"); if (card.parentElement !== $("anaView") || card.nextElementSibling !== end) end.before(card); }
+    if (empty && layout.flow.includes("inst")) { const up = $("upCard"), end = layout.ana[layout.ana.length - 1] === "up" && up.parentElement === $("anaView") ? up : $("anaView").querySelector(":scope > .arr-open"); if (card.parentElement !== $("anaView") || card.nextElementSibling !== end) end.before(card); }
     else if (!empty && layout.flow.includes("inst") && card.parentElement !== $("flowView")) applyLayout();
   }
   card.hidden = layout.hidden.includes("inst");
@@ -4253,9 +4253,8 @@ function renderUpcoming(isCurrent) {
   // most of the month it sits by the open installments; in the last 5 days before the billing day it moves up, under the insights
   const soon = daysBetween(today, ns) <= 5;
   upSoon = soon ? { date: ns, sum: items.reduce((a, i) => a + i.amount, 0) } : null;
-  // in the last days before the billing day it moves up to the home screen; otherwise it keeps its place in "חודשי"
-  if (soon && !arranging) { const a = $("catsCard"); if (card.parentElement !== a.parentElement || card.nextElementSibling !== a) a.before(card); }
-  else if (card.parentElement !== $(layout.flow.includes("up") ? "flowView" : "anaView")) applyLayout();
+  // it stays where the layout puts it (by default at the bottom of "חודשי"), also in the days before the billing day
+  if (card.parentElement !== $(layout.flow.includes("up") ? "flowView" : "anaView") && !layout.hidden.includes("up")) applyLayout();
   if (layout.hidden.includes("up")) card.hidden = true;
   $("upDate").textContent = dd(ns);
   countTo($("upSum"), items.reduce((s, i) => s + i.amount, 0), fmt);
@@ -4352,7 +4351,7 @@ function vibeCands() {
   // a streak
   { const { n } = streakInfo(); if (n >= 2) out.push({ lvl: "good", e: "🔥", t: `<b>${n} ימים</b> ברצף בלי הוצאות משתנות`, go: () => showView("tx") }); }
   // charges coming up
-  if (upSoon) out.push({ lvl: "info", e: "🗓️", t: `ב-${dd(upSoon.date)} יורדים <b>${fmt(upSoon.sum)}</b> בתשלומים ובקבועות`, go: () => { const u = $("upCard"); if (u) u.scrollIntoView({ behavior: "smooth", block: "center" }); } });
+  if (upSoon) out.push({ lvl: "info", e: "🗓️", t: `ב-${dd(upSoon.date)} יורדים <b>${fmt(upSoon.sum)}</b> בתשלומים ובקבועות`, go: () => { if (!layout.flow.includes("up")) showView("ana"); setTimeout(() => { const u = $("upCard"); if (u) u.scrollIntoView({ behavior: "smooth", block: "center" }); }, 250); } });
   const rank = { bad: 0, warn: 1, good: 2, info: 3 };
   return out.sort((a, b) => rank[a.lvl] - rank[b.lvl]);
 }
@@ -6722,6 +6721,8 @@ function normLayout(l) {
   const out = { flow: [], ana: [], hidden: [] }, seen = new Set();
   ["flow", "ana", "hidden"].forEach(k => ((l && l[k]) || []).forEach(x => { if (ARR_NAMES[x] && !seen.has(x)) { out[k].push(x); seen.add(x); } }));
   Object.keys(ARR_NAMES).forEach(x => { if (!seen.has(x)) (ARR_DEFAULT.flow.includes(x) ? out.flow : out.ana).push(x); });
+  if (!(l && l.upAna)) { out.flow = out.flow.filter(x => x !== "up"); out.ana = out.ana.filter(x => x !== "up"); if (!out.hidden.includes("up")) out.ana.push("up"); }
+  out.upAna = 1;
   return out;
 }
 try { layout = normLayout(JSON.parse(localStorage.getItem("layout4") || "null")); } catch (e) { layout = normLayout(null); }
@@ -8234,7 +8235,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261027180746";
+const BUILD_ID = "20261028020320";
 let updToast = null;
 async function checkUpdate() {
   try {
