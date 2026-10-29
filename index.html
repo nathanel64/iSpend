@@ -6711,7 +6711,7 @@ function monthAnim(dir) {
 {
   let y0 = null, pulled = 0, busy = false;
   const ptr = $("ptr"), coin = ptr.querySelector("svg");
-  const ok = () => !busy && !txDrag && window.scrollY <= 0 && !document.documentElement.classList.contains("modal-open") && $("sheetBg").hidden && $("salBg").hidden && $("mvBg").hidden && $("capBg").hidden && document.body.style.overflow !== "hidden";
+  const ok = () => !busy && !txDrag && window.scrollY <= 0 && !document.documentElement.classList.contains("modal-open") && !document.documentElement.classList.contains("touring") && $("sheetBg").hidden && $("salBg").hidden && $("mvBg").hidden && $("capBg").hidden && document.body.style.overflow !== "hidden";
   document.addEventListener("touchstart", e => { y0 = ok() && e.touches.length === 1 ? e.touches[0].clientY : null; pulled = 0; }, { passive: true });
   document.addEventListener("touchmove", e => {
     if (y0 == null) return;
@@ -7054,6 +7054,7 @@ applyLayout();
   const ORDER = ["flow", "tx", "ana", "year", "admin"];
   let sx = null, sy = 0, st = 0;
   const blocked = t => {
+    if (document.documentElement.classList.contains("touring")) return true; // the tour holds the screen still
     if (arranging || document.querySelector(".sheet-bg:not([hidden])") || !$("wrapped").hidden || !$("recap").hidden || document.querySelector(".tour")) return true;
     for (let n = t; n && n !== document.body; n = n.parentElement) {
       if (n.matches && n.matches(".tx-sw, .up-strip, input, textarea, select, .burn, .nav, .theme-seg, .seg, .mini, .insights")) return true;
@@ -8029,7 +8030,7 @@ function closeWin(d) {
   new MutationObserver(() => requestAnimationFrame(addGrab)).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["hidden"], childList: true });
   let st = null;
   document.addEventListener("touchstart", e => {
-    st = null; if (e.touches.length !== 1) return;
+    st = null; if (e.touches.length !== 1 || document.documentElement.classList.contains("touring")) return;
     const wins = openWins(); if (!wins.length) return; const d = wins[wins.length - 1], sh = sheetOf(d); if (!sh || d.getAttribute("role") === "alertdialog") return;
     const t = e.touches[0], r = sh.getBoundingClientRect();
     if (!sh.contains(e.target)) return;
@@ -8585,43 +8586,49 @@ function tourLift(el) {
 }
 const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + esc(USER_NAME) : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
-  { t: "#monthTitle", h: "מעבר בין חודשים", b: "החצים עוברים חודש אחד. לחיצה על שם החודש פותחת את כל החודשים עם הסכום של כל אחד, וקופצים לכל חודש בלחיצה. כל חלון שנפתח אפשר לסגור במשיכה למטה, או ב״חזור״ של הטלפון." },
-  { t: "#askBox", h: "תשאלו אותי ✦", b: "כותבים שאלה רגילה, כמו ״כמה הוצאתי על קפה החודש?״, ״מתי הייתי לאחרונה בסומבררו?״ או ״באיזה חודש הוצאתי הכי הרבה על דלק?״, ומקבלים תשובה במשפט, עם כפתור לתנועות עצמן. החישוב נעשה כאן מהנתונים שלכם. רק שאלה שהאתר לא מבין לבד נשלחת לבינה המלאכותית (השאלה בלבד, בלי סכומים)." },
-  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. <b>לחיצה עליו</b> פותחת פירוט: משכורת, קבועות, משתנות והחזרים. מתחתיו: כמה אפשר להוציא היום. הכפתור <b>״התלוש של החודש״</b> מתחת פותח תלוש: מה נכנס, מה ירד לפי סוג, וכמה נשאר." },
-  { t: "#fab", h: "הוספת הוצאה", b: "הכפתור הזה פותח את חלון ההוספה. לחיצה ארוכה עליו פותחת אותו ישר בהקשבה, כדי להוסיף בקול. בלי קליטה? ההוצאה נשמרת בטלפון ונשלחת כשהחיבור חוזר. ככה נראה החלון:" },
-  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים כאן, וכל החלון מתחלף: סגול להוצאה, ירוק לכסף שנכנס. מתחת מקלידים את הסכום. בטלפון יש מקשים גדולים משלנו, וכפתורים כמו ״+50״ שמוסיפים לסכום בלחיצה. ״המשך״ עובר לפרטים." },
-  { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "לחיצה על הוצאה שכבר הוספתם ממלאת את כל הטופס בבת אחת." },
-  { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "בשלב השני הסכום מופיע למעלה (לחיצה עליו מחזירה לשנות). כותבים מה קניתם, והקטגוריה נבחרת לפי כל המשפט (״קניות בסופר למתנה״ ← מתנות)." },
-  { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "הקטגוריות כאייקונים (הנפוצות אצלכם קודם, ו״עוד״ לכל השאר), אמצעי התשלום ככרטיסים מהארנק (עסק שכבר שילמתם בו מביא איתו את הכרטיס של הפעם הקודמת), והתאריך ב״היום / אתמול / שלשום״. מתחת שורה קטנה מסכמת מה עומד להישמר." },
-  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo2, h: "תאריך אחר ותשלומים", b: "כאן בוחרים כל תאריך אחר. כשמוסיפים כמה ברצף, נשאר התאריך של הקודמת. בעסקה בתשלומים בוחרים כמה, וכל תשלום יורד ביום החיוב של החודש שלו. השמירה מיידית: החלון נסגר מיד, וההוצאה נשלחת ברקע. ״שמירה והוספת עוד״ שומר ופותח את החלון שוב, עם אותו כרטיס ותאריך. אחרי שמירה עולה למטה כרטיס קטן עם מה שנוסף, ויש כמה שניות ללחוץ ״ביטול״ אם טעיתם." },
-  { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "לוחצים על המיקרופון ואומרים הכול במשפט אחד: סכום, על מה ובמה שילמתם. למשל ״45 שקל שווארמה במקס״, או ״קיבלתי 300 מאבא״. הסכום, התיאור, הקטגוריה ואמצעי התשלום מתמלאים לבד, ואתם רק בודקים ולוחצים שמירה." },
-  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "כל עיגול הוא קטגוריה. לחיצה עליו פותחת את הדף שלה: חצי שנה אחורה ואיפה הוצאתם הכי הרבה. תקרה לכל קטגוריה (כמה מותר להוציא בחודש) קובעים בהגדרות, ליד הקטגוריה, וטבעת סביב העיגול מתמלאת. בכפתור ״תקרות״ משנים אותה רק לחודש מסוים." },
-  { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כל אמצעי תשלום הוא כרטיס בארנק, עם הסכום שיצא ממנו החודש. לחיצה שולפת כרטיס, לחיצה נוספת הופכת אותו ומראה על מה הוצאת בו, ו'כל התנועות' מציג רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
-  { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "בתחתית מסך הבית, חלון אחד עם שלוש לשוניות: <b>אתגר</b> שבועי לפי ההרגלים שלכם (״שבוע בלי…״ או ״עד ₪X על…״, לוחצים ״אני בפנים״ ועוקבים), <b>מה אפשר לקנות</b> במה שנשאר בחודש שעבר, ו<b>התגים</b> שאספתם. לחיצה על תג מסבירה איך משיגים אותו." },
-  { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
-  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, שעון, השוואה, תחזית, קבועות ועוד. <b>החודש בשעון</b>: כל יום הוא פלח בצבע לפי כמה יצא בו, וגוררים אצבע סביב השעון כדי לראות כל יום והתנועות שלו. בתחתית: <b>חיובים צפויים בחודש הבא</b>. חיובים קבועים מוצגים כ<b>כרטיסים</b> שמקבלים חותמת ״שולם״ כשהם יורדים, ועסקאות בתשלומים כ<b>כרטיסיית ניקובים</b>: חור לכל תשלום ששולם." },
-  { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות לפי ימים, וליד כל יום סימון אם היה יקר או חסכוני מיום רגיל. <b>חיפוש</b> חכם כמו ״סופר מעל 200״ (החיפושים האחרונים מחכים בלחיצה על השדה), <b>סינון</b> לפי סוג, קטגוריה, כרטיס, סכום ותאריכים, ו<b>בחירה</b> של כמה תנועות כדי לשנות להן קטגוריה או למחוק יחד." },
-  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה פותחת את ה<b>קבלה</b> שלה, עם עריכה ומחיקה. <b>החלקה ימינה</b> מראה את הכפתורים ישר מהרשימה (גם מחיקה וגם עריכה נשמרות מיד, ולכמה שניות מופיע ״ביטול״). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
-  { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה. לחיצה על חודש בגרף פותחת חלון עם הסיכום שלו. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
-  { t: "#tabAdmin", h: "הגדרות", b: "כל ההגדרות מסודרות בקבוצות קצרות, וכל נושא נפתח במסך משלו. בואו נציץ." },
-  { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "מאיזה חודש אתם באתר, כמה חודשים וכמה תנועות. למעלה משמאל, ״סיור באתר״ מראה את הסיור הזה שוב. מתחתיו חיפוש בהגדרות: ״תקרה״, ״כהה״, ״יום חיוב״." },
-  { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת לכל חודש (עם הממוצע של 3 האחרונים), יום החיוב בכרטיס ומאיזה חודש האתר מתחיל. ב״חודשים״ מסתירים חודש או מוחקים אותו." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "<b>קטגוריות ותקרות</b>: לחיצה על קטגוריה פותחת חלון קטן לשם, אייקון וצבע, ״קבועה״ ותקרה לכל חודש. כאן גם אמצעי התשלום והכרטיסים מהארנק." },
-  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay מכניס כל תשלום באייפון לבד. הגדרה חד-פעמית של דקה. <b>סיווג עסקים חכם</b> נותן שם וקטגוריה לעסקים שהאתר לא מכיר. ו<b>ייבוא מקובץ</b> מכניס בבת אחת פירוט שהורדתם מהבנק או מחברת האשראי (אקסל או CSV). אפשר כמה קבצים ביחד, וגם קובץ אחד עם גיליון לכל חודש: העמודות מזוהות לבד, ומה שכבר קיים לא נכנס פעמיים." },
-  { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "קובץ אקסל מסודר עם כל התנועות (כולל עמודת חודש), סיכום לכל חודש ולפי קטגוריה. בטלפון אפשר לשמור אותו או לשלוח בוואטסאפ." },
-  { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת 🔔", b: "מפעילים פעם אחת ובוחרים שעה, ובכל יום בשעה הזו, אם לא הוספתם כלום באותו יום, מגיעה התראה לטלפון. לחיצה עליה פותחת ישר את חלון ההוספה. באייפון זה עובד מהאתר ששמור במסך הבית." },
-  { t: '#setMenu [data-act="weekly"]', view: "admin", opt: true, h: "סיכום שבועי 📊", b: "בכל יום ראשון ב-8:30 מגיעה התראה עם השבוע שעבר: כמה יצא, לעומת השבוע שלפניו ועל מה הלך הכי הרבה. לחיצה עליה פותחת את הסיכום המלא." },
-  { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "מחיקת חודשים, התנתקות ו<b>מחיקת החשבון</b>, במקום אחד ותמיד עם שאלת אישור. ליד כל דבר שצריך הסבר יש כפתור ⓘ. בתחתית: מדיניות הפרטיות והצהרת הנגישות." },
-  { t: null, e: "👆", h: "עוד כמה טריקים", b: "מחליקים ימינה ושמאלה כדי לעבור בין המסכים, ומושכים את המסך למטה כדי לרענן. בתוך עמוד בהגדרות, החלקה ימינה מחזירה לתפריט. הסרגל למטה מצטמצם כשגוללים, ובעמוד ארוך מופיע כפתור ↑ שחוזר למעלה." },
-  { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש. ממנה האתר מחשב כמה נשאר לכם.", last: true }
+  { t: "#monthTitle", h: "מעבר בין חודשים", b: "חיצים לחודש אחד, או לחיצה על שם החודש לכל החודשים. חלון סוגרים במשיכה למטה." },
+  { t: "#askBox", h: "תשאלו אותי ✦", b: "כותבים שאלה, כמו ״כמה הוצאתי על קפה החודש?״, ומקבלים תשובה במשפט." },
+  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "מתמלא לפי מה שיצא מתוך מה שנכנס. לחיצה פותחת פירוט." },
+  { t: "#fab", h: "הוספת הוצאה", b: "פותח את חלון ההוספה. לחיצה ארוכה: הוספה בקול." },
+  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים סוג ומקלידים סכום. ״המשך״ עובר לפרטים." },
+  { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "לחיצה אחת ממלאת הוצאה שכבר הוספתם." },
+  { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם, והקטגוריה נבחרת לבד." },
+  { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה. השורה למטה מסכמת מה יישמר." },
+  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo2, h: "תאריך אחר ותשלומים", b: "תאריך אחר ומספר תשלומים. השמירה מיידית, עם ״ביטול״ לכמה שניות." },
+  { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והכול מתמלא." },
+  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה. לחיצה פותחת את הפירוט שלה." },
+  { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כרטיס לכל אמצעי תשלום. לחיצה שולפת אותו והופכת אותו." },
+  { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "אתגר שבועי, מה אפשר לקנות במה שנחסך, והתגים שאספתם." },
+  { t: "#flowView > .arr-open", h: "המסך שלכם", b: "מזיזים, מסתירים ומעבירים כרטיסים בין הבית ל״חודשי״." },
+  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש, כולל השעון של הימים והחיובים הצפויים." },
+  { t: "#navTx", h: "תנועות", b: "כל התנועות לפי ימים, עם חיפוש חכם, סינון ובחירה של כמה ביחד." },
+  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "לחיצה פותחת קבלה. החלקה: עריכה ומחיקה. לחיצה ארוכה וגרירה: יום אחר." },
+  { t: "#tabYear", h: "שנתי", b: "כל השנה בגרף. לחיצה על חודש פותחת את הסיכום שלו." },
+  { t: "#tabAdmin", h: "הגדרות", b: "ההגדרות בקבוצות קצרות. בואו נציץ." },
+  { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה, וחיפוש בהגדרות." },
+  { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת, יום החיוב בכרטיס והחודשים באתר." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרות ואמצעי תשלום." },
+  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay, סיווג עסקים חכם וייבוא מקבצים של הבנק והאשראי." },
+  { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות וסיכומים בקובץ אקסל אחד." },
+  { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת 🔔", b: "התראה בשעה שתבחרו, בימים שלא הוספתם כלום." },
+  { t: '#setMenu [data-act="weekly"]', view: "admin", opt: true, h: "סיכום שבועי 📊", b: "ביום ראשון בבוקר: השבוע שעבר בהתראה אחת." },
+  { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "התנתקות ומחיקה, תמיד עם אישור." },
+  { t: null, e: "👆", h: "עוד כמה טריקים", b: "החלקה הצידה מעבירה בין מסכים, ומשיכה למטה מרעננת." },
+  { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש.", last: true }
 ];
 let tourEl = null, tourI = 0, tourRestore = null, tourPlace = null, tourHist = [], tourBusy = false, tourEl0 = null, tourSeq = 0;
 const tourReduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const tourWait = ms => new Promise(r => setTimeout(r, ms));
+/* during the tour the page stays still: only the tour moves it (its own scrolling still works) */
+{ const still = e => { if (!document.documentElement.classList.contains("touring")) return; const tip = e.target && e.target.closest && e.target.closest(".tour-tip"); if (tip && tip.scrollHeight > tip.clientHeight + 2) return; e.preventDefault(); };
+  addEventListener("touchmove", still, { passive: false }); addEventListener("wheel", still, { passive: false });
+  addEventListener("keydown", e => { if (document.documentElement.classList.contains("touring") && [" ", "PageDown", "PageUp", "Home", "End", "ArrowDown", "ArrowUp"].includes(e.key) && !(e.target && e.target.closest && e.target.closest("input, textarea"))) e.preventDefault(); });
+  const st = document.createElement("style"); st.textContent = "html.touring, html.touring body { overflow: hidden !important; overscroll-behavior: none; touch-action: none; } html.touring .tour-tip { touch-action: pan-y; }"; document.head.appendChild(st); }
 function startTour() {
   if (tourEl) tourEl.remove();
   showView("flow"); window.scrollTo(0, 0);
   tourEl = document.createElement("div"); tourEl.className = "tour"; tourEl.dir = "rtl"; tourEl.lang = "he";
+  document.documentElement.classList.add("touring");
   tourEl.innerHTML = '<div class="tour-dim"></div><div class="tour-spot hide"></div><div class="tour-tip enter" role="dialog" aria-modal="true" aria-live="polite">'
     + '<div class="tt-head"><span class="tt-n num"></span><button class="tt-x" type="button" data-skip>דלג על הסיור</button></div>'
     + '<div class="tt-in"></div><div class="tour-prog" aria-hidden="true"><i></i></div>'
@@ -8640,6 +8647,7 @@ function tourGo(dir) {
   tourStep(dir);
 }
 function endTour() {
+  document.documentElement.classList.remove("touring");
   if (tourRestore) { try { tourRestore(); } catch (e) {} tourRestore = null; }
   try { localStorage.setItem("tourDone-" + USER_ID, "1"); } catch (e) {}
   if (tourEl) { const t = tourEl; tourEl = null; t.style.transition = "opacity .25s"; t.style.opacity = "0"; t.style.pointerEvents = "none"; setTimeout(() => t.remove(), tourReduce() ? 0 : 260); }
@@ -8907,7 +8915,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030005617";
+const BUILD_ID = "20261030010529";
 let updToast = null;
 async function checkUpdate() {
   try {
