@@ -2475,8 +2475,15 @@ function makeSupaAdapter(uid) {
           <li><b>מעתיקים את המפתח האישי</b> <button class="btn ghost" type="button" id="copyPayTok" style="padding:3px 12px;font-size:.8rem">העתקה</button>
             <div class="field" style="margin-top:6px"><input id="payTokShow" readonly dir="ltr" aria-label="המפתח האישי שלך" style="font-family:ui-monospace,monospace;font-size:15px"></div></li>
           <li><b>מתקינים את הקיצור</b> <a class="btn" id="installShortcut" href="https://www.icloud.com/shortcuts/b7bf468df8d64b0286d0c1a5897ddf9c" target="_blank" rel="noopener" style="padding:4px 14px;font-size:.85rem;text-decoration:none;display:inline-block">התקנת הקיצור iSpend</a><br>כשהוא שואל, מדביקים את המפתח.</li>
-          <li><b>מתקינים את האוטומציה</b> <a class="btn" href="https://www.icloud.com/shortcuts/a7895067bf624719a135a9576c006539" target="_blank" rel="noopener" style="padding:4px 14px;font-size:.85rem;text-decoration:none;display:inline-block">התקנת iSpend אוטומטי</a></li>
-          <li><b>מדליקים אותה:</b> באפליקציית קיצורים, לחיצה ארוכה על <b>iSpend אוטומטי</b> ← <b>עריכה</b> ← למעלה לוחצים על <b>"הפעולה האוטומטית מכובה"</b> ומדליקים. זהו.</li>
+          <li><b>יוצרים פעולה אוטומטית</b> (את זה אפל לא מאפשרת להתקין מקישור, אז עושים פעם אחת ידנית):
+            <ol style="margin:4px 0 0;padding-inline-start:18px">
+              <li>קיצורים ← <b>פעולות אוטומטיות</b> ← <b>פעולה אוטומטית חדשה</b> (או ＋).</li>
+              <li>בוחרים <b>עסקה</b> (בקטגוריה ״ארנק״). בכרטיסים מסמנים את <b>כולם</b>, בוחרים <b>הפעלה מיידית</b> ← <b>הבא</b>.</li>
+              <li><b>פעולה אוטומטית חדשה ריקה</b> ← מוסיפים פעולה <b>מילון</b>, עם שלוש שורות טקסט:
+                <b dir="ltr">amount</b> = <b>עסקה ← כמות</b>, <b dir="ltr">merchant</b> = <b>עסקה ← בית עסק</b>, <b dir="ltr">card</b> = <b>עסקה ← כרטיס או כרטיס כניסה</b>.
+                <span class="note">(לוחצים על שדה הערך ← ״עסקה״, ואז שוב עליו כדי לבחור איזה פרט.)</span></li>
+              <li>מוסיפים פעולה <b>הפעלת קיצור</b> ← בוחרים <b>iSpend</b>, והקלט שלו הוא ה<b>מילון</b>. ← <b>סיום</b>.</li>
+            </ol></li>
         </ol>
         <p class="note" style="margin:0">בתשלום מעל ₪1,000 הקיצור ישאל כמה תשלומים.</p>
         <p class="note" style="margin:0" id="payCopied"></p>
@@ -8900,7 +8907,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030001629";
+const BUILD_ID = "20261030005617";
 let updToast = null;
 async function checkUpdate() {
   try {
