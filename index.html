@@ -1748,7 +1748,7 @@ html.modal-open .to-top { opacity: 0; pointer-events: none; }
 .q-recent button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-size: .8rem; min-height: 34px; display: inline-flex; align-items: center; gap: 6px; }
 .q-recent button::before { content: "↺"; color: var(--muted); }
 /* ===== ask your money: one line on the home screen, an answer in a sentence ===== */
-.ask { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 12px; }
+.ask { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 14px; }
 .ask-in { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1.5px solid color-mix(in srgb, var(--brand) 22%, var(--line)); border-radius: 18px; padding: 4px 6px 4px 12px; box-shadow: 0 4px 14px color-mix(in srgb, var(--brand) 8%, transparent); }
 .ask-in:focus-within { border-color: var(--brand); }
 .ask-ic { width: 28px; height: 28px; border-radius: 10px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #5b4cf0, #9a52d6); font-size: .9rem; flex: none; }
@@ -1771,6 +1771,19 @@ html.modal-open .to-top { opacity: 0; pointer-events: none; }
 @keyframes askIn { from { opacity: 0; transform: translateY(-4px); } }
 @keyframes askDots { from { width: 0; } to { width: 1.2em; } }
 @media (prefers-reduced-motion: reduce) { .ask-ans { animation: none; } }
+/* the month as a dial: a slice per day, coloured by how much went out; turn it with a finger */
+:root { --dial-0: var(--good-soft); --dial-1: color-mix(in srgb, var(--brand) 18%, var(--surface)); --dial-2: color-mix(in srgb, var(--brand) 40%, var(--surface)); --dial-3: color-mix(in srgb, var(--brand) 66%, var(--surface)); --dial-4: var(--brand); --dial-f: color-mix(in srgb, var(--ink) 7%, var(--surface)); }
+.dial { position: relative; width: min(100%, 330px); aspect-ratio: 1; margin: 4px auto 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.dial svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.dial svg path { transition: fill .2s; }
+.dial-c { position: absolute; inset: 30%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+.dial-d { font-size: .8rem; color: var(--muted); }
+.dial-v { font: 700 1.65rem/1.1 var(--font-display); letter-spacing: -.02em; }
+.dial-v.zero { color: var(--good); font-size: 1.05rem; }
+.dial-cum { text-align: center; font-size: .8rem; color: var(--muted); margin: 2px 0 8px; } .dial-cum b { color: var(--ink); }
+.dial-leg { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; font-size: .72rem; color: var(--muted); }
+.dial-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 4px; vertical-align: -1px; }
+.dial-hint { margin: 6px 0 0; text-align: center; font-size: .72rem; color: var(--muted); }
 /* a visible keyboard focus everywhere */
 :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible { outline: 2.5px solid var(--brand-text); outline-offset: 2px; }
 </style>
@@ -2176,11 +2189,6 @@ function makeSupaAdapter(uid) {
 
   <div class="banner" id="cardPrompt" hidden></div>
 
-  <form class="ask" id="askBox" role="search" aria-label="שאלה על הכסף שלך" autocomplete="off">
-    <div class="ask-in"><span class="ask-ic" aria-hidden="true">✦</span><input id="askQ" type="text" enterkeyhint="search" placeholder="תשאלו אותי: כמה הוצאתי על קפה החודש?" aria-label="שאלה"><button type="submit" id="askGo" aria-label="שאלה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14 M13 6l-6 6 6 6"/></svg></button></div>
-    <div class="ask-sug" id="askSug"></div>
-    <div class="ask-ans" id="askAns" aria-live="polite" hidden></div>
-  </form>
 
   <section class="status" id="status" aria-label="מצב החודש">
     <button type="button" class="vibe" id="vibe" hidden></button>
@@ -2216,6 +2224,12 @@ function makeSupaAdapter(uid) {
   </section>
 
   <button class="wrapped-pill" id="wrappedPill" hidden></button>
+
+  <form class="ask" id="askBox" role="search" aria-label="שאלה על הכסף שלך" autocomplete="off">
+    <div class="ask-in"><span class="ask-ic" aria-hidden="true">✦</span><input id="askQ" type="text" enterkeyhint="search" placeholder="תשאלו אותי: כמה הוצאתי על קפה החודש?" aria-label="שאלה"><button type="submit" id="askGo" aria-label="שאלה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14 M13 6l-6 6 6 6"/></svg></button></div>
+    <div class="ask-sug" id="askSug"></div>
+    <div class="ask-ans" id="askAns" aria-live="polite" hidden></div>
+  </form>
 
   <div class="ins-wrap" id="insWrap" data-k="ins">
   <div class="insights" id="instSuggest" aria-live="polite"></div>
@@ -2269,10 +2283,12 @@ function makeSupaAdapter(uid) {
     <button type="button" class="ci-go" id="cmpMore" hidden>כל הקטגוריות</button>
   </section>
   <section class="card" id="calCard" data-k="cal">
-    <h2><span>לוח החודש</span><span class="side" id="calSide"></span></h2>
-    <div class="cal-wd" aria-hidden="true"><span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span></div>
-    <div class="cal" id="cal"></div>
-    <div class="cal-leg" aria-hidden="true"><span>פחות</span><i style="--l:0"></i><i style="--l:1"></i><i style="--l:2"></i><i style="--l:3"></i><i style="--l:4"></i><span>יותר</span><span class="cal-free">✓ בלי הוצאות</span></div>
+    <h2><span>החודש בשעון</span><span class="side" id="calSide"></span></h2>
+    <div class="dial" id="calDial" role="slider" tabindex="0" aria-label="יום בחודש"><svg id="calSvg" viewBox="-114 -114 228 228" aria-hidden="true"></svg>
+      <div class="dial-c"><div class="dial-d" id="dialD"></div><div class="dial-v num" id="dialV"></div></div></div>
+    <div class="dial-cum num" id="dialCum"></div>
+    <div class="dial-leg" aria-hidden="true"><span><i style="background:var(--dial-0)"></i>בלי הוצאות</span><span><i style="background:var(--dial-1)"></i>קטן</span><span><i style="background:var(--dial-3)"></i>רגיל</span><span><i style="background:var(--dial-4)"></i>יקר</span><span><i style="background:var(--dial-f)"></i>עוד לא</span></div>
+    <p class="dial-hint">גוררים אצבע סביב השעון, או לוחצים על יום</p>
     <div class="cal-day" id="calDay" hidden></div>
   </section>
   <section class="card" id="upCard" data-k="up" hidden>
@@ -4316,25 +4332,44 @@ $("cmpList").addEventListener("click", e => { const b = e.target.closest("[data-
 
 /* the month as a calendar: each day colored by what went out, tap a day for its list */
 let calSel = null;
+let dialCtx = null, dialMonth = "";
 function renderCal(f, isCurrent) {
   const { start, end } = f, by = new Map();
   f.spend.forEach(t => { const k = iso(t.date); by.set(k, (by.get(k) || 0) + (t.refund ? -t.amount : t.amount)); });
   const vals = [...by.values()].filter(v => v > 0).sort((a, b) => a - b), q = p => vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * p))] : 0;
-  const cuts = [q(.25), q(.5), q(.75)];
-  const lvl = v => v <= 0 ? 0 : v <= cuts[0] ? 1 : v <= cuts[1] ? 2 : v <= cuts[2] ? 3 : 4;
-  const cells = [];
-  for (let i = 0; i < start.getDay(); i++) cells.push(`<span class="cd pad"></span>`);
-  let free = 0, top = null;
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const k = iso(d), v = by.get(k) || 0, fut = d > today, isT = k === iso(today);
-    if (!fut && v <= 0) free++;
-    if (v > 0 && (!top || v > top.v)) top = { d: new Date(d), v };
-    cells.push(`<button type="button" class="cd ${fut ? "fut" : ""} ${isT ? "today" : ""} ${!fut && v <= 0 ? "free" : ""} ${calSel === k ? "sel" : ""}" style="--l:${fut ? 0 : lvl(v)}" data-day="${k}" ${fut ? "disabled" : ""} aria-label="${d.getDate()} ב${MONTHS[d.getMonth()]}: ${v > 0 ? fmt(v) : "בלי הוצאות"}"><b>${d.getDate()}</b>${!fut && v > 0 ? `<small class="num">${v >= 1000 ? (v / 1000).toFixed(1) + "K" : Math.round(v)}</small>` : ""}</button>`);
-  }
-  $("cal").innerHTML = cells.join("");
+  const cuts = [q(.3), q(.6), q(.85)], lvl = v => v <= 0 ? 0 : v <= cuts[0] ? 1 : v <= cuts[1] ? 2 : v <= cuts[2] ? 3 : 4;
+  const days = []; for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) { const k = iso(d); days.push({ k, d: new Date(d), v: by.get(k) || 0, fut: d > today }); }
+  const free = days.filter(x => !x.fut && x.v <= 0).length;
   $("calSide").textContent = free ? free + " ימים בלי הוצאות" : "";
+  const income = (isCurrent && vibeCtx && vibeCtx.incomeExpected) || f.income || 0;
+  dialCtx = { days, lvl, income, isCurrent };
+  // a new month opens on today (or its last day)
+  const mk = iso(start); if (dialMonth !== mk) { dialMonth = mk; const t = days.find(x => x.k === iso(today)); calSel = t ? t.k : days.filter(x => !x.fut).slice(-1).map(x => x.k)[0] || null; }
   if (calSel && (calSel < iso(start) || calSel > iso(end))) calSel = null;
-  drawCalDay();
+  drawDial(); drawCalDay();
+}
+function drawDial() {
+  const c = dialCtx; if (!c) return;
+  const N = c.days.length, R1 = 100, R0 = 68, G = 1.1 * Math.PI / 180, pt = (a, r) => [(Math.sin(a) * r).toFixed(2), (-Math.cos(a) * r).toFixed(2)];
+  const seg = i => { const a0 = i / N * 2 * Math.PI + G, a1 = (i + 1) / N * 2 * Math.PI - G, [x0, y0] = pt(a0, R1), [x1, y1] = pt(a1, R1), [x2, y2] = pt(a1, R0), [x3, y3] = pt(a0, R0);
+    return `M${x0} ${y0}A${R1} ${R1} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${R0} ${R0} 0 0 0 ${x3} ${y3}Z`; };
+  let h = "", selI = c.days.findIndex(x => x.k === calSel), todayI = c.days.findIndex(x => x.k === iso(today));
+  c.days.forEach((x, i) => { h += `<path d="${seg(i)}" fill="var(${x.fut ? "--dial-f" : "--dial-" + c.lvl(x.v)})"${i === selI ? ' stroke="var(--ink)" stroke-width="2.2"' : ""}/>`; });
+  // a date every five slices, around the outside
+  c.days.forEach((x, i) => { if (i === 0 || x.d.getDate() % 5 === 0) { const [tx_, ty] = pt((i + .5) / N * 2 * Math.PI, R1 + 9); h += `<text x="${tx_}" y="${(+ty + 3).toFixed(2)}" font-size="8" text-anchor="middle" fill="var(--muted)">${x.d.getDate()}</text>`; } });
+  // the share of the month's income that went out, as a thin inner ring
+  const upto = selI >= 0 ? selI : c.days.filter(x => !x.fut).length - 1, cum = c.days.slice(0, upto + 1).reduce((a, x) => a + x.v, 0);
+  if (c.income > 0) { const r = 60, L = 2 * Math.PI * r, fr = Math.max(0, Math.min(1, cum / c.income));
+    h += `<circle r="${r}" fill="none" stroke="var(--line)" stroke-width="4"/><circle r="${r}" fill="none" stroke="${fr > .92 ? "var(--bad)" : "var(--brand)"}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(fr * L).toFixed(1)} ${L.toFixed(1)}" transform="rotate(-90)"/>`; }
+  if (c.isCurrent && todayI >= 0) { const a = (todayI + .5) / N * 2 * Math.PI, [ax, ay] = pt(a, R0 - 3), [bx, by] = pt(a, R1 + 3); h += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" opacity=".85"/>`; }
+  $("calSvg").innerHTML = h;
+  const sel = c.days[selI], dv = $("dialV");
+  if (!sel) { $("dialD").textContent = "בחרו יום"; dv.textContent = ""; }
+  else { $("dialD").textContent = `יום ${WEEKDAYS[sel.d.getDay()]}, ${sel.d.getDate()}.${sel.d.getMonth() + 1}`;
+    if (sel.fut) { dv.textContent = "עוד לא"; dv.className = "dial-v num zero"; } else if (sel.v > 0) { dv.textContent = fmt(Math.round(sel.v)); dv.className = "dial-v num"; } else { dv.textContent = "בלי הוצאות 🌿"; dv.className = "dial-v num zero"; } }
+  $("dialCum").innerHTML = `מתחילת החודש עד ${sel ? sel.d.getDate() + "." + (sel.d.getMonth() + 1) : "היום"}: <b>${fmt(Math.round(cum))}</b>${c.income > 0 ? ` · ${Math.round(cum / c.income * 100)}% מההכנסה` : ""}`;
+  const dial = $("calDial"); dial.setAttribute("aria-valuemin", 1); dial.setAttribute("aria-valuemax", N); dial.setAttribute("aria-valuenow", selI + 1);
+  dial.setAttribute("aria-valuetext", sel ? `${sel.d.getDate()} ב${MONTHS[sel.d.getMonth()]}: ${sel.fut ? "עוד לא הגיע" : sel.v > 0 ? fmt(Math.round(sel.v)) : "בלי הוצאות"}` : "לא נבחר יום");
 }
 function drawCalDay() {
   const box = $("calDay");
@@ -4345,12 +4380,17 @@ function drawCalDay() {
     (list.length ? `<div class="days">${list.map(t => txRowHtml(t, false)).join("")}</div>` : `<p class="inst-empty">יום שלם בלי הוצאות 🎉</p>`);
   box.hidden = false;
 }
-$("cal").addEventListener("click", e => {
-  const c = e.target.closest("[data-day]"); if (!c || c.disabled) return;
-  calSel = calSel === c.dataset.day ? null : c.dataset.day;
-  document.querySelectorAll("#cal .cd.sel").forEach(x => x.classList.remove("sel")); if (calSel) c.classList.add("sel");
-  drawCalDay();
-});
+{ const dial = $("calDial"); let drag = false;
+  const pick = e => { const c = dialCtx; if (!c) return; const r = dial.getBoundingClientRect(), x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+    if (Math.hypot(x, y) < r.width * .22) return; // the middle is for reading
+    let a = Math.atan2(x, -y); if (a < 0) a += 2 * Math.PI; const i = Math.min(c.days.length - 1, Math.floor(a / (2 * Math.PI) * c.days.length)), k = c.days[i].k;
+    if (k !== calSel) { calSel = k; drawDial(); drawCalDay(); try { navigator.vibrate && buzz(4); } catch (err) {} } };
+  dial.addEventListener("pointerdown", e => { drag = true; try { dial.setPointerCapture(e.pointerId); } catch (err) {} pick(e); });
+  dial.addEventListener("pointermove", e => { if (drag) pick(e); });
+  ["pointerup", "pointercancel"].forEach(ev => dial.addEventListener(ev, () => { drag = false; }));
+  dial.addEventListener("keydown", e => { const c = dialCtx; if (!c) return; let i = c.days.findIndex(x => x.k === calSel); if (i < 0) i = 0;
+    if (e.key === "ArrowLeft" || e.key === "ArrowUp") i = Math.min(c.days.length - 1, i + 1); else if (e.key === "ArrowRight" || e.key === "ArrowDown") i = Math.max(0, i - 1); else return;
+    e.preventDefault(); calSel = c.days[i].k; drawDial(); drawCalDay(); }); }
 $("calDay").addEventListener("click", onTxListClick);
 
 /* what goes out on the next billing day: installments due then, and fixed expenses that came back lately */
@@ -6920,7 +6960,7 @@ document.querySelectorAll("[data-theme-set]").forEach(b => b.onclick = async () 
 }
 
 /* 1: arrange the home and analysis screens: order, which screen, hide. Kept on this device and in the settings (V5) */
-const ARR_NAMES = { ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "הארנק שלך", fix: "חיובים קבועים", cal: "לוח החודש", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
+const ARR_NAMES = { ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "הארנק שלך", fix: "חיובים קבועים", cal: "החודש בשעון", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
 const ARR_DEFAULT = { flow: ["ins", "cats", "pay", "inst"], ana: ["week", "cal", "cmp", "merch", "fc", "fix", "burn", "up"], hidden: [] };
 var layout = null, arranging = false;
 function normLayout(l) {
@@ -7429,7 +7469,7 @@ function markEmpty() {
 (function anaExtras() {
   const av = $("anaView"); if (!av) return;
   av.insertAdjacentHTML("afterbegin", `<div class="ana-jump" id="anaJump" role="navigation" aria-label="קפיצה לכרטיס"></div><section class="card ana-sum" id="anaSum" hidden><h2>המסקנה של החודש</h2><div id="anaSumRows"></div></section>`);
-  const SHORT = { week: "שבועי", cal: "לוח", cmp: "השוואה", merch: "עסקים", fc: "תחזית", fix: "קבועות", burn: "מצטבר", up: "חודש הבא", ins: "תובנות", cats: "קטגוריות", pay: "אמצעי תשלום", inst: "תשלומים" };
+  const SHORT = { week: "שבועי", cal: "שעון", cmp: "השוואה", merch: "עסקים", fc: "תחזית", fix: "קבועות", burn: "מצטבר", up: "חודש הבא", ins: "תובנות", cats: "קטגוריות", pay: "אמצעי תשלום", inst: "תשלומים" };
   $("anaJump").addEventListener("click", e => {
     const b = e.target.closest("[data-j]"); if (!b) return;
     const el = arrEl(b.dataset.j); if (!el) return;
@@ -8552,7 +8592,7 @@ const TOUR = [
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כל אמצעי תשלום הוא כרטיס בארנק, עם הסכום שיצא ממנו החודש. לחיצה שולפת כרטיס, לחיצה נוספת הופכת אותו ומראה על מה הוצאת בו, ו'כל התנועות' מציג רק את התנועות שלו. כשיש עסקאות בתשלומים מופיע כרטיס שמראה כמה עוד נשאר לשלם, ו-5 ימים לפני יום החיוב עולה לכאן גם כרטיס של מה שעומד לרדת." },
   { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "בתחתית מסך הבית, חלון אחד עם שלוש לשוניות: <b>אתגר</b> שבועי לפי ההרגלים שלכם (״שבוע בלי…״ או ״עד ₪X על…״, לוחצים ״אני בפנים״ ועוקבים), <b>מה אפשר לקנות</b> במה שנשאר בחודש שעבר, ו<b>התגים</b> שאספתם. לחיצה על תג מסבירה איך משיגים אותו." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
-  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, לוח, השוואה, תחזית, קבועות ועוד. בתחתית: <b>חיובים צפויים בחודש הבא</b>. חיובים קבועים מוצגים כ<b>כרטיסים</b> שמקבלים חותמת ״שולם״ כשהם יורדים, ועסקאות בתשלומים כ<b>כרטיסיית ניקובים</b>: חור לכל תשלום ששולם." },
+  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, שעון, השוואה, תחזית, קבועות ועוד. <b>החודש בשעון</b>: כל יום הוא פלח בצבע לפי כמה יצא בו, וגוררים אצבע סביב השעון כדי לראות כל יום והתנועות שלו. בתחתית: <b>חיובים צפויים בחודש הבא</b>. חיובים קבועים מוצגים כ<b>כרטיסים</b> שמקבלים חותמת ״שולם״ כשהם יורדים, ועסקאות בתשלומים כ<b>כרטיסיית ניקובים</b>: חור לכל תשלום ששולם." },
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות לפי ימים, וליד כל יום סימון אם היה יקר או חסכוני מיום רגיל. <b>חיפוש</b> חכם כמו ״סופר מעל 200״ (החיפושים האחרונים מחכים בלחיצה על השדה), <b>סינון</b> לפי סוג, קטגוריה, כרטיס, סכום ותאריכים, ו<b>בחירה</b> של כמה תנועות כדי לשנות להן קטגוריה או למחוק יחד." },
   { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה פותחת את ה<b>קבלה</b> שלה, עם עריכה ומחיקה. <b>החלקה ימינה</b> מראה את הכפתורים ישר מהרשימה (גם מחיקה וגם עריכה נשמרות מיד, ולכמה שניות מופיע ״ביטול״). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה. לחיצה על חודש בגרף פותחת חלון עם הסיכום שלו. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
@@ -8860,7 +8900,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261029224258";
+const BUILD_ID = "20261030001629";
 let updToast = null;
 async function checkUpdate() {
   try {
