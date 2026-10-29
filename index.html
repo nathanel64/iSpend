@@ -1865,6 +1865,10 @@ body { margin: 0; }
 @keyframes tcShine { 0%, 55% { transform: translateX(120%); } 100% { transform: translateX(-120%); } }
 @keyframes tcSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 @keyframes tcPop { 50% { transform: scale(1.12); } }
+#copyPayTok { transition: transform .12s ease, background .2s, color .2s, border-color .2s; }
+#copyPayTok.pressing { transform: scale(.9); }
+#copyPayTok.copied { background: var(--good); border-color: var(--good); color: #fff; }
+#payBox .payKeys > div { padding: 5px 10px; border-radius: 10px; background: color-mix(in srgb, var(--good) 8%, transparent); }
 @media (prefers-reduced-motion: reduce) { .tour-chip.glow::after, .tour-chip .tc-needle { animation: none !important; } }
 </style>
 </head>
@@ -1967,15 +1971,23 @@ async function startApp() {
   const payUrl = SUPA_URL + "/rest/v1/rpc/add_pay?apikey=" + SUPA_KEY;
   // copy for real (and say so only when it worked); otherwise select the text so it can be copied by hand
   const copy = async (txt, label) => {
-    const note = document.getElementById("payCopied");
-    if (!txt) { note.textContent = "המפתח עוד לא נטען. רעננו את הדף ונסו שוב."; return; }
-    try { await navigator.clipboard.writeText(txt); note.textContent = label + " הועתק."; return; } catch (e) {}
+    const note = document.getElementById("payCopied"), btn = document.getElementById("copyPayTok");
+    const done = (ok, msg) => {
+      note.textContent = msg; note.style.color = ok ? "var(--good)" : "var(--bad, #d33)";
+      if (ok) { btn.textContent = "הועתק ✓"; btn.classList.add("copied"); clearTimeout(copy.t);
+        copy.t = setTimeout(() => { btn.textContent = "העתקה"; btn.classList.remove("copied"); note.textContent = ""; }, 4000); }
+    };
+    btn.classList.add("pressing"); setTimeout(() => btn.classList.remove("pressing"), 180);
+    if (!txt) return done(false, "המפתח עוד לא נטען. רעננו את הדף ונסו שוב.");
+    try { await navigator.clipboard.writeText(txt); return done(true, label + " הועתק בהצלחה ✓"); } catch (e) {}
     const t = document.createElement("textarea"); t.value = txt; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
     document.body.appendChild(t); t.select(); t.setSelectionRange(0, txt.length);
     let ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
     t.remove();
-    note.textContent = ok ? label + " הועתק." : "לא הצלחתי להעתיק. סמנו את המפתח בתיבה והעתיקו ידנית.";
+    done(ok, ok ? label + " הועתק בהצלחה ✓" : "לא הצלחתי להעתיק. סמנו את המפתח בתיבה והעתיקו ידנית.");
   };
+  { const vb = document.getElementById("payVidBtn"), v = document.getElementById("payVid");
+    vb.onclick = () => { const show = v.hidden; v.hidden = !show; vb.textContent = show ? "✕ סגירת הסרטון" : "▶ צפייה בסרטון הדרכה (דקה)"; if (show) { v.play().catch(() => {}); } else v.pause(); }; }
   document.getElementById("payTokShow").value = PROFILE.pay_token || "";
   freshProf.then(p => { if (p && p.pay_token) { PROFILE.pay_token = p.pay_token; document.getElementById("payTokShow").value = p.pay_token; } }).catch(() => {});
   document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
@@ -2473,20 +2485,26 @@ function makeSupaAdapter(uid) {
         <p class="note" style="margin:0">כל תשלום באייפון ב-Apple Pay ייכנס לכאן מיד. הגדרה חד-פעמית של דקה:</p>
         <ol>
           <li><b>מעתיקים את המפתח האישי</b> <button class="btn ghost" type="button" id="copyPayTok" style="padding:3px 12px;font-size:.8rem">העתקה</button>
-            <div class="field" style="margin-top:6px"><input id="payTokShow" readonly dir="ltr" aria-label="המפתח האישי שלך" style="font-family:ui-monospace,monospace;font-size:15px"></div></li>
-          <li><b>מתקינים את הקיצור</b> <a class="btn" id="installShortcut" href="https://www.icloud.com/shortcuts/b7bf468df8d64b0286d0c1a5897ddf9c" target="_blank" rel="noopener" style="padding:4px 14px;font-size:.85rem;text-decoration:none;display:inline-block">התקנת הקיצור iSpend</a><br>כשהוא שואל, מדביקים את המפתח.</li>
-          <li><b>יוצרים פעולה אוטומטית</b> (את זה אפל לא מאפשרת להתקין מקישור, אז עושים פעם אחת ידנית):
+            <div class="field" style="margin-top:6px"><input id="payTokShow" readonly dir="ltr" aria-label="המפתח האישי שלך" style="font-family:ui-monospace,monospace;font-size:15px"></div>
+            <p id="payCopied" role="status" aria-live="polite" style="margin:4px 0 0;font-size:.85rem;font-weight:600;min-height:1.2em"></p></li>
+          <li><b>מתקינים את הקיצור</b> <a class="btn" id="installShortcut" href="https://www.icloud.com/shortcuts/b7bf468df8d64b0286d0c1a5897ddf9c" target="_blank" rel="noopener" style="padding:4px 14px;font-size:.85rem;text-decoration:none;display:inline-block">התקנת הקיצור iSpend</a><br>לוחצים <b>הגדרת קיצור</b>, מדביקים את המפתח ← <b>הוספת קיצור</b>.</li>
+          <li><b>יוצרים פעולה אוטומטית</b> (אפל לא מאפשרת להתקין אותה מקישור, אז עושים פעם אחת ידנית):
+            <div style="margin:6px 0"><button class="btn ghost" type="button" id="payVidBtn" style="padding:4px 14px;font-size:.85rem">▶ צפייה בסרטון הדרכה (דקה)</button>
+              <video id="payVid" src="guide-applepay.mp4" poster="guide-applepay.jpg" controls playsinline muted preload="none" hidden style="display:block;width:100%;max-width:300px;margin:8px auto 0;border-radius:14px;background:#000"></video></div>
             <ol style="margin:4px 0 0;padding-inline-start:18px">
-              <li>קיצורים ← <b>פעולות אוטומטיות</b> ← <b>פעולה אוטומטית חדשה</b> (או ＋).</li>
-              <li>בוחרים <b>עסקה</b> (בקטגוריה ״ארנק״). בכרטיסים מסמנים את <b>כולם</b>, בוחרים <b>הפעלה מיידית</b> ← <b>הבא</b>.</li>
-              <li><b>פעולה אוטומטית חדשה ריקה</b> ← מוסיפים פעולה <b>מילון</b>, עם שלוש שורות טקסט:
-                <b dir="ltr">amount</b> = <b>עסקה ← כמות</b>, <b dir="ltr">merchant</b> = <b>עסקה ← בית עסק</b>, <b dir="ltr">card</b> = <b>עסקה ← כרטיס או כרטיס כניסה</b>.
-                <span class="note">(לוחצים על שדה הערך ← ״עסקה״, ואז שוב עליו כדי לבחור איזה פרט.)</span></li>
-              <li>מוסיפים פעולה <b>הפעלת קיצור</b> ← בוחרים <b>iSpend</b>, והקלט שלו הוא ה<b>מילון</b>. ← <b>סיום</b>.</li>
+              <li>באפליקציית קיצורים ← <b>פעולות אוטומטיות</b> ← <b>＋</b>.</li>
+              <li>מחפשים <b>ארנק</b> ובוחרים <b>״כאשר מתבצעת קריאה של כל כרטיס״</b> (עסקה).</li>
+              <li>מוסיפים פעולה <b>מילון</b> עם שלוש שורות <b>מלל</b>. בכל שורה לוחצים על הערך ← <b>עסקה</b>, ושוב עליו כדי לבחור:
+                <div class="payKeys" dir="rtl" style="margin:6px 0 2px;display:grid;gap:4px">
+                  <div><b dir="ltr">Amount</b> – עסקה ← <b>כמות</b></div>
+                  <div><b dir="ltr">Merchant</b> – עסקה ← <b>בית העסק</b></div>
+                  <div><b dir="ltr">Card</b> – עסקה ← <b>כרטיס</b></div>
+                </div>
+                <span class="note">(את המילים עצמן כותבים באותיות קטנות: <span dir="ltr">amount, merchant, card</span>)</span></li>
+              <li>מוסיפים פעולה <b>הפעלת קיצור</b> ← בוחרים <b>iSpend</b>, ויוצאים. זה נשמר לבד.</li>
             </ol></li>
         </ol>
         <p class="note" style="margin:0">בתשלום מעל ₪1,000 הקיצור ישאל כמה תשלומים.</p>
-        <p class="note" style="margin:0" id="payCopied"></p>
       </div>
     </details>
 
@@ -8915,7 +8933,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030010529";
+const BUILD_ID = "20261030014818";
 let updToast = null;
 async function checkUpdate() {
   try {
