@@ -5983,6 +5983,7 @@ function softDelete(k, sw) {
   }
   openTx = null; confirmTx = null;
   tearRow(sw);
+  undoAct = null; clearTimeout(undoTimer);
   pendingDel = { k, timer: setTimeout(commitDel, 5000) };
   const bar = $("undoBar"); $("undoTxt").textContent = (t.gen ? "העסקה בתשלומים נמחקה" : "״" + t.merchant + "״ נמחקה");
   bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run");
@@ -5996,6 +5997,7 @@ async function commitDel() {
   if (!ok) { const why = txMsgText; redrawLists(); const bar = $("undoBar"); $("undoTxt").textContent = "המחיקה נכשלה: " + (why || "נסו שוב"); bar.classList.remove("run"); bar.hidden = false; setTimeout(() => { bar.hidden = true; }, 7000); }
 }
 $("undoBtn").onclick = () => {
+  if (undoAct) { const f = undoAct; undoAct = null; clearTimeout(undoTimer); $("undoBar").hidden = true; f(); return; }
   const p = pendingDel; if (!p) return;
   pendingDel = null; clearTimeout(p.timer); $("undoBar").hidden = true; redrawLists();
   const back = document.querySelector(`.tx-sw[data-k="${CSS.escape(p.k)}"]`); if (back) back.classList.add("restored");
@@ -6265,6 +6267,56 @@ function openEdit(t) {
   instShown();
   $("addSave").textContent = "שמירת שינויים";
 }
+// the row of an edit, as the sheet holds it: what is written, and what the screen shows until the sheet answers
+function editRow(t, amount, desc, date, cat, card, kind, inst) {
+  const d = parseDate(date), type = kind === "inc" ? "הכנסה" : "הוצאה";
+  if (t.del.key === "apple") { const r = t.del.raw; return { range: "'עסקאות'!A" + t.del.row + ":I" + t.del.row, values: [date, amount, desc, card, cat, type, r[6] || "", r[7] || "", inst > 1 ? inst : ""] }; }
+  const ddmm = String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
+  return { range: "'_moneyman'!A" + (t.del.index + 2) + ":E" + (t.del.index + 2), values: [ddmm, kind === "inc" ? amount : -amount, desc, t.del.raw[3] || "", cat] };
+}
+let undoAct = null, undoTimer = null;
+function showUndo(text, act) {
+  if (pendingDel) commitDel();
+  undoAct = act; clearTimeout(undoTimer);
+  const bar = $("undoBar"); $("undoTxt").textContent = text;
+  bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run");
+  undoTimer = setTimeout(() => { if (undoAct === act) { undoAct = null; bar.hidden = true; } }, 5000);
+}
+function fastEdit(t, amount, desc, date, cat, card, kind, inst) {
+  const arr = arrOf(t.del.key), idx = t.del.index, before = (arr[idx] || []).slice(), w = editRow(t, amount, desc, date, cat, card, kind, inst);
+  const shown = w.values.map(v => v === "" ? "" : String(v));
+  arr[idx] = shown;
+  const d = parseDate(date); view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
+  // in the background: the row must still hold this transaction, then write, then read it back
+  const job = (async () => {
+    const now = trimRow(await readRowOf(t));
+    if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) throw { code: "changed" };
+    await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: w.range, values: [w.values] });
+    try { arr[idx] = await readRowOf(t); } catch (e) {}
+    if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && (desc !== t.merchant || cat !== t.category)) {
+      const next = { ...merchantRules, [t.rawMerchant]: { name: desc, cat } };
+      try { await writeRange("'הגדרות'!L2:N201", pad(Object.entries(next).map(([k, r]) => [k, r.name, r.cat]), 200, 3)); merchantRules = next; } catch (e) {}
+      if (window.ispendLearn) window.ispendLearn(t.rawMerchant, desc, cat);
+    }
+    afterData(); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+  })();
+  job.catch(err => {
+    if (arr[idx] && JSON.stringify(arr[idx]) === JSON.stringify(shown)) arr[idx] = before;
+    afterData(); undoAct = null; $("undoBar").hidden = true;
+    toast("השינוי לא נשמר: " + (err && err.code === "changed" ? "הגיליון השתנה. רעננו ונסו שוב." : writeError(err)), 4500);
+  });
+  showUndo("השינוי נשמר", async () => {
+    // put the row back the way it was: on the screen at once, in the sheet once the save has finished
+    arr[idx] = before; afterData();
+    try {
+      await job;
+      const oldVals = t.del.key === "apple" ? Array.from({ length: 9 }, (_, i) => before[i] ?? "") : Array.from({ length: 5 }, (_, i) => before[i] ?? "");
+      await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: w.range, values: [oldVals] });
+      try { arr[idx] = await readRowOf(t); } catch (e) {}
+      afterData(); toast("השינוי בוטל", 1800); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+    } catch (e) { /* the save itself failed: the row is already back */ }
+  });
+}
 async function saveEdit(t, amount, desc, date, cat, card, kind) {
   const d = parseDate(date);
   const ddmm = String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
@@ -6498,6 +6550,13 @@ $("addForm").addEventListener("submit", async e => {
   if (!desc) { $("addMsg").textContent = "הוסיפו תיאור קצר."; $("addDesc").focus(); return; }
   if (!date) { $("addMsg").textContent = "בחרו תאריך."; return; }
   if (!mcp) { $("addMsg").textContent = "אפשר להוסיף רק כשהעמוד פתוח ב-claude.ai."; return; }
+  if (editTx && (editTx.del.key === "apple" || editTx.del.key === "bank")) {
+    // no waiting: the change shows at once, the window closes, and it is written in the background (with "ביטול" for a few seconds)
+    const t = editTx, cat = $("addCat").value, card = $("addCard").value, kind = addKind, inst = +$("addInst").value;
+    fastEdit(t, amount, desc, date, cat, card, kind, inst);
+    openTx = null; confirmTx = null; if (mine()) closeAdd(); afterData();
+    return;
+  }
   if (editTx) {
     const btn = $("addSave"); btn.disabled = true; btn.textContent = "שומר…"; $("addMsg").textContent = "";
     try {
@@ -8270,7 +8329,7 @@ const TOUR = [
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "״עריכת המסך״, או לחיצה ארוכה על כרטיס: מזיזים כרטיסים, מסתירים מה שלא צריך, ומעבירים כרטיסים בין הבית ל״חודשי״. ככה מוסיפים לבית בדיוק את מה שחשוב לכם." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש. למעלה ״המסקנה של החודש״ בשלוש שורות, ושורת קיצורים שקופצת ישר לכל כרטיס: שבועי, לוח, השוואה, תחזית, קבועות ועוד. בתחתית: <b>חיובים צפויים בחודש הבא</b>. חיובים קבועים מוצגים כ<b>כרטיסים</b> שמקבלים חותמת ״שולם״ כשהם יורדים, ועסקאות בתשלומים כ<b>כרטיסיית ניקובים</b>: חור לכל תשלום ששולם." },
   { t: "#navTx", h: "תנועות", b: "כל ההוצאות וההכנסות לפי ימים, וליד כל יום סימון אם היה יקר או חסכוני מיום רגיל. <b>חיפוש</b> חכם כמו ״סופר מעל 200״ (החיפושים האחרונים מחכים בלחיצה על השדה), <b>סינון</b> לפי סוג, קטגוריה, כרטיס, סכום ותאריכים, ו<b>בחירה</b> של כמה תנועות כדי לשנות להן קטגוריה או למחוק יחד." },
-  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה פותחת את ה<b>קבלה</b> שלה, עם עריכה ומחיקה. <b>החלקה ימינה</b> מראה את הכפתורים ישר מהרשימה (ומחיקה אפשר לבטל מיד). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
+  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "<b>לחיצה</b> על תנועה פותחת את ה<b>קבלה</b> שלה, עם עריכה ומחיקה. <b>החלקה ימינה</b> מראה את הכפתורים ישר מהרשימה (גם מחיקה וגם עריכה נשמרות מיד, ולכמה שניות מופיע ״ביטול״). <b>לחיצה ארוכה</b> מרימה את התנועה, ואז <b>גוררים</b> אותה למעלה או למטה: לשנות את הסדר באותו יום, או להעביר אותה ליום אחר. התאריך מתעדכן לבד." },
   { t: "#tabYear", h: "שנתי", b: "התמונה של כל השנה. לחיצה על חודש בגרף פותחת חלון עם הסיכום שלו. בכל יום ראשון מחכה גם סיכום קצר של השבוע שעבר." },
   { t: "#tabAdmin", h: "הגדרות", b: "כל ההגדרות מסודרות בקבוצות קצרות, וכל נושא נפתח במסך משלו. בואו נציץ." },
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "מאיזה חודש אתם באתר, כמה חודשים וכמה תנועות. למעלה משמאל, ״סיור באתר״ מראה את הסיור הזה שוב. מתחתיו חיפוש בהגדרות: ״תקרה״, ״כהה״, ״יום חיוב״." },
@@ -8568,7 +8627,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261029150345";
+const BUILD_ID = "20261029151944";
 let updToast = null;
 async function checkUpdate() {
   try {
