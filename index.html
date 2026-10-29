@@ -1698,6 +1698,42 @@ body.arrange .arr-open { display: none !important; }
 /* a window scrolls on its own: reaching its top or bottom does not drag the page behind it */
 html.modal-open, html.modal-open body { overflow: hidden; }
 .sheet, .sheet-bg, .obj-wrap, .obj-bg, .recap, .wrapped, .rc-body { overscroll-behavior: contain; }
+/* ===== 3: a floating bar, the + in its middle; it slims down while scrolling down ===== */
+.nav { inset-inline: max(12px, env(safe-area-inset-left, 0px)) !important; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important; max-width: 560px; margin: 0 auto;
+  grid-template-columns: 1fr 1fr 1fr 66px 1.5fr 1.5fr !important; align-items: center; padding: 8px 6px !important; border-radius: 26px;
+  border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent) !important; background: color-mix(in srgb, var(--surface) 78%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);
+  box-shadow: 0 10px 30px rgba(28, 20, 70, .16), 0 1px 0 rgba(255, 255, 255, .5) inset; transition: padding .25s, transform .25s; }
+.nav > div:has(.fab) { position: static !important; display: flex; justify-content: center; }
+.nav .fab { width: 56px !important; height: 56px !important; border-radius: 50% !important; margin: -26px 0 0 !important; transition: transform .25s, width .25s, height .25s, margin .25s; }
+.nav .fab::after { top: 8px; inset-inline-end: 8px; width: 8px; height: 8px; }
+.nav button:not(.fab) { position: relative; border-radius: 16px; padding: 6px 0 5px; transition: font-size .2s, padding .2s, gap .2s; }
+.nav button[aria-pressed="true"]:not(.fab)::before { content: ""; position: absolute; inset: 1px 10%; border-radius: 14px; background: color-mix(in srgb, var(--brand) 12%, transparent); z-index: -1; }
+.nav.slim { padding: 4px 6px !important; }
+.nav.slim button:not(.fab) { font-size: 0; gap: 0; padding: 7px 0; }
+.nav.slim .fab { width: 48px !important; height: 48px !important; margin-top: -14px !important; }
+body { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 112px) !important; }
+.undo-bar { bottom: calc(env(safe-area-inset-bottom, 0px) + 104px) !important; }
+.sel-bar { bottom: calc(env(safe-area-inset-bottom, 0px) + 100px) !important; }
+.arr-done { bottom: calc(env(safe-area-inset-bottom, 0px) + 104px) !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nav { box-shadow: 0 10px 30px rgba(0, 0, 0, .45); } }
+:root[data-theme="dark"] .nav { box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+
+/* ===== 4: a face for every business: its first letter, in the brand's colour, with the category as a small badge ===== */
+.tx .av { position: relative; grid-row: span 2; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font: 700 1.05rem var(--font-display); color: #fff; background: var(--av); letter-spacing: -.02em; }
+.tx .av.light { color: #1c1b22; }
+.tx .av .ic { position: absolute; inset-block-end: -3px; inset-inline-end: -4px; width: 19px !important; height: 19px !important; border-radius: 7px !important; box-shadow: 0 0 0 2px var(--surface); }
+.tx .av .ic svg { width: 11px !important; height: 11px !important; }
+
+/* ===== 5: the month's line beside its name ===== */
+.mspark { border: 0; background: none; padding: 2px 0 0; display: flex; align-items: center; gap: 6px; color: var(--muted); cursor: pointer; min-width: 0; min-height: 24px; }
+.mspark[hidden] { display: none; }
+.mspark svg { width: 64px; height: 18px; overflow: visible; flex: none; }
+.mspark small { font-size: .66rem; white-space: nowrap; line-height: 1.1; }
+.mspark small b { font-weight: 700; }
+.mspark small b.up { color: var(--bad); } .mspark small b.down { color: var(--good); }
+.mspark small { font-size: .7rem; }
+@media (prefers-reduced-motion: reduce) { .nav, .nav button, .nav .fab { transition: none !important; } }
 /* a visible keyboard focus everywhere */
 :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible { outline: 2.5px solid var(--brand-text); outline-offset: 2px; }
 </style>
@@ -2092,6 +2128,7 @@ function makeSupaAdapter(uid) {
     <div class="month">
       <div class="hello" id="hello"></div>
       <h1 id="monthTitle">אוקטובר 2026</h1>
+      <button type="button" class="mspark" id="mSpark" hidden></button>
       <div class="range num" id="rangeLabel"></div>
     </div>
     <button class="icon-btn" id="prev" aria-label="חודש קודם"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -3304,6 +3341,7 @@ function render() {
   try { renderInstallments(); } catch (e) { console.error(e); }
   try { renderUpcoming(isCurrent); } catch (e) { console.error(e); }
   try { renderFixed(f, isCurrent); } catch (e) { console.error(e); }
+  try { renderMonthSpark(f, isCurrent); } catch (e) { console.error(e); }
   try { renderCal(f, isCurrent); } catch (e) { console.error(e); }
   try { renderCmp(f, isCurrent, elapsed); } catch (e) { console.error(e); }
   try { renderFc(f, isCurrent, { incomeExpected, goal, fixedExpected, elapsed, days, daysLeft }); } catch (e) { console.error(e); }
@@ -4591,7 +4629,7 @@ function txRowHtml(t, withDate) {
   const k = txKey(t);
   const open = k && openTx === k;
   const row = `<div class="tx ${t.del ? "can-del" : ""}" ${k ? `role="button" tabindex="0" aria-expanded="${open}"` : ""}>
-    ${catIcon(t.category)}
+    ${merchantAv(t)}
     <div class="m">${t.inst ? `<bdi dir="ltr" class="inst">(${t.inst.k}/${t.inst.n})</bdi> ` : ""}<bdi>${esc(t.merchant)}</bdi></div>
     <div class="a num ${pos ? "in" : ""}">${pos ? ltr("+" + fmt2(t.amount)) : fmt2(t.amount)}</div>
     <div class="meta">${isPendingTx(t) ? `<span class="pend" title="נשמר בטלפון, יישלח כשיהיה חיבור"><svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 01-.5-9.97A6 6 0 0118 9a4.5 4.5 0 01-.5 9z"/></svg>ממתין · </span>` : ""}<span class="${t.category === "לא מסווג" ? "uncat" : ""}">${esc(t.category)}</span>${withDate === true ? " · " + dd(t.date) : ""} · ${esc(t.account)}${t.gen ? " · מתוך " + fmt(t.total) : ""}</div>
@@ -7809,6 +7847,59 @@ setInterval(() => { if (!$("sheetBg").hidden) addPickers(); }, 300);
   const oe = openEdit; openEdit = function () { pkAllCats = false; const r = oe.apply(this, arguments); addPickers(true); return r; };
   const sk = setKind; setKind = function () { const r = sk.apply(this, arguments); addPickers(true); return r; }; }
 
+
+/* 3: the floating bar slims while scrolling down and comes back when scrolling up */
+{ let lastY = scrollY, acc = 0; const nav = document.querySelector(".nav");
+  addEventListener("scroll", () => { const y = scrollY, d = y - lastY; lastY = y; acc = Math.sign(d) === Math.sign(acc) ? acc + d : d;
+    if (y < 80 || acc < -24) nav.classList.remove("slim"); else if (acc > 24) nav.classList.add("slim"); }, { passive: true }); }
+
+/* 4: business faces. Known brands get their colour; any other business a steady colour of its own */
+const BRAND_AV = [
+  [/שופרסל|shufersal/i, "#d71f26"], [/רמי לוי|rami levy/i, "#1f4fa3"], [/יוחננוף|yohananof/i, "#1e7d3c"], [/ויקטורי|victory/i, "#d0202f"], [/אושר עד|osher ad/i, "#f3c300", 1],
+  [/טיב טעם/, "#c8102e"], [/מחסני השוק/, "#e2231a"], [/am:?pm/i, "#f26722"], [/סופר.?פארם|super.?pharm/i, "#00539b"], [/be |ביי/i, "#ff6a00"],
+  [/ארומה|aroma/i, "#7a3b2e"], [/קפה קפה/, "#5b3a29"], [/גרג|greg/i, "#c8102e"], [/לנדוור|landwer/i, "#1c3f7a"], [/מקדונלד|mcdonald/i, "#da291c"], [/בורגר קינג|burger king/i, "#d62300"],
+  [/וולט|wolt/i, "#009de0"], [/תן ביס|10bis/i, "#ff8000"], [/פז\b|^paz/i, "#ffd200", 1], [/סונול|sonol/i, "#00843d"], [/דלק|delek/i, "#e2001a"], [/דור אלון|ten\b/i, "#e30613"],
+  [/פנגו|pango/i, "#00a3e0"], [/גט\b|gett/i, "#ffcc00", 1], [/אובר|uber/i, "#111111"], [/בולט|bolt/i, "#34d186", 1], [/רב.?קו|רכבת/, "#1c5aa6"],
+  [/נטפליקס|netflix/i, "#e50914"], [/ספוטיפיי|spotify/i, "#1db954", 1], [/יוטיוב|youtube/i, "#ff0000"], [/אפל|apple|icloud|אייקלאוד/i, "#1c1c1e"], [/גוגל|google/i, "#4285f4"],
+  [/הולמס|holmes/i, "#00205b"], [/פרטנר|partner/i, "#00a0af"], [/סלקום|cellcom/i, "#6d2077"], [/פלאפון|pelephone/i, "#0055a5"], [/הוט\b|hot\b/i, "#e4002b"], [/yes\b/i, "#00a3e0"],
+  [/איקאה|ikea/i, "#0058a3"], [/זארה|zara/i, "#111111"], [/h&m/i, "#e50010"], [/עלי אקספרס|aliexpress/i, "#e62e04"], [/אמזון|amazon/i, "#232f3e"]
+];
+function merchantAv(t) {
+  const name = String(t.merchant || "").trim(), raw = String(t.rawMerchant || "");
+  const hit = BRAND_AV.find(([re]) => re.test(name) || re.test(raw));
+  const letter = (name.match(/[A-Za-zא-ת0-9]/) || ["?"])[0].toUpperCase();
+  let bg, light = false;
+  if (hit) { bg = hit[1]; light = !!hit[2]; }
+  else { let h = 0; for (const ch of name.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) % 360; bg = `hsl(${h} 42% 42%)`; }
+  return `<span class="av${light ? " light" : ""}" style="--av:${bg}" aria-hidden="true">${esc(letter)}${catIcon(t.category, true)}</span>`;
+}
+
+/* 5: the month so far as a small line beside its name, against last month at the same point */
+function renderMonthSpark(f, isCurrent) {
+  const el = $("mSpark"); if (!el) return;
+  const { start, end } = f, days = Math.round((end - start) / 864e5) + 1;
+  const upto = isCurrent ? Math.min(days, Math.round((today - start) / 864e5) + 1) : days;
+  const val = t => t.refund ? -t.amount : t.amount;
+  const cum = list => { const a = new Array(days + 1).fill(0); list.forEach(t => { const i = Math.round((t.date - start) / 864e5) + 1; if (i >= 1 && i <= days) a[i] += val(t); }); for (let i = 1; i <= days; i++) a[i] += a[i - 1]; return a; };
+  const now = cum(f.spend);
+  const [py, pm] = prevYM(view.y, view.m), pf = monthFigures(py, pm), pdays = Math.round((pf.end - pf.start) / 864e5) + 1;
+  const prevA = new Array(days + 1).fill(0); { const a = new Array(pdays + 1).fill(0); pf.spend.forEach(t => { const i = Math.round((t.date - pf.start) / 864e5) + 1; if (i >= 1 && i <= pdays) a[i] += val(t); }); for (let i = 1; i <= pdays; i++) a[i] += a[i - 1]; for (let i = 1; i <= days; i++) prevA[i] = a[Math.min(i, pdays)]; }
+  if (!now[upto] && !prevA[days]) { el.hidden = true; return; }
+  const W = 64, H = 18, top = Math.max(now[upto], prevA[days], 1) * 1.08;
+  const X = i => (1 - (i - 1) / Math.max(1, days - 1)) * W, Y = v => H - 2 - v / top * (H - 4); // right to left, like the page
+  const line = (a, n) => { let d = ""; for (let i = 1; i <= n; i++) d += (d ? "L" : "M") + X(i).toFixed(1) + " " + Y(a[i]).toFixed(1); return d; };
+  const css = getComputedStyle(document.documentElement), brand = css.getPropertyValue("--brand").trim() || "#4b3fd6";
+  const diff = Math.round(now[upto] - prevA[upto]);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${line(prevA, days)}" fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="1.4" stroke-dasharray="2 3"/>
+    <path d="${line(now, upto)}L${X(upto).toFixed(1)} ${H}L${W} ${H}Z" fill="${brand}" fill-opacity=".12"/>
+    <path d="${line(now, upto)}" fill="none" stroke="${brand}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${isCurrent ? `<circle cx="${X(upto).toFixed(1)}" cy="${Y(now[upto]).toFixed(1)}" r="2.6" fill="${brand}" stroke="var(--bg)" stroke-width="1.2"/>` : ""}</svg>
+    <small>${prevA[upto] ? `<b class="${diff > 0 ? "up" : "down"}">${diff > 0 ? "▲" : "▼"} ${fmt(Math.abs(diff))}</b> מ${MONTHS[pm]}` : fmt(now[upto])}</small>`;
+  el.setAttribute("aria-label", `הוצאה מצטברת ${isCurrent ? "עד היום" : "בחודש"}: ${fmt(now[upto])}` + (prevA[upto] ? `, ${diff > 0 ? "יותר" : "פחות"} ב-${fmt(Math.abs(diff))} מאותה נקודה ב${MONTHS[pm]}` : "") + ". לחיצה פותחת את המסך החודשי");
+  el.hidden = false;
+}
+$("mSpark").onclick = () => { showView("ana"); scrollTo(0, 0); };
+
 /* 11: number keys for the amount on a phone */
 (function numpad() {
   if (!matchMedia("(pointer: coarse)").matches) return;
@@ -8086,6 +8177,7 @@ function tourLift(el) {
 const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + esc(USER_NAME) : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "חצי העיגול מתמלא לפי מה שהוצאתם מתוך מה שנכנס. סגול: בדרך ליעד החיסכון. כתום: חרגתם מהיעד אבל עדיין בפלוס. אדום: עברתם את ההכנסה. <b>לחיצה עליו</b> פותחת פירוט: משכורת, קבועות, משתנות והחזרים. מתחתיו: כמה אפשר להוציא היום. הכפתור <b>״התלוש של החודש״</b> מתחת פותח תלוש: מה נכנס, מה ירד לפי סוג, וכמה נשאר." },
+  { t: "#mSpark", opt: true, h: "הקו של החודש", b: "ליד שם החודש: כמה הוצאתם מתחילת החודש, יום אחרי יום, מול הקו המקווקו של החודש הקודם. החץ אומר בכמה אתם מעל או מתחת לאותה נקודה בחודש שעבר. לחיצה פותחת את המסך החודשי." },
   { t: "#fab", h: "הוספת הוצאה", b: "הכפתור הזה פותח את חלון ההוספה. לחיצה ארוכה עליו פותחת אותו ישר בהקשבה, כדי להוסיף בקול. בלי קליטה? ההוצאה נשמרת בטלפון ונשלחת כשהחיבור חוזר. ככה נראה החלון:" },
   { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים כאן, וכל החלון מתחלף: סגול להוצאה, ירוק לכסף שנכנס. מתחת מקלידים את הסכום. בטלפון יש מקשים גדולים משלנו, וכפתורים כמו ״+50״ שמוסיפים לסכום בלחיצה. ״המשך״ עובר לפרטים." },
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "לחיצה על הוצאה שכבר הוספתם ממלאת את כל הטופס בבת אחת." },
@@ -8397,7 +8489,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261029085712";
+const BUILD_ID = "20261029143448";
 let updToast = null;
 async function checkUpdate() {
   try {
