@@ -1412,6 +1412,8 @@ body.arrange .arr-open { display: none !important; }
 .quick-k { flex: none; font-size: .74rem; color: var(--muted); margin-bottom: -4px; }
 /* days: the date stays on top while scrolling */
 .days .day-head { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--head-h, 64px)); z-index: 2; background: var(--surface); padding-top: 6px; align-items: baseline; }
+/* inside a window that scrolls by itself, a month or day title sticks to the window's own top, not under the page header */
+.sheet .day-head, .obj-wrap .day-head, #catSheetList .day-head { position: sticky; top: -18px; z-index: 2; background: var(--surface); padding-top: 16px; box-shadow: 0 1px 0 var(--line); }
 .day-head .dl b { color: var(--ink); font-weight: 700; }
 .day-head .dl small { color: var(--muted); font-weight: 500; font-size: .78rem; }
 .day-head .num { color: var(--ink); }
@@ -8390,7 +8392,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261028110029";
+const BUILD_ID = "20261029083521";
 let updToast = null;
 async function checkUpdate() {
   try {
