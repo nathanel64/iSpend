@@ -1695,6 +1695,9 @@ body.arrange .arr-open { display: none !important; }
 #addForm.st1 .dt, #addForm.st2 .st1only { display: none !important; }
 #addForm.st2 .amount-in { display: none; }
 @media (prefers-reduced-motion: reduce) { #addForm *, #addForm::before { transition-duration: .01s !important; } }
+/* a window scrolls on its own: reaching its top or bottom does not drag the page behind it */
+html.modal-open, html.modal-open body { overflow: hidden; }
+.sheet, .sheet-bg, .obj-wrap, .obj-bg, .recap, .wrapped, .rc-body { overscroll-behavior: contain; }
 /* a visible keyboard focus everywhere */
 :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible { outline: 2.5px solid var(--brand-text); outline-offset: 2px; }
 </style>
@@ -6511,7 +6514,7 @@ function monthAnim(dir) {
 {
   let y0 = null, pulled = 0, busy = false;
   const ptr = $("ptr"), coin = ptr.querySelector("svg");
-  const ok = () => !busy && !txDrag && window.scrollY <= 0 && $("sheetBg").hidden && $("salBg").hidden && $("mvBg").hidden && $("capBg").hidden && document.body.style.overflow !== "hidden";
+  const ok = () => !busy && !txDrag && window.scrollY <= 0 && !document.documentElement.classList.contains("modal-open") && $("sheetBg").hidden && $("salBg").hidden && $("mvBg").hidden && $("capBg").hidden && document.body.style.overflow !== "hidden";
   document.addEventListener("touchstart", e => { y0 = ok() && e.touches.length === 1 ? e.touches[0].clientY : null; pulled = 0; }, { passive: true });
   document.addEventListener("touchmove", e => {
     if (y0 == null) return;
@@ -8005,6 +8008,8 @@ window.openWeekNow = () => { const w = recapWeek(); if (!w) { toast("בשבוע 
   function sync() {
     queued = false;
     const d = top();
+    // while a window is open (not the tour), only the window scrolls: the page behind it stays put
+    document.documentElement.classList.toggle("modal-open", openDialogs().some(x => !x.closest(".tour")));
     if (d === last) return;
     if (d && !openers.has(d)) openers.set(d, document.activeElement && document.activeElement !== document.body && !d.contains(document.activeElement) ? document.activeElement : last);
     if (d && !d.contains(document.activeElement)) setTimeout(() => { if (top() !== d || d.contains(document.activeElement)) return;
@@ -8392,7 +8397,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261029083521";
+const BUILD_ID = "20261029085712";
 let updToast = null;
 async function checkUpdate() {
   try {
