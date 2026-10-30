@@ -1481,6 +1481,11 @@ body.arrange .arr-open { display: none !important; }
 .wl-ch span{opacity:.85}.wl-ch b{font-size:.95rem}
 .wl-cr{display:flex;justify-content:space-between;gap:6px;opacity:.92}
 .wl-cr bdi{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
+.wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
+.wl-all[hidden]{display:none}
+#payCard h2:has(.wl-all:not([hidden])){display:flex;align-items:center;gap:8px}
+@keyframes wlAllIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .wl-hint{font-size:.8rem;color:var(--muted);text-align:center;margin-top:6px;min-height:1.2em}
 @media (prefers-reduced-motion:reduce){.wl,.wl-c,.wl-t,.wl-i{transition-duration:.01s}}
 
@@ -2355,7 +2360,7 @@ function makeSupaAdapter(uid) {
     <div id="instList"></div>
   </section>
   <section class="card" id="payCard" data-k="pay">
-    <h2>הארנק שלך <span class="side num" id="payTotal"></span></h2>
+    <h2>הארנק שלך <span class="side num" id="payTotal"></span><button type="button" class="wl-all" id="wlAll" hidden><span aria-hidden="true">›</span> כל הכרטיסים</button></h2>
     <div class="cats" id="payMethods"></div>
   </section>
   <button type="button" class="arr-open" data-arrange>עריכת המסך</button>
@@ -3612,20 +3617,22 @@ function renderPayMethods(f) {
     const o = tops.get(r.name) || { n: 0, m: new Map(), inM: new Map() };
     const top = [...o.m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3), tmax = top.length ? top[0][1] : 1;
     const topIn = [...o.inM.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
-    const bars = (L, mx) => L.map(([m, v]) => `<div class="wl-r"><span><bdi>${esc(m)}</bdi></span><span class="num">${fmt(v)}</span><em><i style="width:${(v / mx * 100).toFixed(0)}%"></i></em></div>`).join("");
-    const col = (title, sum, L) => `<div class="wl-col"><div class="wl-ch"><span>${title}</span><b class="num">${fmt(sum)}</b></div>${L.map(([m, v]) => `<div class="wl-cr"><bdi>${esc(m)}</bdi><span class="num">${fmt(v)}</span></div>`).join("") || `<div class="wl-cr">—</div>`}</div>`;
+    // a pulled-out card shows the exact amounts, with agorot
+    const M = v => `<span class="m0">${fmt(v)}</span><span class="m2">${fmtX(v)}</span>`;
+    const bars = (L, mx) => L.map(([m, v]) => `<div class="wl-r"><span><bdi>${esc(m)}</bdi></span><span class="num">${M(v)}</span><em><i style="width:${(v / mx * 100).toFixed(0)}%"></i></em></div>`).join("");
+    const col = (title, sum, L) => `<div class="wl-col"><div class="wl-ch"><span>${title}</span><b class="num">${M(sum)}</b></div>${L.map(([m, v]) => `<div class="wl-cr"><bdi>${esc(m)}</bdi><span class="num">${M(v)}</span></div>`).join("") || `<div class="wl-cr">—</div>`}</div>`;
     const front = r.bank
-      ? `<div class="wl-top"><span class="wl-n"><bdi>${esc(r.name)}</bdi></span><span class="wl-amt num">${r.out ? fmt(r.out) : "+" + fmt(r.in)}</span></div><div class="wl-chip"></div>
-         <div class="wl-bot"><span class="wl-io"><span><small>נכנס</small><b class="num">${fmt(r.in)}</b></span><span><small>יצא</small><b class="num">${fmt(r.out)}</b></span></span><span>${o.n} תנועות</span></div>`
-      : `<div class="wl-top"><span class="wl-n"><bdi>${esc(r.name)}</bdi></span><span class="wl-amt num">${fmt(r.spent)}</span></div>${r.name === "מזומן" ? "" : `<div class="wl-chip"></div>`}
-         <div class="wl-bot"><span>${o.n} תנועות החודש</span><span class="wl-big num">${fmt(r.spent)}</span></div>`;
+      ? `<div class="wl-top"><span class="wl-n"><bdi>${esc(r.name)}</bdi></span><span class="wl-amt num">${r.out ? M(r.out) : "+" + M(r.in)}</span></div><div class="wl-chip"></div>
+         <div class="wl-bot"><span class="wl-io"><span><small>נכנס</small><b class="num">${M(r.in)}</b></span><span><small>יצא</small><b class="num">${M(r.out)}</b></span></span><span>${o.n} תנועות</span></div>`
+      : `<div class="wl-top"><span class="wl-n"><bdi>${esc(r.name)}</bdi></span><span class="wl-amt num">${M(r.spent)}</span></div>${r.name === "מזומן" ? "" : `<div class="wl-chip"></div>`}
+         <div class="wl-bot"><span>${o.n} תנועות החודש</span><span class="wl-big num">${M(r.spent)}</span></div>`;
     // the bank shows what came in; with spending too, both side by side
     const back = r.bank && r.out && (r.in || topIn.length)
       ? `<div class="wl-top"><span class="wl-n">החודש בחשבון</span></div><div class="wl-cols">${col("נכנס", r.in, topIn)}${col("יצא", r.out, top)}</div>`
       : r.bank && !r.out
-      ? `<div class="wl-top"><span class="wl-n">מה נכנס</span><span class="wl-amt num">${fmt(r.in)}</span></div>
+      ? `<div class="wl-top"><span class="wl-n">מה נכנס</span><span class="wl-amt num">${M(r.in)}</span></div>
       <div class="wl-rows">${topIn.length ? bars(topIn, topIn[0][1]) : `<div>אין תנועות החודש</div>`}</div>`
-      : `<div class="wl-top"><span class="wl-n">על מה הוצאת</span><span class="wl-amt num">${fmt(r.bank ? r.out : r.spent)}</span></div>
+      : `<div class="wl-top"><span class="wl-n">על מה הוצאת</span><span class="wl-amt num">${M(r.bank ? r.out : r.spent)}</span></div>
       <div class="wl-rows">${top.length ? bars(top, tmax) : `<div>אין הוצאות החודש</div>`}</div>`;
     const backAll = back + `<button type="button" class="wl-go" data-acc="${esc(r.name)}">כל התנועות <span class="chv" aria-hidden="true">‹</span></button>`;
     return `<div class="wl-c" data-wi="${i}" tabindex="0" role="button" aria-label="${esc(r.name)}"><div class="wl-t"><div class="wl-i">
@@ -3640,13 +3647,15 @@ function placeWallet() {
   const si = walletSel == null ? -1 : walletRows.findIndex(r => r.name === walletSel);
   cs.forEach((c, i) => {
     c.classList.toggle("flip", i === si && walletFlip);
+    c.classList.toggle("sel", i === si);
     if (si < 0) { c.style.top = (i * STRIP) + "px"; c.style.zIndex = i; c.style.transform = ""; c.style.filter = ""; }
     else if (i === si) { c.style.top = "0px"; c.style.zIndex = 50; c.style.transform = "translateZ(20px)"; c.style.filter = ""; }
     else { const k = i < si ? i : i - 1; c.style.top = (CH + 12 + k * 14) + "px"; c.style.zIndex = k; c.style.transform = `scale(${(0.92 + k * 0.015).toFixed(3)})`; c.style.filter = "brightness(.82)"; }
   });
   wl.style.height = (si < 0 ? (n - 1) * STRIP + CH : CH + 12 + Math.max(0, n - 2) * 14 + 44) + "px";
   if (n === 1 && si < 0) wl.style.height = CH + "px";
-  const hint = $("wlHint"); if (hint) hint.textContent = si < 0 ? (n > 1 ? "לחיצה על כרטיס שולפת אותו" : "לחיצה על הכרטיס הופכת אותו") : walletFlip ? "לחיצה נוספת מחזירה · לחיצה על כרטיס אחר מחליפה" : "לחיצה נוספת הופכת את הכרטיס";
+  const hint = $("wlHint"); if (hint) hint.textContent = si < 0 ? (n > 1 ? "לחיצה על כרטיס שולפת אותו" : "לחיצה על הכרטיס הופכת אותו") : walletFlip ? "לחיצה על הכרטיס או מחוץ לו מחזירה" : "לחיצה נוספת הופכת · לחיצה מחוץ לכרטיס מחזירה";
+  const all = $("wlAll"); if (all) { all.hidden = si < 0; all.lastChild.textContent = n > 1 ? " כל הכרטיסים" : " חזרה"; }
 }
 function walletTap(i) {
   const r = walletRows[i]; if (!r) return;
@@ -3662,8 +3671,18 @@ let fltRange = { min: null, max: null, from: "", to: "" };
 $("payMethods").addEventListener("click", e => {
   const b = e.target.closest("[data-acc]");
   if (b) { e.stopPropagation(); walletSel = null; walletFlip = false; filterAcc = b.dataset.acc; filterCat = null; txKind = "all"; showAll = false; openTx = null; render(); showView("tx"); return; }
-  const c = e.target.closest("[data-wi]"); if (c) walletTap(+c.dataset.wi);
+  const c = e.target.closest("[data-wi]"); if (c) walletTap(+c.dataset.wi); else walletBack();
 });
+/* a card pulled out by mistake: back to all the cards with the button, a tap anywhere outside it, or Escape */
+function walletBack() { if (walletSel == null && !walletFlip) return; walletSel = null; walletFlip = false; placeWallet(); }
+$("wlAll").addEventListener("click", e => { e.stopPropagation(); walletBack(); });
+document.addEventListener("click", e => {
+  if (walletSel == null || !e.target || !e.target.closest) return;
+  if (e.target.closest("#payMethods [data-wi], #wlAll")) return;
+  if (e.target.closest(".sheet-bg, .tour, .modal, [role=dialog]")) return;
+  walletBack();
+}, true);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && walletSel != null && !document.querySelector(".sheet-bg:not([hidden])")) walletBack(); });
 $("payMethods").addEventListener("keydown", e => {
   const c = e.target.closest("[data-wi]"); if (!c || e.target.closest("[data-acc]")) return;
   if (e.key === "Enter" || e.key === " ") { e.preventDefault(); walletTap(+c.dataset.wi); }
@@ -9045,7 +9064,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030165951";
+const BUILD_ID = "20261030212613";
 let updToast = null;
 async function checkUpdate() {
   try {
