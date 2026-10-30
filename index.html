@@ -1489,6 +1489,20 @@ body.arrange .arr-open { display: none !important; }
 .wl-ch span{opacity:.85}.wl-ch b{font-size:.95rem}
 .wl-cr{display:flex;justify-content:space-between;gap:6px;opacity:.92}
 .wl-cr bdi{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.wl-ord{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:600;color:var(--muted);background:var(--bg);cursor:pointer}
+.wl-ord[hidden]{display:none}
+.wl-ord:not([hidden])+.wl-all:not([hidden]){margin-inline-start:6px}
+.wl-ord:not([hidden])~.wl-all:not([hidden]){display:inline-flex}
+#payCard h2:has(.wl-ord:not([hidden])){display:flex;align-items:center;gap:8px}
+.wo{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.wo-r{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:14px;padding:8px 10px}
+.wo-c{flex:none;width:38px;height:26px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.wo-n{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wo-b{flex:none;width:38px;height:34px;border:0;border-radius:10px;background:var(--surface);color:var(--ink);font-size:.8rem;cursor:pointer}
+.wo-b:disabled{opacity:.3;cursor:default}
+.wo-b:not(:disabled):active{transform:scale(.92)}
+.wo-note{margin:8px 2px 0;font-size:.8rem}
+.wo-act{display:flex;gap:8px;margin-top:10px}
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -2368,7 +2382,7 @@ function makeSupaAdapter(uid) {
     <div id="instList"></div>
   </section>
   <section class="card" id="payCard" data-k="pay">
-    <h2>הארנק שלך <span class="side num" id="payTotal"></span><button type="button" class="wl-all" id="wlAll" hidden><span aria-hidden="true">›</span> כל הכרטיסים</button></h2>
+    <h2>הארנק שלך <span class="side num" id="payTotal"></span><button type="button" class="wl-ord" id="wlOrd" hidden aria-label="סידור הכרטיסים">סידור</button><button type="button" class="wl-all" id="wlAll" hidden><span aria-hidden="true">›</span> כל הכרטיסים</button></h2>
     <div class="cats" id="payMethods"></div>
   </section>
   <button type="button" class="arr-open" data-arrange>עריכת המסך</button>
@@ -3607,6 +3621,8 @@ function renderPayMethods(f) {
   });
   const rows = [...by.entries()].map(([name, r]) => ({ name, bank: name === bankName(), out: r.out, in: r.in, spent: name === bankName() ? r.out : r.out - r.in }))
     .filter(r => r.out || r.in).sort((a, b) => (a.bank - b.bank) || b.spent - a.spent);
+  // an order the user chose comes first; cards it does not know yet keep the usual order after them
+  if (walletOrder.length) { const pos = n => { const i = walletOrder.indexOf(n); return i < 0 ? 1e6 : i; }; rows.sort((a, b) => pos(a.name) - pos(b.name)); }
   $("payCard").hidden = !rows.length;
   const max = Math.max(1, ...rows.map(r => Math.max(r.out, r.in)));
   $("payTotal").textContent = "";
@@ -3617,6 +3633,8 @@ function renderPayMethods(f) {
     const k = t.merchant || t.category || "ללא שם", mm = (t.income || t.refund) ? o.inM : o.m; mm.set(k, (mm.get(k) || 0) + t.amount); });
   walletRows = rows;
   if (walletSel && !rows.some(r => r.name === walletSel)) { walletSel = null; walletFlip = false; }
+  $("wlOrd").hidden = rows.length < 2 || wlArranging;
+  if (wlArranging) { drawWalletOrder(); return; }
   $("payMethods").className = "";
   $("payMethods").innerHTML = `<div class="wl" id="wl">` + rows.map((r, i) => {
     const bg = cardBg(r.name, r.bank);
@@ -3685,6 +3703,35 @@ async function saveCardColors(next) {
   try { await writeRange("'הגדרות'!V10", [[JSON.stringify(next)]]); } catch (e) { toast && toast("לא נשמר. נסו שוב."); }
 }
 try { cardColors = JSON.parse(localStorage.getItem("cardColors") || "{}") || {}; } catch (e) { cardColors = {}; }
+let walletOrder = [], wlArranging = false;
+try { walletOrder = JSON.parse(localStorage.getItem("walletOrder") || "[]") || []; } catch (e) { walletOrder = []; }
+/* the wallet in the order the user wants: a short list with arrows, the top of the list is the top of the stack */
+function drawWalletOrder() {
+  const rows = walletRows;
+  $("wlAll").hidden = true;
+  $("payMethods").innerHTML = `<div class="wo" role="list">` + rows.map((r, i) => `<div class="wo-r" role="listitem" data-name="${esc(r.name)}">
+      <span class="wo-c" style="background:${cardBg(r.name, r.bank)}"></span><bdi class="wo-n">${esc(r.name)}</bdi>
+      <button type="button" class="wo-b" data-mv="-1" data-i="${i}" aria-label="להזיז את ${esc(r.name)} למעלה"${i === 0 ? " disabled" : ""}>▲</button>
+      <button type="button" class="wo-b" data-mv="1" data-i="${i}" aria-label="להזיז את ${esc(r.name)} למטה"${i === rows.length - 1 ? " disabled" : ""}>▼</button></div>`).join("") +
+    `</div><p class="note wo-note">הכרטיס האחרון ברשימה מופיע מלפנים, גדול.</p><div class="wo-act"><button type="button" class="btn" id="woDone">סיום</button>${walletOrder.length ? `<button type="button" class="btn ghost" id="woReset">לסדר האוטומטי</button>` : ""}</div>`;
+}
+async function saveWalletOrder(list) {
+  walletOrder = list;
+  try { localStorage.setItem("walletOrder", JSON.stringify(list)); } catch (e) {}
+  try { await writeRange("'הגדרות'!V11", [[list.length ? JSON.stringify(list) : ""]]); } catch (e) {}
+}
+$("wlOrd").addEventListener("click", e => { e.stopPropagation(); walletSel = null; walletFlip = false; wlArranging = true; render(); });
+$("payMethods").addEventListener("click", e => {
+  if (!wlArranging) return;
+  const mv = e.target.closest("[data-mv]");
+  if (mv) { e.stopPropagation(); const i = +mv.dataset.i, j = i + +mv.dataset.mv, names = walletRows.map(r => r.name); if (j < 0 || j >= names.length) return;
+    [names[i], names[j]] = [names[j], names[i]]; walletRows = names.map(n => walletRows.find(r => r.name === n));
+    // keep cards that are not shown this month in their place in the saved order
+    const rest = walletOrder.filter(n => !names.includes(n)); saveWalletOrder([...names, ...rest]);
+    drawWalletOrder(); const b = $("payMethods").querySelector(`[data-mv="${mv.dataset.mv}"][data-i="${j}"]`); if (b && !b.disabled) b.focus(); return; }
+  if (e.target.closest("#woDone")) { e.stopPropagation(); wlArranging = false; render(); return; }
+  if (e.target.closest("#woReset")) { e.stopPropagation(); saveWalletOrder([]); wlArranging = false; render(); return; }
+}, true);
 let walletRows = [], walletSel = null, walletFlip = false;
 function placeWallet() {
   const wl = $("wl"); if (!wl) return;
@@ -5230,6 +5277,7 @@ function applySettings(values) {
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
   { const hj = String((values[6] || [])[21] || "").trim(); if (hj && !monthBusy) { try { const a = JSON.parse(hj); if (Array.isArray(a)) { const n = new Set(a.map(x => { const m = String(x).match(/^(\d{4})-(\d{2})$/); return m ? +m[1] * 12 + +m[2] - 1 : NaN; }).filter(k => !isNaN(k))); if ([...n].sort().join() !== [...hiddenMonths].sort().join()) { hiddenMonths = n; saveHiddenLocal(); setTimeout(() => { try { if (txAll.length) afterData(); renderMonths(); } catch (e) {} }, 0); } } } catch (e) {} } }
   { const sm = String((values[5] || [])[21] || "").trim().match(/^(\d{4})-(\d{1,2})$/); if (sm) { startMonthPref = +sm[1] * 12 + +sm[2] - 1; applyStartMonth(); } }
+  { const oj = String((values[9] || [])[21] || "").trim(); try { const a = oj ? JSON.parse(oj) : []; if (Array.isArray(a) && JSON.stringify(a) !== JSON.stringify(walletOrder) && !wlArranging) { walletOrder = a; try { localStorage.setItem("walletOrder", JSON.stringify(a)); } catch (e) {} } } catch (e) {} }
   { const cj = String((values[8] || [])[21] || "").trim(); if (cj) { try { const o = JSON.parse(cj); if (o && typeof o === "object" && JSON.stringify(o) !== JSON.stringify(cardColors)) { cardColors = o; try { localStorage.setItem("cardColors", cj); } catch (e) {} } } catch (e) {} } }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
@@ -5550,6 +5598,7 @@ $("savePay").onclick = async () => {
       const cm = {}; let cmChanged = false;
       Object.entries(cardMap).forEach(([raw, to]) => { cm[raw] = ren[to] || to; if (ren[to]) cmChanged = true; });
       if (cmChanged) { await writeRange("'הגדרות'!I2:J61", pad(Object.entries(cm).map(([k, v]) => [k, v]), 60, 2)); cardMap = cm; }
+      if (walletOrder.some(o => ren[o])) { walletOrder = walletOrder.map(o => ren[o] || o); try { await writeRange("'הגדרות'!V11", [[JSON.stringify(walletOrder)]]); } catch (e) {} }
       if (Object.keys(ren).some(o => cardColors[o])) { const cc = { ...cardColors }; Object.entries(ren).forEach(([o, n]) => { if (cc[o]) { cc[n] = cc[o]; delete cc[o]; } }); cardColors = cc; try { await writeRange("'הגדרות'!V10", [[JSON.stringify(cc)]]); } catch (e) {} }
     }
     PAY = list; draftPay = list.slice(); draftPayOrig = list.slice(); adminDirty.pay = false; renderAdminLists();
@@ -9122,7 +9171,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031011336";
+const BUILD_ID = "20261031012226";
 let updToast = null;
 async function checkUpdate() {
   try {
