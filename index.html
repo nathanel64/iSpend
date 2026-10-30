@@ -8414,14 +8414,16 @@ $("askAns").addEventListener("click", e => {
   const refresh = () => {
     const v = nsNum("salAmount");
     if (target === sal) done.disabled = !v;
-    $("nsMiniV").textContent = fmt(v);
+    $("nsMiniV").textContent = v % 1 ? "₪" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : fmt(v);
   };
   const stage = (st, t) => {
     form.classList.toggle("st-a", st === "a"); form.classList.toggle("st-b", st === "b"); form.classList.toggle("pad-goal", st === "g");
     $("nsMini").hidden = st === "a";
     target = st === "g" ? goal : sal;
     pad.hidden = st === "b";
-    if (!pad.hidden) { quick(target); done.textContent = target === sal ? "המשך ›" : "אישור"; done.disabled = false; }
+    if (!pad.hidden) { quick(target); done.textContent = target === sal ? "המשך ›" : "אישור"; done.disabled = false;
+      // the salary can have agorot, so its pad has a decimal point; the savings goal is whole shekels
+      const dk = pad.querySelector('[data-k="00"], [data-k="."]'); if (dk) { const dot = target === sal; dk.dataset.k = dot ? "." : "00"; dk.textContent = dot ? "." : "00"; dk.setAttribute("aria-label", dot ? "נקודה עשרונית" : "שני אפסים"); } }
     sal.closest(".sal-amount").classList.toggle("np-on", st === "a"); goal.closest(".sal-amount").classList.toggle("np-on", st === "g");
     refresh();
   };
@@ -8429,11 +8431,18 @@ $("askAns").addEventListener("click", e => {
   pad.addEventListener("click", e => {
     const b = e.target.closest("button[data-k], button[data-add]"); if (!b) return;
     try { navigator.vibrate && buzz(5); } catch (x) {}
-    let v = (target.value || "").replace(/[^\d]/g, "");
-    if (b.dataset.add) return type(String((parseInt(v, 10) || 0) + +b.dataset.add));
+    let v = (target.value || "").replace(/[^\d.]/g, "");
+    if (b.dataset.add) return type(String(Math.round(((parseFloat(v) || 0) + +b.dataset.add) * 100) / 100));
     const k = b.dataset.k;
-    if (k === "del") v = v.slice(0, -1); else { if ((v + k).length > 7) return; v = v === "0" ? k.replace(/^0+/, "") : v + k; }
-    if (v === "" || /^0+$/.test(v)) v = v === "" ? "" : "0";
+    if (k === "del") v = v.slice(0, -1);
+    else if (k === ".") { if (v.includes(".")) return; v = (v || "0") + "."; }
+    else {
+      if (/\.\d\d$/.test(v)) return; // two digits after the point at most
+      const [i, f] = v.split("."); if (f === undefined && (i + k).replace(/^0+/, "").length > 7) return;
+      v = v === "0" ? k.replace(/^0+/, "") : v + k;
+      if (v.includes(".") && /\.\d{3,}$/.test(v)) v = v.replace(/(\.\d\d)\d+$/, "$1");
+    }
+    if (/^0+$/.test(v)) v = "0";
     type(v);
   });
   done.onclick = () => { if (target === sal && !nsNum("salAmount")) return; stage("b"); };
@@ -9036,7 +9045,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030025330";
+const BUILD_ID = "20261030165951";
 let updToast = null;
 async function checkUpdate() {
   try {
