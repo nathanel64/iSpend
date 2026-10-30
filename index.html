@@ -8607,6 +8607,21 @@ function tourAddDemo2() {
   setTimeout(() => { const f = document.getElementById("addForm"); if (f && f.classList.contains("st1")) { f.classList.replace("st1", "st2"); document.getElementById("numpad").hidden = true; document.getElementById("amtMini").hidden = false; document.querySelector("#addForm .amount-in").classList.remove("np-on"); } }, 0);
   return close;
 }
+function tourMarkPay(el) {
+  // points at the Apple Pay row: it needs a one-time setup
+  const r = el && el.querySelector('[data-go="apple"]'); if (!r) return null;
+  if (!document.getElementById("tourMarkCss")) { const st = document.createElement("style"); st.id = "tourMarkCss";
+    st.textContent = "@keyframes tourMark{0%,100%{box-shadow:inset 0 0 0 2px var(--brand),0 0 0 0 color-mix(in srgb,var(--brand) 35%,transparent)}50%{box-shadow:inset 0 0 0 2px var(--brand),0 0 0 7px color-mix(in srgb,var(--brand) 0%,transparent)}}"
+      + ".tour-mark{position:relative;z-index:3;border-radius:14px;background:color-mix(in srgb,var(--brand) 8%,var(--surface));animation:tourMark 1.8s ease-in-out infinite}"
+      + ".tour-mark-tag{flex:none;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--brand-fill);color:var(--brand-ink);white-space:nowrap}"
+      + "@media (prefers-reduced-motion: reduce){.tour-mark{animation:none;box-shadow:inset 0 0 0 2px var(--brand)}}";
+    document.head.appendChild(st); }
+  const tag = document.createElement("span"); tag.className = "tour-mark-tag"; tag.textContent = "הגדרה חד-פעמית";
+  const chev = r.querySelector(".set-chev"); r.insertBefore(tag, chev || null);
+  const pill = r.querySelector(".set-pill"), pillHid = pill && pill.hidden; if (pill) pill.hidden = true;
+  r.classList.add("tour-mark");
+  return () => { r.classList.remove("tour-mark"); tag.remove(); if (pill) pill.hidden = pillHid; };
+}
 function tourLift(el) {
   // shows the long press: the first row lifts, glides down past the next one and back
   const r = el && el.querySelector(".tx-sw"); if (!r) return null;
@@ -8617,36 +8632,36 @@ function tourLift(el) {
   return () => r.classList.remove("tour-lift");
 }
 const TOUR = [
-  { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + esc(USER_NAME) : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר, פחות מדקה." },
-  { t: "#monthTitle", h: "מעבר בין חודשים", b: "חיצים לחודש אחד, או לחיצה על שם החודש לכל החודשים. חלון סוגרים במשיכה למטה." },
-  { t: "#askBox", h: "תשאלו אותי ✦", b: "כותבים שאלה, כמו ״כמה הוצאתי על קפה החודש?״, ומקבלים תשובה במשפט." },
-  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "מתמלא לפי מה שיצא מתוך מה שנכנס. לחיצה פותחת פירוט." },
-  { t: "#fab", h: "הוספת הוצאה", b: "פותח את חלון ההוספה. לחיצה ארוכה: הוספה בקול." },
-  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים סוג ומקלידים סכום. ״המשך״ עובר לפרטים." },
-  { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "לחיצה אחת ממלאת הוצאה שכבר הוספתם." },
-  { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם, והקטגוריה נבחרת לבד." },
-  { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה. השורה למטה מסכמת מה יישמר." },
-  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo2, h: "תאריך אחר ותשלומים", b: "תאריך אחר ומספר תשלומים. השמירה מיידית, עם ״ביטול״ לכמה שניות." },
-  { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והכול מתמלא." },
-  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה. לחיצה פותחת את הפירוט שלה." },
-  { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כרטיס לכל אמצעי תשלום. לחיצה שולפת אותו והופכת אותו." },
-  { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "אתגר שבועי, מה אפשר לקנות במה שנחסך, והתגים שאספתם." },
-  { t: "#flowView > .arr-open", h: "המסך שלכם", b: "מזיזים, מסתירים ומעבירים כרטיסים בין הבית ל״חודשי״." },
-  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש, כולל השעון של הימים והחיובים הצפויים." },
-  { t: "#navTx", h: "תנועות", b: "כל התנועות לפי ימים, עם חיפוש חכם, סינון ובחירה של כמה ביחד." },
-  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "לחיצה פותחת קבלה. החלקה: עריכה ומחיקה. לחיצה ארוכה וגרירה: יום אחר." },
-  { t: "#tabYear", h: "שנתי", b: "כל השנה בגרף. לחיצה על חודש פותחת את הסיכום שלו." },
-  { t: "#tabAdmin", h: "הגדרות", b: "ההגדרות בקבוצות קצרות. בואו נציץ." },
-  { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה, וחיפוש בהגדרות." },
-  { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת, יום החיוב בכרטיס והחודשים באתר." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרות ואמצעי תשלום." },
-  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, h: "חיבורים", b: "Apple Pay, סיווג עסקים חכם וייבוא מקבצים של הבנק והאשראי." },
-  { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות וסיכומים בקובץ אקסל אחד." },
-  { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת 🔔", b: "התראה בשעה שתבחרו, בימים שלא הוספתם כלום." },
-  { t: '#setMenu [data-act="weekly"]', view: "admin", opt: true, h: "סיכום שבועי 📊", b: "ביום ראשון בבוקר: השבוע שעבר בהתראה אחת." },
-  { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "התנתקות ומחיקה, תמיד עם אישור." },
-  { t: null, e: "👆", h: "עוד כמה טריקים", b: "החלקה הצידה מעבירה בין מסכים, ומשיכה למטה מרעננת." },
-  { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: המשכורת של החודש.", last: true }
+  { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + esc(USER_NAME) : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר של דקה, ואפשר לדלג בכל רגע." },
+  { t: "#monthTitle", h: "מעבר בין חודשים", b: "החיצים עוברים חודש אחד. לחיצה על שם החודש פותחת את כל החודשים. כל חלון נסגר במשיכה למטה." },
+  { t: "#askBox", h: "תשאלו אותי ✦", b: "כותבים שאלה בשפה רגילה, כמו ״כמה הוצאתי על קפה החודש?״, ומקבלים תשובה במשפט, עם קישור לתנועות." },
+  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "הטבעת מתמלאת לפי מה שהוצאתם מתוך מה שנכנס החודש. לחיצה פותחת פירוט מלא." },
+  { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או הכנסה. לחיצה רגילה פותחת חלון, ולחיצה ארוכה מקליטה בקול." },
+  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. ״המשך״ עובר לפרטים." },
+  { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "הוצאות שחוזרות על עצמן? לחיצה אחת ממלאת את כל הפרטים מהפעם הקודמת." },
+  { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. אפשר תמיד לשנות." },
+  { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
+  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo2, h: "תאריך אחר ותשלומים", b: "לקנייה מיום אחר או בתשלומים. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם." },
+  { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והסכום, העסק והכרטיס מתמלאים לבד." },
+  { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
+  { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כרטיס לכל אמצעי תשלום, עם כמה ירד ממנו החודש. לחיצה שולפת אותו והופכת לפירוט." },
+  { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "אתגר שבועי קטן, מה אפשר לקנות במה שחסכתם, והתגים שאספתם בדרך." },
+  { t: "#flowView > .arr-open", h: "המסך שלכם", b: "המסך מתאים את עצמו אליכם: מזיזים, מסתירים ומעבירים כרטיסים בין הבית ל״חודשי״." },
+  { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: השעון שמראה כמה הוצאתם בכל יום, והחיובים הקבועים שעוד צפויים." },
+  { t: "#navTx", h: "תנועות", b: "כל התנועות לפי ימים. אפשר לחפש, לסנן, ולבחור כמה ביחד כדי לערוך או למחוק." },
+  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "לחיצה פותחת קבלה. החלקה הצידה: עריכה או מחיקה. לחיצה ארוכה וגרירה מעבירה ליום אחר." },
+  { t: "#tabYear", h: "שנתי", b: "כל השנה בגרף אחד, כדי לראות מגמות. לחיצה על חודש פותחת את הסיכום שלו." },
+  { t: "#tabAdmin", h: "הגדרות", b: "כאן מתאימים את האתר אליכם, בקבוצות קצרות. בואו נציץ." },
+  { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
+  { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת, יום החיוב בכרטיס והחודשים באתר. ככה החישובים מדויקים לכם." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם." },
+  { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
+  { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
+  { t: '#setMenu [data-act="remind"]', view: "admin", opt: true, h: "תזכורת 🔔", b: "התראה בשעה שתבחרו, רק בימים שלא הוספתם כלום, כדי שלא תשכחו." },
+  { t: '#setMenu [data-act="weekly"]', view: "admin", opt: true, h: "סיכום שבועי 📊", b: "ביום ראשון בבוקר: כמה הוצאתם בשבוע שעבר ועל מה, בהתראה אחת." },
+  { t: '#setMenu [data-g="danger"]', view: "admin", h: "אזור זהירות", b: "התנתקות ומחיקת החשבון. כל פעולה כאן מבקשת אישור קודם." },
+  { t: null, e: "👆", h: "עוד כמה טריקים", b: "החלקה הצידה מעבירה בין המסכים, ומשיכה למטה בראש העמוד מרעננת את הנתונים." },
+  { t: null, e: "🚀", h: "מתחילים!", b: "הצעד הראשון: להכניס את המשכורת של החודש. משם הכול מתחיל להתחבר.", last: true }
 ];
 let tourEl = null, tourI = 0, tourRestore = null, tourPlace = null, tourHist = [], tourBusy = false, tourEl0 = null, tourSeq = 0;
 const tourReduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -8947,7 +8962,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030021047";
+const BUILD_ID = "20261030022708";
 let updToast = null;
 async function checkUpdate() {
   try {
