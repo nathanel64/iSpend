@@ -727,6 +727,27 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .mv-list .mv-add { padding: 7px 14px; color: var(--brand); background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--brand) 40%, transparent); }
 .mv-new { border: 2px solid var(--brand); border-radius: 16px; padding: 12px 14px; background: var(--surface); color: var(--ink); font-size: 1rem; outline: none; }
 .mv .ns-save.danger { background: linear-gradient(135deg, #e0554b, #c23a33); box-shadow: 0 10px 24px rgba(194, 58, 51, .3); }
+/* the salary window on a phone: our own keys instead of the phone keyboard, one amount at a time */
+.ns-mini { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: var(--bg); border-radius: 16px; padding: 10px 14px; font: inherit; font-size: .9rem; color: var(--ink); text-align: start; }
+.ns-mini[hidden] { display: none; }
+.ns-mini b { font-size: 1.1rem; margin-inline-end: auto; }
+.ns-mini-e { color: var(--brand); font-weight: 600; font-size: .82rem; }
+.ns-pad { margin: 0; }
+.ns-pad .np-quick button { background: var(--brand-soft); color: var(--brand); }
+.ns-pad .np-done { background: linear-gradient(135deg, #5b4cf0, #9a52d6); color: #fff; border-radius: 16px; padding: 12px; font-size: 1rem; box-shadow: 0 8px 20px rgba(91, 76, 240, .3); }
+.ns-pad .np-done:disabled { opacity: .45; box-shadow: none; }
+.ns.pad-goal .ns-pad .np-done { background: linear-gradient(135deg, #f2b63c, #e39a1e); box-shadow: 0 8px 20px rgba(230, 160, 40, .3); }
+.ns.np-mode .ns-top p { display: none; }
+.ns.np-mode .ns-gauge { width: 92px; margin-bottom: 2px; }
+.ns.np-mode .ns-top h3 { font-size: 1.35rem; margin: 4px 0 0; }
+.ns.np-mode .ns-top { padding-top: 14px; }
+.ns.np-mode .ns-body { gap: 9px; padding-top: 8px; }
+.ns.np-mode .sal-amount input { caret-color: transparent; }
+.ns.st-b .ns-field:has(#salAmount), .ns.pad-goal .ns-field:has(#salAmount), .ns.st-a #nsGoalF, .ns.st-a #nsPreview, .ns.st-a #nsBack, .ns.st-a #salPopSave { display: none !important; }
+.ns.pad-goal #salGoalRange, .ns.pad-goal #salGoalChips, .ns.pad-goal #nsPreview, .ns.pad-goal #nsBack, .ns.pad-goal #salPopSave, .ns.pad-goal .sal-later { display: none !important; }
+.ns.pad-goal .ns .sal-amount.small, .ns.pad-goal .sal-amount.small { border-color: #f2b63c; }
+.ns.st-a .sal-amount:not(.small) { border-color: var(--brand); }
+@media (max-height: 640px) { .ns.np-mode .ns-gauge, .ns.np-mode .ns-kicker { display: none; } .ns.np-mode .np-keys button { height: 42px; } }
 .sal-later { border: 0; background: none; color: var(--muted); font-size: .85rem; padding: 4px; }
 
 /* ===== redesign: calm & clear ===== */
@@ -2637,11 +2658,17 @@ function makeSupaAdapter(uid) {
         <label class="sal-amount"><span>₪</span><input id="salAmount" type="text" inputmode="decimal" placeholder="0" aria-label="סכום המשכורת" autocomplete="off"></label>
         <button type="button" class="ns-chip" id="salSame" hidden></button>
       </div>
-      <div class="ns-field">
+      <button type="button" class="ns-mini" id="nsMini" hidden><span class="ns-dot in"></span>נכנס החודש <b class="num" id="nsMiniV"></b><span class="ns-mini-e">עריכה</span></button>
+      <div class="ns-field" id="nsGoalF">
         <div class="ns-lbl"><span class="ns-dot gold"></span>כמה לחסוך<span class="ns-pct num" id="nsPct"></span></div>
         <label class="sal-amount small"><span>₪</span><input id="salGoal" type="text" inputmode="decimal" placeholder="0" aria-label="יעד חיסכון לחודש" autocomplete="off"></label>
         <input type="range" class="ns-range" id="salGoalRange" min="0" max="50" step="1" value="0" aria-label="אחוז מההכנסה לחיסכון">
         <div class="ns-chips" id="salGoalChips"></div>
+      </div>
+      <div class="numpad ns-pad" id="salPad" hidden>
+        <div class="np-quick" id="salPadQ"></div>
+        <div class="np-keys"><button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k="00">00</button><button type="button" data-k="0">0</button><button type="button" data-k="del" aria-label="מחיקת ספרה">⌫</button></div>
+        <button type="button" class="np-done" id="salPadDone">המשך ›</button>
       </div>
       <div class="ns-preview" id="nsPreview" hidden></div>
       <p class="form-msg" id="salPopMsg"></p>
@@ -8375,6 +8402,53 @@ $("askAns").addEventListener("click", e => {
   const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); show(false); return r; };
 })();
 
+/* the salary window on a phone: the phone keyboard used to cover half of it, so it gets our own keys.
+   First the salary (the keys and "המשך"), then the savings goal with the slider; tapping an amount brings its keys back. */
+(function salPad() {
+  if (!matchMedia("(pointer: coarse)").matches) return;
+  const form = $("salForm"), pad = $("salPad"), sal = $("salAmount"), goal = $("salGoal"), done = $("salPadDone");
+  [sal, goal].forEach(i => { i.setAttribute("inputmode", "none"); i.readOnly = true; });
+  form.classList.add("np-mode");
+  let target = sal;
+  const quick = t => { $("salPadQ").innerHTML = (t === sal ? [100, 500, 1000, 5000] : [100, 250, 500, 1000]).map(n => `<button type="button" data-add="${n}" dir="ltr">+${n.toLocaleString("en-US")}</button>`).join(""); };
+  const refresh = () => {
+    const v = nsNum("salAmount");
+    if (target === sal) done.disabled = !v;
+    $("nsMiniV").textContent = fmt(v);
+  };
+  const stage = (st, t) => {
+    form.classList.toggle("st-a", st === "a"); form.classList.toggle("st-b", st === "b"); form.classList.toggle("pad-goal", st === "g");
+    $("nsMini").hidden = st === "a";
+    target = st === "g" ? goal : sal;
+    pad.hidden = st === "b";
+    if (!pad.hidden) { quick(target); done.textContent = target === sal ? "המשך ›" : "אישור"; done.disabled = false; }
+    sal.closest(".sal-amount").classList.toggle("np-on", st === "a"); goal.closest(".sal-amount").classList.toggle("np-on", st === "g");
+    refresh();
+  };
+  const type = v => { target.value = withCommas(v); target.dispatchEvent(new Event("input", { bubbles: true })); if (target === sal) { try { fitSal(); } catch (e) {} } refresh(); };
+  pad.addEventListener("click", e => {
+    const b = e.target.closest("button[data-k], button[data-add]"); if (!b) return;
+    try { navigator.vibrate && buzz(5); } catch (x) {}
+    let v = (target.value || "").replace(/[^\d]/g, "");
+    if (b.dataset.add) return type(String((parseInt(v, 10) || 0) + +b.dataset.add));
+    const k = b.dataset.k;
+    if (k === "del") v = v.slice(0, -1); else { if ((v + k).length > 7) return; v = v === "0" ? k.replace(/^0+/, "") : v + k; }
+    if (v === "" || /^0+$/.test(v)) v = v === "" ? "" : "0";
+    type(v);
+  });
+  done.onclick = () => { if (target === sal && !nsNum("salAmount")) return; stage("b"); };
+  $("nsMini").onclick = () => stage("a");
+  sal.addEventListener("click", () => stage("a"));
+  goal.addEventListener("click", () => stage("g"));
+  sal.addEventListener("focus", () => { if (!form.classList.contains("st-a")) stage("a"); });
+  goal.addEventListener("focus", () => { if (!form.classList.contains("pad-goal")) stage("g"); });
+  // "same as last month" fills the salary and moves on
+  $("salSame").addEventListener("click", () => setTimeout(() => { refresh(); if (nsNum("salAmount")) stage("b"); }, 0));
+  // every time the window opens it starts at the salary, unless one is already filled in
+  const oa = askSalary; askSalary = function () { const r = oa.apply(this, arguments); stage(nsNum("salAmount") ? "b" : "a"); setTimeout(() => { try { document.activeElement && document.activeElement.blur(); } catch (e) {} }, 80); return r; };
+  stage("a");
+})();
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -8962,7 +9036,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030022708";
+const BUILD_ID = "20261030025330";
 let updToast = null;
 async function checkUpdate() {
   try {
