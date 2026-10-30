@@ -482,7 +482,15 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .admin-title { font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; margin: 6px 0 0; }
 .edit-list { display: flex; flex-direction: column; gap: 8px; }
 .edit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
-.edit-row.pay { grid-template-columns: minmax(0, 1fr) auto; }
+.edit-row.pay { grid-template-columns: auto minmax(0, 1fr) auto; }
+.edit-row.pay.bank-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+.pay-dot { width: 30px; height: 20px; border-radius: 5px; border: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), 0 1px 3px rgba(0,0,0,.18); position: relative; }
+.pay-dot::before { content: ""; position: absolute; inset: -12px -8px; }
+.pay-dot[aria-expanded="true"] { outline: 2px solid var(--brand); outline-offset: 2px; }
+.pay-sws { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 4px 12px; animation: wlAllIn .2s ease; }
+.pay-sw { width: 34px; height: 24px; border-radius: 6px; border: 0; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.pay-sw.on { outline: 2.5px solid var(--ink); outline-offset: 2px; }
+.pay-sw.auto { width: auto; padding: 0 10px; color: #fff; font: 600 .74rem var(--font-body); }
 .bank-row input[type="text"] { border-color: color-mix(in srgb, var(--good) 40%, var(--line)); font-weight: 600; }
 .bank-lock { width: 32px; display: grid; place-items: center; }
 .bank-lock .ic { width: 30px; height: 30px; border-radius: 10px; }
@@ -3611,9 +3619,7 @@ function renderPayMethods(f) {
   if (walletSel && !rows.some(r => r.name === walletSel)) { walletSel = null; walletFlip = false; }
   $("payMethods").className = "";
   $("payMethods").innerHTML = `<div class="wl" id="wl">` + rows.map((r, i) => {
-    let h = 0; for (const ch of r.name) h = (h * 31 + ch.charCodeAt(0)) % 360;
-    const bg = r.bank ? "linear-gradient(135deg,#0d6e52,#27a77f)" : r.name === "מזומן" ? "linear-gradient(135deg,#a85a14,#e09a3a)"
-      : `linear-gradient(135deg,hsl(${h} 45% 28%),hsl(${(h + 35) % 360} 55% 48%))`;
+    const bg = cardBg(r.name, r.bank);
     const o = tops.get(r.name) || { n: 0, m: new Map(), inM: new Map() };
     const top = [...o.m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3), tmax = top.length ? top[0][1] : 1;
     const topIn = [...o.inM.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -3640,6 +3646,45 @@ function renderPayMethods(f) {
   }).join("") + `</div><div class="wl-hint" id="wlHint"></div>`;
   placeWallet();
 }
+/* card colors: known Israeli card companies and banks get their own colors by name; anyone can pick another one */
+const CARD_BRANDS = [ // checked in order: "לאומי קארד" is max, "ויזה כאל" is cal
+  [/max|מקס|לאומי ?קארד/i, ["#8a1550", "#e0337a"]],
+  [/cal\b|כאל|ויזה ?כאל|דיינרס|diners/i, ["#0a4573", "#00b6ad"]],
+  [/isracard|ישראכרט/i, ["#042a59", "#a3172a"]],
+  [/amex|אמריקן|אמקס|american/i, ["#00468b", "#2a8fe0"]],
+  [/hapoalim|פועלים|הפועלים|\bbit\b|ביט/i, ["#9e1015", "#ed1d24"]],
+  [/leumi|לאומי/i, ["#005a96", "#00adef"]],
+  [/discount|דיסקונט|מרכנתיל/i, ["#004d26", "#00a352"]],
+  [/mizrahi|מזרחי|טפחות/i, ["#b8560b", "#f5821f"]],
+  [/בינלאומי|fibi|הבינלאומי/i, ["#1f3a5f", "#4f7cac"]],
+  [/paypal|פייפאל|פייפל/i, ["#003087", "#009cde"]],
+  [/mastercard|מאסטרקארד|מסטרקארד/i, ["#c2001a", "#f79e1b"]],
+  [/visa|ויזה/i, ["#1a1f71", "#3d4bb8"]],
+];
+const CARD_SW = { // the colors to pick from
+  navy: ["#1a2a5e", "#3a5cc4"], blue: ["#0b5ea8", "#3aa0f0"], teal: ["#0b6e72", "#22b8b0"], green: ["#0d6e52", "#27a77f"],
+  gold: ["#9a6a12", "#e6b23c"], orange: ["#b8560b", "#f5821f"], red: ["#9e1015", "#ed4146"], pink: ["#8a1550", "#e0337a"],
+  purple: ["#4b2a9e", "#9a6af0"], black: ["#1b1d22", "#4a4f5a"], silver: ["#6b7280", "#b9c0cc"], rose: ["#9d4a5e", "#e8a0b0"]
+};
+let cardColors = {};
+const brandOf = name => { const n = String(name || ""); const b = CARD_BRANDS.find(([re]) => re.test(n)); return b ? b[1] : null; };
+// the colors of a card: the one picked, or the company's, or one from its name
+function cardGrad(name, bank) {
+  const pick = CARD_SW[cardColors[name]]; if (pick) return pick;
+  const br = brandOf(name); if (br) return br;
+  if (bank) return ["#0d6e52", "#27a77f"];
+  if (name === "מזומן") return ["#a85a14", "#e09a3a"];
+  let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return [`hsl(${h} 45% 28%)`, `hsl(${(h + 35) % 360} 55% 48%)`];
+}
+const cardBg = (name, bank) => { const [a, b] = cardGrad(name, bank); return `linear-gradient(135deg,${a},${b})`; };
+async function saveCardColors(next) {
+  cardColors = next;
+  try { localStorage.setItem("cardColors", JSON.stringify(next)); } catch (e) {}
+  render(); renderAdminLists();
+  try { await writeRange("'הגדרות'!V10", [[JSON.stringify(next)]]); } catch (e) { toast && toast("לא נשמר. נסו שוב."); }
+}
+try { cardColors = JSON.parse(localStorage.getItem("cardColors") || "{}") || {}; } catch (e) { cardColors = {}; }
 let walletRows = [], walletSel = null, walletFlip = false;
 function placeWallet() {
   const wl = $("wl"); if (!wl) return;
@@ -5185,6 +5230,7 @@ function applySettings(values) {
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
   { const hj = String((values[6] || [])[21] || "").trim(); if (hj && !monthBusy) { try { const a = JSON.parse(hj); if (Array.isArray(a)) { const n = new Set(a.map(x => { const m = String(x).match(/^(\d{4})-(\d{2})$/); return m ? +m[1] * 12 + +m[2] - 1 : NaN; }).filter(k => !isNaN(k))); if ([...n].sort().join() !== [...hiddenMonths].sort().join()) { hiddenMonths = n; saveHiddenLocal(); setTimeout(() => { try { if (txAll.length) afterData(); renderMonths(); } catch (e) {} }, 0); } } } catch (e) {} } }
   { const sm = String((values[5] || [])[21] || "").trim().match(/^(\d{4})-(\d{1,2})$/); if (sm) { startMonthPref = +sm[1] * 12 + +sm[2] - 1; applyStartMonth(); } }
+  { const cj = String((values[8] || [])[21] || "").trim(); if (cj) { try { const o = JSON.parse(cj); if (o && typeof o === "object" && JSON.stringify(o) !== JSON.stringify(cardColors)) { cardColors = o; try { localStorage.setItem("cardColors", cj); } catch (e) {} } } catch (e) {} } }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -5260,18 +5306,25 @@ function renderCapTotal() {
   el.hidden = false; el.classList.toggle("over", sal > 0 && sum > sal);
   el.innerHTML = `<span>סך התקרות <b class="num">${fmt(sum)}</b></span>` + (sal ? `<span class="ct-bar"><i style="width:${Math.min(100, pct).toFixed(1)}%"></i></span><small title="ממוצע ${last3.length} החודשים האחרונים שהוזנה בהם משכורת">${Math.round(pct)}% מ${last3.length > 1 ? "המשכורת הממוצעת" : "המשכורת"} (${fmt(sal)})</small>` : "");
 }
+let payColorOpen = null;
+const payDot = (p, i, bank) => `<button type="button" class="pay-dot" data-color="${i}" style="background:${cardBg(p.trim(), bank)}" aria-label="צבע הכרטיס ${esc(p)}" aria-expanded="${payColorOpen === p}"></button>`;
+function paySwatches(p, bank) {
+  const name = p.trim(), cur = cardColors[name] || "", br = brandOf(name);
+  const auto = `<button type="button" class="pay-sw auto${cur ? "" : " on"}" data-sw="" style="background:${(() => { const keep = cardColors[name]; delete cardColors[name]; const g = cardBg(name, bank); if (keep) cardColors[name] = keep; return g; })()}" aria-pressed="${!cur}"><span>${br ? "לפי החברה" : "אוטומטי"}</span></button>`;
+  return `<div class="pay-sws" role="group" aria-label="צבע ל${esc(name)}">${auto}${Object.entries(CARD_SW).map(([k, [a, b]]) => `<button type="button" class="pay-sw${cur === k ? " on" : ""}" data-sw="${k}" style="background:linear-gradient(135deg,${a},${b})" aria-label="${k}" aria-pressed="${cur === k}"></button>`).join("")}</div>`;
+}
 function renderAdminLists() {
   if (!adminDirty.cats) drawCatList();
   renderCapTotal();
   try { if (window.drawCatRows) drawCatRows(); if (window.renderSetMenu) renderSetMenu(); } catch (e) {}
   if (!adminDirty.pay) {
     $("payList").innerHTML = draftPay.map((p, i) => i === 0 ? `<div class="edit-row pay bank-row">
-      <input type="text" id="pay-0" value="${esc(p)}" aria-label="שם חשבון הבנק" data-i="0">
-      <span class="bank-lock" title="חשבון הבנק נשאר תמיד">${glyph("bank", 150, 45, true)}</span></div>
+      ${payDot(p, 0, true)}<input type="text" id="pay-0" value="${esc(p)}" aria-label="שם חשבון הבנק" data-i="0">
+      <span class="bank-lock" title="חשבון הבנק נשאר תמיד">${glyph("bank", 150, 45, true)}</span></div>${payColorOpen === p && p.trim() ? paySwatches(p, true) : ""}
       <p class="note pay-note">חשבון הבנק: אליו נכנסות המשכורת וההעברות. אפשר לשנות לו שם, אבל לא למחוק.</p>
-      <div class="pay-sub">כרטיסים ואמצעי תשלום נוספים</div>` : `<div class="edit-row pay">
-      <input type="text" id="pay-${i}" value="${esc(p)}" aria-label="אמצעי תשלום" data-i="${i}">
-      <button class="del" data-del="${i}" aria-label="מחיקת ${esc(p)}">✕</button></div>`).join("");
+      <div class="pay-sub">כרטיסים ואמצעי תשלום נוספים</div><p class="note pay-note">הצבע של כל כרטיס נבחר לבד לפי החברה. לחיצה על הריבוע הצבעוני מחליפה אותו.</p>` : `<div class="edit-row pay">
+      ${payDot(p, i, false)}<input type="text" id="pay-${i}" value="${esc(p)}" aria-label="אמצעי תשלום" data-i="${i}">
+      <button class="del" data-del="${i}" aria-label="מחיקת ${esc(p)}">✕</button></div>${payColorOpen === p && p.trim() ? paySwatches(p, i === 0) : ""}`).join("");
   }
 }
 function renderSal() {
@@ -5458,6 +5511,10 @@ $("payList").addEventListener("input", e => {
   adminDirty.pay = true; draftPay[i] = e.target.value; $("payMsg").textContent = "";
 });
 $("payList").addEventListener("click", e => {
+  const dot = e.target.closest("[data-color]");
+  if (dot) { const p = (draftPay[+dot.dataset.color] || "").trim(); if (!p) return; const keep = adminDirty.pay; adminDirty.pay = false; payColorOpen = payColorOpen === p ? null : p; renderAdminLists(); adminDirty.pay = keep; return; }
+  const sw = e.target.closest("[data-sw]");
+  if (sw && payColorOpen) { const next = { ...cardColors }; if (sw.dataset.sw) next[payColorOpen] = sw.dataset.sw; else delete next[payColorOpen]; const keep = adminDirty.pay; adminDirty.pay = false; saveCardColors(next); adminDirty.pay = keep; return; }
   const d = e.target.closest("[data-del]"); if (!d) return;
   const i = +d.dataset.del; if (i === 0) return; // the bank account stays
   if (draftPayOrig[i]) { askMovePay(i); return; }
@@ -5493,6 +5550,7 @@ $("savePay").onclick = async () => {
       const cm = {}; let cmChanged = false;
       Object.entries(cardMap).forEach(([raw, to]) => { cm[raw] = ren[to] || to; if (ren[to]) cmChanged = true; });
       if (cmChanged) { await writeRange("'הגדרות'!I2:J61", pad(Object.entries(cm).map(([k, v]) => [k, v]), 60, 2)); cardMap = cm; }
+      if (Object.keys(ren).some(o => cardColors[o])) { const cc = { ...cardColors }; Object.entries(ren).forEach(([o, n]) => { if (cc[o]) { cc[n] = cc[o]; delete cc[o]; } }); cardColors = cc; try { await writeRange("'הגדרות'!V10", [[JSON.stringify(cc)]]); } catch (e) {} }
     }
     PAY = list; draftPay = list.slice(); draftPayOrig = list.slice(); adminDirty.pay = false; renderAdminLists();
     build(); render(); renderCardMap();
@@ -9064,7 +9122,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030212613";
+const BUILD_ID = "20261031011336";
 let updToast = null;
 async function checkUpdate() {
   try {
