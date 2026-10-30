@@ -2498,7 +2498,7 @@ function makeSupaAdapter(uid) {
           <span class="pv-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>
           <span class="pv-txt"><b>צפו בסרטון ההדרכה</b><small id="payVidSub">צעד אחר צעד, פחות מ-2 דקות</small></span>
         </button>
-        <video id="payVid" src="guide-applepay.mp4" poster="guide-applepay.jpg" controls playsinline muted preload="none" hidden></video>
+        <video id="payVid" src="guide-applepay.mp4" poster="guide-applepay.jpg" controls playsinline preload="none" hidden></video>
         <ol>
           <li><b>מעתיקים את המפתח האישי</b> <button class="btn ghost" type="button" id="copyPayTok" style="padding:3px 12px;font-size:.8rem">העתקה</button>
             <div class="field" style="margin-top:6px"><input id="payTokShow" readonly dir="ltr" aria-label="המפתח האישי שלך" style="font-family:ui-monospace,monospace;font-size:15px"></div>
@@ -8947,7 +8947,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030020145";
+const BUILD_ID = "20261030021047";
 let updToast = null;
 async function checkUpdate() {
   try {
