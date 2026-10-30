@@ -1865,6 +1865,17 @@ body { margin: 0; }
 @keyframes tcShine { 0%, 55% { transform: translateX(120%); } 100% { transform: translateX(-120%); } }
 @keyframes tcSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 @keyframes tcPop { 50% { transform: scale(1.12); } }
+.pay-vid-btn { display: flex; align-items: center; gap: 14px; width: 100%; margin: 12px 0 4px; padding: 14px 16px; border: 0; border-radius: 18px; cursor: pointer; text-align: start; color: #fff; font: inherit;
+  background: linear-gradient(135deg, #5b4cf0, #8b5cf6 60%, #c06cf2); box-shadow: 0 8px 22px rgba(91,76,240,.35); transition: transform .15s ease, box-shadow .2s; }
+.pay-vid-btn:active { transform: scale(.97); }
+.pay-vid-btn .pv-play { flex: none; width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.95); display: grid; place-items: center; animation: pvPulse 2.4s ease-in-out infinite; }
+.pay-vid-btn .pv-play svg { width: 22px; height: 22px; fill: #5b4cf0; margin-left: 3px; }
+.pay-vid-btn.open .pv-play { animation: none; }
+.pay-vid-btn .pv-txt { display: grid; gap: 2px; } .pay-vid-btn b { font-size: 1.05rem; } .pay-vid-btn small { opacity: .9; font-size: .82rem; }
+#payVid { display: block; width: 100%; max-width: 320px; margin: 10px auto 6px; border-radius: 16px; background: #000; }
+#payVid[hidden] { display: none; }
+@keyframes pvPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.55); } 50% { box-shadow: 0 0 0 9px rgba(255,255,255,0); } }
+@media (prefers-reduced-motion: reduce) { .pay-vid-btn .pv-play { animation: none; } }
 #copyPayTok { transition: transform .12s ease, background .2s, color .2s, border-color .2s; }
 #copyPayTok.pressing { transform: scale(.9); }
 #copyPayTok.copied { background: var(--good); border-color: var(--good); color: #fff; }
@@ -1987,7 +1998,7 @@ async function startApp() {
     done(ok, ok ? label + " הועתק בהצלחה ✓" : "לא הצלחתי להעתיק. סמנו את המפתח בתיבה והעתיקו ידנית.");
   };
   { const vb = document.getElementById("payVidBtn"), v = document.getElementById("payVid");
-    vb.onclick = () => { const show = v.hidden; v.hidden = !show; vb.textContent = show ? "✕ סגירת הסרטון" : "▶ צפייה בסרטון הדרכה (דקה)"; if (show) { v.play().catch(() => {}); } else v.pause(); }; }
+    vb.onclick = () => { const show = v.hidden; v.hidden = !show; vb.setAttribute("aria-expanded", show); vb.classList.toggle("open", show); document.getElementById("payVidSub").textContent = show ? "לחצו שוב כדי לסגור" : "צעד אחר צעד, פחות מ-2 דקות"; if (show) { v.play().catch(() => {}); } else v.pause(); }; }
   document.getElementById("payTokShow").value = PROFILE.pay_token || "";
   freshProf.then(p => { if (p && p.pay_token) { PROFILE.pay_token = p.pay_token; document.getElementById("payTokShow").value = p.pay_token; } }).catch(() => {});
   document.getElementById("copyPayTok").onclick = () => copy(PROFILE.pay_token || "", "המפתח");
@@ -2483,14 +2494,17 @@ function makeSupaAdapter(uid) {
       <summary>חיבור Apple Pay (כל תשלום נכנס לבד)</summary>
       <div class="body">
         <p class="note" style="margin:0">כל תשלום באייפון ב-Apple Pay ייכנס לכאן מיד. הגדרה חד-פעמית של דקה:</p>
+        <button type="button" id="payVidBtn" class="pay-vid-btn" aria-controls="payVid" aria-expanded="false">
+          <span class="pv-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+          <span class="pv-txt"><b>צפו בסרטון ההדרכה</b><small id="payVidSub">צעד אחר צעד, פחות מ-2 דקות</small></span>
+        </button>
+        <video id="payVid" src="guide-applepay.mp4" poster="guide-applepay.jpg" controls playsinline muted preload="none" hidden></video>
         <ol>
           <li><b>מעתיקים את המפתח האישי</b> <button class="btn ghost" type="button" id="copyPayTok" style="padding:3px 12px;font-size:.8rem">העתקה</button>
             <div class="field" style="margin-top:6px"><input id="payTokShow" readonly dir="ltr" aria-label="המפתח האישי שלך" style="font-family:ui-monospace,monospace;font-size:15px"></div>
             <p id="payCopied" role="status" aria-live="polite" style="margin:4px 0 0;font-size:.85rem;font-weight:600;min-height:1.2em"></p></li>
           <li><b>מתקינים את הקיצור</b> <a class="btn" id="installShortcut" href="https://www.icloud.com/shortcuts/b7bf468df8d64b0286d0c1a5897ddf9c" target="_blank" rel="noopener" style="padding:4px 14px;font-size:.85rem;text-decoration:none;display:inline-block">התקנת הקיצור iSpend</a><br>לוחצים <b>הגדרת קיצור</b>, מדביקים את המפתח ← <b>הוספת קיצור</b>.</li>
           <li><b>יוצרים פעולה אוטומטית</b> (אפל לא מאפשרת להתקין אותה מקישור, אז עושים פעם אחת ידנית):
-            <div style="margin:6px 0"><button class="btn ghost" type="button" id="payVidBtn" style="padding:4px 14px;font-size:.85rem">▶ צפייה בסרטון הדרכה (דקה)</button>
-              <video id="payVid" src="guide-applepay.mp4" poster="guide-applepay.jpg" controls playsinline muted preload="none" hidden style="display:block;width:100%;max-width:300px;margin:8px auto 0;border-radius:14px;background:#000"></video></div>
             <ol style="margin:4px 0 0;padding-inline-start:18px">
               <li>באפליקציית קיצורים ← <b>פעולות אוטומטיות</b> ← <b>＋</b>.</li>
               <li>מחפשים <b>ארנק</b> ובוחרים <b>״כאשר מתבצעת קריאה של כל כרטיס״</b> (עסקה).</li>
@@ -8933,7 +8947,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261030014818";
+const BUILD_ID = "20261030020145";
 let updToast = null;
 async function checkUpdate() {
   try {
