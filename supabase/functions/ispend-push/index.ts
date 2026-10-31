@@ -39,7 +39,7 @@ function weeklyMsg(s: { week_stats?: unknown }, ws: string) {
   const top = w.top ? `הכי הרבה הלך על ${String(w.top).slice(0, 30)}.` : "";
   return { title: `השבוע שעבר: ${shek(w.total || 0)} 📊`, body: [cmp, top].filter(Boolean).join(" · ") + " לחיצה פותחת את הסיכום.", url: "./?week", tag: "ispend-week" };
 }
-const MSG = { title: "iSpend", body: "יש הוצאות/הכנסות חדשות להיום? לחץ להוספה", url: "./?add" };
+const MSG = { title: "🧾 תזכורת", body: "יש הוצאות/הכנסות חדשות להיום? לחץ להוספה", url: "./?add" };
 
 Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
