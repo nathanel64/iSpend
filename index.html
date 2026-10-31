@@ -6744,27 +6744,93 @@ function ticketRows(items) {
 /* 5: a payslip: what came in, what went out by kind, and what is left */
 function openPayslip() {
   const c = vibeCtx; if (!c) return;
-  const f = c.f, sal = salaryFor(view.y, view.m, true), sum = a => a.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
+  const f = c.f, sal = salaryFor(view.y, view.m, true), val = t => t.refund ? -t.amount : t.amount, sum = a => a.reduce((s, t) => s + val(t), 0);
   const inst = f.spend.filter(t => t.inst || t.gen), fix = f.spend.filter(t => !(t.inst || t.gen) && FIXED.has(t.category)), vr = f.spend.filter(t => !(t.inst || t.gen) && !FIXED.has(t.category));
   const incomeTotal = (sal.missing ? 0 : sal.amount) + f.income, out = sum(f.spend), left = incomeTotal - out;
-  const top = list => { const m = new Map(); list.forEach(t => m.set(t.category, (m.get(t.category) || 0) + (t.refund ? -t.amount : t.amount))); return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3); };
-  const row = (k, v, cls) => `<div class="pp-row ${cls || ""}"><span>${k}</span><i></i><b class="num">${cls === "minus" ? "−" : ""}${fmt(Math.abs(v))}</b></div>`;
-  const subs = list => top(list).map(([k, v]) => `<div class="pp-row sub"><span>${esc(k)}</span><i></i><span class="num">${fmt(v)}</span></div>`).join("");
+  // every category with money in it this month, biggest first; one that came to zero is left out
+  const byCat = (list, v = val) => { const m = new Map(); list.forEach(t => m.set(t.category || "ללא קטגוריה", (m.get(t.category || "ללא קטגוריה") || 0) + v(t))); return [...m.entries()].filter(([, x]) => Math.abs(x) >= 0.5).sort((a, b) => b[1] - a[1]); };
   const others = f.inP.filter(t => t.income);
+  // the slip as lines, drawn on the page and into the picture that is shared
+  const L = [];
+  L.push({ k: "main", t: "משכורת" + (sal.est ? " (הערכה)" : ""), v: sal.missing ? 0 : sal.amount, c: "plus" });
+  if (others.length) { L.push({ k: "main", t: "הכנסות נוספות", v: f.income, c: "plus" }); byCat(others, t => t.amount).forEach(([n, v]) => L.push({ k: "sub", t: n, v })); }
+  L.push({ k: "rule" });
+  if (fix.length) { L.push({ k: "main", t: "חיובים קבועים", v: sum(fix), c: "minus" }); byCat(fix).forEach(([n, v]) => L.push({ k: "sub", t: n, v })); }
+  if (inst.length) { L.push({ k: "main", t: "תשלומים", v: sum(inst), c: "minus" }); byCat(inst).forEach(([n, v]) => L.push({ k: "sub", t: n, v })); }
+  if (vr.length) { L.push({ k: "main", t: "הוצאות משתנות", v: sum(vr), c: "minus" }); byCat(vr).forEach(([n, v]) => L.push({ k: "sub", t: n, v })); }
+  const slip = {
+    title: `תלוש ${MONTHS[view.m]} ${view.y}`, who: `${typeof USER_NAME !== "undefined" && USER_NAME ? USER_NAME + " · " : ""}${dd(f.start)}–${dd(f.end)}`,
+    stamp: left < 0 ? "במינוס" : c.isCurrent ? "בתוקף" : "סגור", neg: left < 0, lines: L, totalT: left < 0 ? "חסר" : "נשאר לך", total: Math.abs(left),
+    notes: [c.goal ? `יעד החיסכון: ${fmt(c.goal)} · ${left >= c.goal ? "בדרך ליעד ✓" : "חסרים " + fmt(c.goal - left) + " ליעד"}` : "", c.isCurrent ? "התלוש מתעדכן עם כל הוצאה עד סוף החודש" : "סיכום סופי של החודש"].filter(Boolean)
+  };
+  const money = (v, cls) => cls === "minus" ? "−" + fmt(Math.abs(v)) : fmt(v);
+  const html = L.map(l => l.k === "rule" ? `<hr class="pp-rule">` : l.k === "main"
+    ? `<div class="pp-row ${l.c}"><span>${esc(l.t)}</span><i></i><b class="num">${money(l.v, l.c)}</b></div>`
+    : `<div class="pp-row sub"><span>${esc(l.t)}</span><i></i><span class="num">${fmt(l.v)}</span></div>`).join("");
   openObj(`<div class="paper" role="dialog" aria-modal="true" aria-label="תלוש החודש">
-    <span class="pp-stamp ${left < 0 ? "neg" : ""}">${left < 0 ? "במינוס" : c.isCurrent ? "בתוקף" : "סגור"}</span>
-    <div class="pp-head"><span class="pp-logo">iSpend</span><h4>תלוש ${MONTHS[view.m]} ${view.y}</h4><small>${typeof USER_NAME !== "undefined" && USER_NAME ? esc(USER_NAME) + " · " : ""}${dd(f.start)}–${dd(f.end)}</small></div>
+    <span class="pp-stamp ${slip.neg ? "neg" : ""}">${slip.stamp}</span>
+    <div class="pp-head"><span class="pp-logo">iSpend</span><h4>${slip.title}</h4><small>${esc(slip.who)}</small></div>
     <hr class="pp-rule">
-    ${row("משכורת" + (sal.est ? " (הערכה)" : ""), sal.missing ? 0 : sal.amount, "plus")}
-    ${others.length ? row("הכנסות נוספות", f.income, "plus") : ""}
-    <hr class="pp-rule">
-    ${fix.length ? row("חיובים קבועים", sum(fix), "minus") + subs(fix) : ""}
-    ${inst.length ? row("תשלומים", sum(inst), "minus") : ""}
-    ${vr.length ? row("הוצאות משתנות", sum(vr), "minus") + subs(vr) : ""}
-    <div class="pp-total ${left < 0 ? "neg" : ""}"><span>${left < 0 ? "חסר" : "נשאר לך"}</span><b class="num">${fmt(Math.abs(left))}</b></div>
-    ${c.goal ? `<div class="pp-note">יעד החיסכון: ${fmt(c.goal)} · ${left >= c.goal ? "בדרך ליעד ✓" : "חסרים " + fmt(c.goal - left) + " ליעד"}</div>` : ""}
-    <div class="pp-note">${c.isCurrent ? "התלוש מתעדכן עם כל הוצאה עד סוף החודש" : "סיכום סופי של החודש"}</div>
-  </div><div class="obj-btns"><button type="button" class="ob-main" data-oclose>סגירה</button></div>`);
+    ${html}
+    <div class="pp-total ${slip.neg ? "neg" : ""}"><span>${slip.totalT}</span><b class="num">${fmt(slip.total)}</b></div>
+    ${slip.notes.map(n => `<div class="pp-note">${n}</div>`).join("")}
+  </div><div class="obj-btns"><button type="button" class="ob-main" data-oshare>שיתוף כתמונה</button><button type="button" data-oclose>סגירה</button></div>`);
+  $("objWrap").querySelector("[data-oshare]").onclick = e => shareSlip(slip, e.currentTarget);
+}
+// the slip drawn into a picture (no outside library), then shared or saved
+function slipCanvas(slip) {
+  const W = 720, PAD = 48, S = 2, font = (w, px) => `${w} ${px}px Rubik, Assistant, "Segoe UI", Arial, sans-serif`;
+  const rowsH = slip.lines.reduce((h, l) => h + (l.k === "rule" ? 40 : l.k === "main" ? 50 : 36), 0);
+  const H = 250 + rowsH + 120 + slip.notes.length * 40 + 60;
+  const cv = document.createElement("canvas"); cv.width = W * S; cv.height = H * S;
+  const x = cv.getContext("2d"); x.scale(S, S); x.direction = "rtl";
+  x.fillStyle = "#efeae2"; x.fillRect(0, 0, W, H);
+  // the paper with a torn bottom edge
+  const top = 24, bot = H - 30, z = 12;
+  x.save(); x.shadowColor = "rgba(0,0,0,.18)"; x.shadowBlur = 24; x.shadowOffsetY = 8;
+  x.beginPath(); x.moveTo(24, top); x.lineTo(W - 24, top); x.lineTo(W - 24, bot);
+  for (let px = W - 24, up = true; px > 24; px -= z, up = !up) x.lineTo(Math.max(24, px - z), up ? bot + z : bot);
+  x.lineTo(24, top); x.closePath(); x.fillStyle = "#fffdf8"; x.fill(); x.restore();
+  const R = W - PAD, Lx = PAD, ink = "#24222b", mute = "#7d7987";
+  const dots = (y, a, b) => { x.save(); x.strokeStyle = "#cfc9bd"; x.setLineDash([2, 5]); x.lineWidth = 2; x.beginPath(); x.moveTo(a, y); x.lineTo(b, y); x.stroke(); x.restore(); };
+  const dash = y => { x.save(); x.strokeStyle = "#cfc9bd"; x.setLineDash([9, 7]); x.lineWidth = 2; x.beginPath(); x.moveTo(Lx, y); x.lineTo(R, y); x.stroke(); x.restore(); };
+  x.textAlign = "center"; x.fillStyle = "#6c5fe0"; x.font = font(800, 22); x.fillText("iSpend", W / 2, 84);
+  x.fillStyle = ink; x.font = font(700, 34); x.fillText(slip.title, W / 2, 130);
+  x.fillStyle = mute; x.font = font(400, 22); x.fillText(slip.who, W / 2, 166);
+  // stamp
+  x.save(); x.translate(PAD + 70, 80); x.rotate(-0.24); x.strokeStyle = x.fillStyle = slip.neg ? "#b33a32" : "#13784f"; x.lineWidth = 3; x.globalAlpha = .85;
+  x.font = font(800, 20); const sw = x.measureText(slip.stamp).width + 24; x.strokeRect(-sw / 2, -18, sw, 34); x.textAlign = "center"; x.fillText(slip.stamp, 0, 7); x.restore();
+  let y = 196; dash(y); y += 34;
+  slip.lines.forEach(l => {
+    if (l.k === "rule") { y += 6; dash(y); y += 34; return; }
+    const main = l.k === "main", ind = main ? 0 : 24;
+    x.font = font(main ? 500 : 400, main ? 25 : 21); x.textAlign = "right"; x.fillStyle = main ? ink : mute; x.fillText(l.t, R - ind, y);
+    const tw = x.measureText(l.t).width;
+    const vs = main && l.c === "minus" ? "−" + fmt(Math.abs(l.v)) : fmt(l.v);
+    x.font = font(main ? 700 : 400, main ? 25 : 21); x.textAlign = "left"; x.fillStyle = main ? (l.c === "minus" ? "#b33a32" : "#13784f") : mute;
+    x.direction = "ltr"; x.fillText(vs.replace(/[⁦-⁩]/g, ""), Lx, y); const vw = x.measureText(vs).width; x.direction = "rtl";
+    dots(y - 6, Lx + vw + 12, R - ind - tw - 12);
+    y += main ? 50 : 36;
+  });
+  y += 4; x.fillStyle = ink; x.fillRect(Lx, y, R - Lx, 2.5); y += 58;
+  x.textAlign = "right"; x.font = font(700, 28); x.fillText(slip.totalT, R, y);
+  x.textAlign = "left"; x.direction = "ltr"; x.font = font(800, 46); x.fillStyle = slip.neg ? "#b33a32" : ink; x.fillText(fmt(slip.total).replace(/[⁦-⁩]/g, ""), Lx, y + 4); x.direction = "rtl";
+  y += 26; x.fillStyle = ink; x.fillRect(Lx, y, R - Lx, 2.5); x.fillRect(Lx, y + 6, R - Lx, 2.5); y += 50;
+  x.textAlign = "center"; x.fillStyle = mute; x.font = font(400, 20);
+  slip.notes.forEach(n => { x.fillText(n.replace(/<[^>]+>/g, "").replace(/[⁦-⁩]/g, ""), W / 2, y); y += 40; });
+  return cv;
+}
+async function shareSlip(slip, btn) {
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+  const cv = slipCanvas(slip), name = `iSpend-${slip.title.replace(/\s+/g, "-")}.png`;
+  const blob = await new Promise(r => cv.toBlob(r, "image/png")); if (!blob) { toast("לא הצלחתי ליצור תמונה."); return; }
+  const file = new File([blob], name, { type: "image/png" });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: slip.title }); return; } }
+  catch (e) { if (e && e.name === "AbortError") return; }
+  // no share sheet (a computer): save the picture instead
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  if (btn) { btn.textContent = "התמונה נשמרה ✓"; setTimeout(() => { btn.textContent = "שיתוף כתמונה"; }, 2500); }
 }
 
 /* 6: a transaction as a receipt */
@@ -9186,7 +9252,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031022947";
+const BUILD_ID = "20261031023925";
 let updToast = null;
 async function checkUpdate() {
   try {
