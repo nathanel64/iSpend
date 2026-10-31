@@ -8300,17 +8300,13 @@ $("selDel").onclick = async () => {
 /* the add window's pickers: categories as icons, payment methods as small cards, and dates as chips.
    The selects and the date field stay the source of truth (voice, recent, editing all fill them), and the pickers follow them. */
 let pkSig = "", pkAllCats = false;
-const pkCardBg = name => {
-  if (name === bankName()) return "linear-gradient(135deg,#0d6e52,#27a77f)";
-  if (name === "מזומן") return "linear-gradient(135deg,#a85a14,#e09a3a)";
-  let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360;
-  return `linear-gradient(135deg,hsl(${h} 45% 28%),hsl(${(h + 35) % 360} 55% 48%))`;
-};
+// the same colors as the cards in the wallet (picked, by card company, or from the name)
+const pkCardBg = name => cardBg(name, name === bankName());
 function addPickers(force) {
   const form = $("addForm"); if (!form || $("sheetBg").hidden) return;
   const cat = $("addCat"), card = $("addCard"), date = $("addDate"), amt = parseFloat(String($("addAmount").value).replace(/[,\s₪]/g, "")) || 0;
   const cats = [...cat.options].map(o => o.value), cards = [...card.options].map(o => o.value);
-  const sig = [addKind, cat.value, cats.join(","), card.value, cards.join(","), date.value, amt, $("addInst").value, pkAllCats, $("addDesc").value].join("|");
+  const sig = [addKind, cat.value, cats.join(","), card.value, cards.join(","), date.value, amt, $("addInst").value, pkAllCats, $("addDesc").value, JSON.stringify(cardColors)].join("|");
   if (!force && sig === pkSig) return; pkSig = sig;
   form.classList.toggle("inc", addKind === "inc");
   // the categories you use most first (the chosen one always shows); "עוד" opens the rest
@@ -9421,7 +9417,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031215728";
+const BUILD_ID = "20261101000656";
 let updToast = null;
 async function checkUpdate() {
   try {
