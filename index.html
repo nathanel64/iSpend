@@ -2183,8 +2183,12 @@ function makeSupaAdapter(uid) {
   let txLoading = null; // three reads of the same table at once share one request
   const loadSettings = async () => {
     const { data, error } = await sb.from("profiles").select("settings").eq("id", uid).single(); if (error) fail(error);
-    return Array.isArray(data.settings) ? data.settings : [];
+    setCache = Array.isArray(data.settings) ? data.settings : []; setAt = Date.now();
+    return setCache.map(r => (r || []).slice());
   };
+  // a save changes the copy read in the last few minutes and writes it once, instead of reading it again first
+  let setCache = null, setAt = 0;
+  const settingsForWrite = () => setCache && Date.now() - setAt < 5 * 60e3 ? Promise.resolve(setCache.map(r => (r || []).slice())) : loadSettings();
   let setQ = Promise.resolve();
   const run = async (tool, input) => {
     if (tool === "update_spreadsheet") {
@@ -2224,12 +2228,13 @@ function makeSupaAdapter(uid) {
         const prev = setQ; let done; setQ = new Promise(r => done = r);
         try { await prev; } catch (e) {}
         try {
-        const g = await loadSettings();
+        const g = await settingsForWrite();
         input.values.forEach((rowVals, i) => {
           const ri = p.r0 - 2 + i; while (g.length <= ri) g.push([]);
           const r = (g[ri] || []).slice(); rowVals.forEach((v, j) => { while (r.length <= p.c0 + j) r.push(""); r[p.c0 + j] = v == null ? "" : String(v); }); g[ri] = r;
         });
-        const { error } = await sb.from("profiles").update({ settings: trim(g) }).eq("id", uid); if (error) fail(error);
+        const { error } = await sb.from("profiles").update({ settings: trim(g) }).eq("id", uid); if (error) { setCache = null; fail(error); }
+        setCache = g; setAt = Date.now();
         return { payload: { ok: true } };
         } finally { done(); }
       }
@@ -3588,14 +3593,12 @@ $("salForm").addEventListener("submit", async e => {
   e.preventDefault();
   const v = Math.round(parseFloat($("salAmount").value.replace(/,/g, "")) * 100) / 100;
   if (!(v > 0)) { $("salPopMsg").textContent = "הזינו סכום גדול מאפס."; $("salAmount").focus(); return; }
-  const btn = $("salPopSave"); btn.disabled = true; btn.textContent = "שומר…";
   const gRaw = $("salGoal").value.replace(/[^\d.]/g, ""), gv = gRaw === "" ? null : Math.round(parseFloat(gRaw));
-  try {
-    await writeSalaries({ ...salaries, [salKey]: v });
-    if (gv != null && gv !== goals[salKey]) { const ym = salKey.split("-"); const keep = view; view = { y: +ym[0], m: +ym[1] - 1 }; try { await saveGoal(gv); } finally { view = keep; render(); } }
-    closeSal(); try { renderSal(); } catch (err) {}
-  }
-  catch (err) { $("salPopMsg").textContent = writeError(err); btn.disabled = false; btn.textContent = "שומרים ומתחילים"; }
+  // the window closes at once; both amounts save behind it
+  const jobs = [writeSalaries({ ...salaries, [salKey]: v })];
+  if (gv != null && gv !== goals[salKey]) { const ym = salKey.split("-"); const keep = view; view = { y: +ym[0], m: +ym[1] - 1 }; try { jobs.push(saveGoal(gv)); } finally { view = keep; render(); } }
+  closeSal(); try { renderSal(); } catch (err) {}
+  Promise.all(jobs).catch(err => { toast("המשכורת לא נשמרה. " + writeError(err), 5000); salAsked = false; });
 });
 
 /* the next payment of a purchase typed month by month: suggested from the charge day, added with one tap */
@@ -3881,7 +3884,7 @@ function renderGoal(a, sal) {
   inp.oninput = () => { inp.value = withCommas(inp.value); };
   $("goalForm").querySelector(".chips").onclick = e => { const b = e.target.closest("[data-g]"); if (b) inp.value = withCommas(b.dataset.g); };
   $("goalCancel").onclick = () => { editingGoal = false; render(); };
-  const save = async v => { $("goalMsg").textContent = "שומר…"; try { await saveGoal(v); } catch (err) { $("goalMsg").textContent = writeError(err); } };
+  const save = v => { saveGoal(v).catch(err => toast("היעד לא נשמר. " + writeError(err), 5000)); };
   if ($("goalClear")) $("goalClear").onclick = () => save(0);
   $("goalForm").onsubmit = e => { e.preventDefault(); const v = parseFloat(inp.value.replace(/[^\d.]/g, "")); save(isNaN(v) ? 0 : v); };
   inp.focus();
@@ -4745,7 +4748,9 @@ const CAP_MARK = "__defaults"; // a row that says the defaults are kept on their
 async function saveCapsBy(next) {
   next[""] = { ...(next[""] || {}), [CAP_MARK]: 1 };
   const rows = []; Object.keys(next).sort().forEach(k => Object.entries(next[k]).forEach(([c, a]) => rows.push([k ? k + "|" + c : c, a])));
-  await writeRange("'הגדרות'!W2:X201", pad(rows, 200, 2)); capsBy = next;
+  const prev = capsBy; capsBy = next;
+  try { await writeRange("'הגדרות'!W2:X201", pad(rows, 200, 2)); }
+  catch (err) { if (capsBy === next) { capsBy = prev; bubKey = ""; try { render(); } catch (e) {} } throw err; }
 }
 // spent on a category in a month (purchases minus refunds)
 const catSpent = (cat, y, m) => monthFigures(y, m).spend.filter(t => t.category === cat).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
@@ -4801,10 +4806,9 @@ $("capForm").addEventListener("submit", async e => {
   if (v === (def || 0)) delete next[k][cat]; // same as the default: nothing special for this month
   else next[k][cat] = v; // 0 = no cap this month only
   if (!Object.keys(next[k]).length) delete next[k];
-  const btn = $("capSave"); btn.disabled = true; btn.textContent = "שומר…";
-  try { await saveCapsBy(next); closeCap(); bubKey = ""; render(); }
-  catch (err) { $("capMsg2").textContent = writeError(err); }
-  btn.disabled = false; btn.textContent = "שמירת תקרה";
+  // the cap shows at once; the save runs behind
+  const p = saveCapsBy(next); closeCap(); bubKey = ""; render();
+  p.catch(err => toast("התקרה לא נשמרה. " + writeError(err), 5000));
 });
 function setCapEdit(on) {
   capEdit = on; $("capEditBtn").setAttribute("aria-pressed", on); $("capEditBtn").textContent = on ? "סיום" : "תקרות";
@@ -5244,8 +5248,9 @@ async function saveGoal(amount) {
   const next = { ...goals }, k = mkey(view.y, view.m);
   if (amount == null) delete next[k]; else next[k] = Math.max(0, Math.round(amount));
   const rows = Object.entries(next).sort((a, b) => b[0].localeCompare(a[0])).map(([a, b]) => [a, b]);
-  await writeRange("'הגדרות'!R2:S201", pad(rows, 200, 2));
-  goals = next; editingGoal = false; render();
+  const prev = goals; goals = next; editingGoal = false; render();
+  try { await writeRange("'הגדרות'!R2:S201", pad(rows, 200, 2)); }
+  catch (err) { if (goals === next) { goals = prev; render(); } throw err; }
 }
 async function saveIncome(e) {
   e.preventDefault();
@@ -5253,11 +5258,8 @@ async function saveIncome(e) {
   const next = { ...salaries };
   const k = mkey(view.y, view.m);
   if (raw === "") delete next[k]; else next[k] = Math.max(0, Math.round(parseFloat(raw) * 100) / 100 || 0);
-  $("incomeMsg").textContent = "שומר…";
-  try {
-    await writeSalaries(next);
-    editingIncome = false; render();
-  } catch (err) { $("incomeMsg").textContent = writeError(err); }
+  editingIncome = false;
+  writeSalaries(next).catch(err => toast("המשכורת לא נשמרה. " + writeError(err), 5000));
 }
 
 /* ---------- settings (tab "הגדרות": A category, B fixed, D payment method, F month, G salary) ---------- */
@@ -5324,10 +5326,12 @@ async function writeRange(range, values) {
   await mcp.callTool(SERVER, "update_values", { spreadsheetId: SHEET_ID, range, values });
   try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
 }
+// saves show right away; the write runs behind, and a failed one puts the old values back
 async function writeSalaries(next) {
-  const rows = Object.entries(next).sort((a, b) => b[0].localeCompare(a[0])).map(([k, v]) => [k, v]);
-  await writeRange("'הגדרות'!F2:G201", pad(rows, 200, 2));
+  const prev = salaries, rows = Object.entries(next).sort((a, b) => b[0].localeCompare(a[0])).map(([k, v]) => [k, v]);
   salaries = next; build(); render();
+  try { await writeRange("'הגדרות'!F2:G201", pad(rows, 200, 2)); }
+  catch (err) { if (salaries === next) { salaries = prev; build(); render(); } throw err; }
 }
 
 let draftCats = [], draftPay = [], draftPayOrig = []; // draftPayOrig: each row's saved name, to spot renames
@@ -9182,7 +9186,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031022546";
+const BUILD_ID = "20261031022947";
 let updToast = null;
 async function checkUpdate() {
   try {
