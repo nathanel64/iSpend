@@ -1503,26 +1503,10 @@ body.arrange .arr-open { display: none !important; }
 .wo-b:not(:disabled):active{transform:scale(.92)}
 .wo-note{margin:8px 2px 0;font-size:.8rem}
 .wo-act{display:flex;gap:8px;margin-top:10px}
-/* 7: more room between the cards */
+/* more room between the cards */
 .wrap { gap: 22px; }
 .card { padding: 20px; gap: 14px; }
 .card h2 { font-size: 1.1rem; }
-/* 1: a short home screen (on by default, can be turned off in the settings): the gauge, the question box,
-   the last three, and a row of buttons that open everything else in a window */
-.home-chips, #recentCard { display: none; }
-body.home-lite .home-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: -6px; }
-body.home-lite #recentCard { display: flex; }
-:root:not(.touring) body.home-lite:not(.arrange) #flowView > section[data-k], :root:not(.touring) body.home-lite:not(.arrange) #flowView > #funCard { display: none; }
-:root.touring .home-chips, :root.touring #recentCard, body.arrange .home-chips, body.arrange #recentCard { display: none !important; }
-.home-chips button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-.home-chips button .hc-v { color: var(--muted); font-weight: 500; font-size: .8rem; }
-.home-chips button:active { transform: scale(.96); }
-.rc-all { border: 0; background: none; color: var(--brand); font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; padding: 0; }
-#recentList .day-head { display: none; }
-#recentList:empty::after { content: "עוד אין תנועות. ה־＋ למטה מוסיף את הראשונה."; color: var(--muted); font-size: .9rem; }
-.sheet.peek { padding-bottom: 18px; }
-.sheet.peek h3 { justify-content: flex-end; margin-bottom: 4px; }
-.peek-body > .card, .peek-body > section { box-shadow: none; padding: 4px 0 0; display: flex !important; }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -2322,12 +2306,6 @@ function makeSupaAdapter(uid) {
     <div class="ask-ans" id="askAns" aria-live="polite" hidden></div>
   </form>
 
-  <nav class="home-chips" id="homeChips" aria-label="עוד במסך הבית"></nav>
-  <section class="card" id="recentCard">
-    <h2>אחרונות <button type="button" class="rc-all" id="recentAll">כל התנועות <span aria-hidden="true">‹</span></button></h2>
-    <div class="days" id="recentList"></div>
-  </section>
-
   <div class="ins-wrap" id="insWrap" data-k="ins">
   <div class="insights" id="instSuggest" aria-live="polite"></div>
   <div class="insights" id="insights" aria-live="polite"></div>
@@ -2642,12 +2620,6 @@ function makeSupaAdapter(uid) {
   <button class="w-nav w-prev" id="wPrev" aria-label="הקודם"></button>
 </div>
 
-<div class="sheet-bg" id="peekBg" hidden dir="rtl" lang="he">
-  <div class="sheet peek" role="dialog" aria-modal="true" aria-label="כרטיס מהמסך הראשי">
-    <h3><span id="peekTitle"></span><button type="button" class="x" id="peekX" aria-label="סגירה">✕</button></h3>
-    <div class="peek-body" id="peekBody"></div>
-  </div>
-</div>
 <div class="sheet-bg" id="catSheetBg" hidden dir="rtl" lang="he">
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="catSheetTitle">
     <h3><span class="cs-head" id="catSheetTitle"></span><button type="button" class="x" id="closeCatSheet" aria-label="סגירה">✕</button></h3>
@@ -4739,9 +4711,11 @@ function vibeCands() {
   return out.sort((a, b) => rank[a.lvl] - rank[b.lvl]);
 }
 let vibeShown = "";
+const VIBE_OFF = true;
 function renderVibe() {
   const el = $("vibe"), list = vibeCands();
-  if (!list.length) { el.hidden = true; vibeShown = ""; return; }
+  // the rotating line above the gauge is off: it repeated what the screen already says
+  if (VIBE_OFF || !list.length) { el.hidden = true; vibeShown = ""; return; }
   const v = list[vibeIdx % list.length];
   if (vibeShown !== v.t) { el.className = "vibe " + v.lvl; el.innerHTML = `<span class="e" aria-hidden="true">${v.e}</span><span class="t">${v.t}</span><span class="chev" aria-hidden="true">‹</span>`; vibeShown = v.t; }
   el.onclick = v.go; el.hidden = false;
@@ -5309,7 +5283,6 @@ function applySettings(values) {
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
   { const hj = String((values[6] || [])[21] || "").trim(); if (hj && !monthBusy) { try { const a = JSON.parse(hj); if (Array.isArray(a)) { const n = new Set(a.map(x => { const m = String(x).match(/^(\d{4})-(\d{2})$/); return m ? +m[1] * 12 + +m[2] - 1 : NaN; }).filter(k => !isNaN(k))); if ([...n].sort().join() !== [...hiddenMonths].sort().join()) { hiddenMonths = n; saveHiddenLocal(); setTimeout(() => { try { if (txAll.length) afterData(); renderMonths(); } catch (e) {} }, 0); } } } catch (e) {} } }
   { const sm = String((values[5] || [])[21] || "").trim().match(/^(\d{4})-(\d{1,2})$/); if (sm) { startMonthPref = +sm[1] * 12 + +sm[2] - 1; applyStartMonth(); } }
-  { const hl = String((values[10] || [])[21] || "").trim(); if (hl === "0" || hl === "1") { const on = hl === "1"; if (on !== homeLite && typeof setHomeLite === "function") { homeLite = on; try { localStorage.setItem("homeLite", hl); } catch (e) {} applyHomeLite(); } } }
   { const oj = String((values[9] || [])[21] || "").trim(); try { const a = oj ? JSON.parse(oj) : []; if (Array.isArray(a) && JSON.stringify(a) !== JSON.stringify(walletOrder) && !wlArranging) { walletOrder = a; try { localStorage.setItem("walletOrder", JSON.stringify(a)); } catch (e) {} } } catch (e) {} }
   { const cj = String((values[8] || [])[21] || "").trim(); if (cj) { try { const o = JSON.parse(cj); if (o && typeof o === "object" && JSON.stringify(o) !== JSON.stringify(cardColors)) { cardColors = o; try { localStorage.setItem("cardColors", cj); } catch (e) {} } } catch (e) {} } }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
@@ -7416,7 +7389,6 @@ boot();
     <div class="set-gh">החשבון</div>
     <div class="set-grp" data-g="me">
       <div class="set-row" style="cursor:default">${ico("moon", 250)}<span class="set-rt"><b>מראה</b></span><span id="setLook"></span></div>
-      <button type="button" class="set-row" data-act="homelite">${ico("grid", 250)}<span class="set-rt"><b>מסך בית מקוצר</b><small>רק הסיכום, השאלה ו-3 האחרונות. השאר בכפתורים</small></span><span class="set-pill" data-p="homelite"></span></button>
       <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת יומית</b><small>בשעה שתבחר, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="weekly">${ico("grid", 200)}<span class="set-rt"><b>סיכום שבועי</b><small>ביום ראשון בבוקר: כמה יצא בשבוע שעבר ועל מה</small></span><span class="set-pill" id="weeklyPill"${window.ISPEND_PUSH ? "" : " hidden"}></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="xlsx">${ico("xls", 140)}<span class="set-rt"><b>הורדה לאקסל</b><small>כל התנועות, סיכום חודשי ולפי קטגוריה</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
@@ -7462,7 +7434,6 @@ boot();
   menu.addEventListener("click", async e => {
     const r = e.target.closest(".set-row"); if (!r) return;
     if (r.dataset.go) return setGo(r.dataset.go);
-    if (r.dataset.act === "homelite") { await setHomeLite(!homeLite); return; }
     if (r.dataset.act === "xlsx") { exportXlsx(r); return; }
     if (r.dataset.act === "import") { openImport(); return; }
     if (r.dataset.act === "aicheck") { aiCheckNow(); return; }
@@ -8619,51 +8590,6 @@ $("askAns").addEventListener("click", e => {
   stage("a");
 })();
 
-/* 1: the short home screen */
-let homeLite = true;
-try { const v = localStorage.getItem("homeLite"); if (v === "0") homeLite = false; } catch (e) {}
-const HC_NAMES = { ins: "תובנות", cats: "לאן הלך הכסף", pay: "הארנק", inst: "תשלומים", week: "תקציב שבועי", burn: "הוצאה מצטברת", fix: "חיובים קבועים", cal: "שעון", cmp: "השוואה", merch: "עסקים", fc: "תחזית", up: "צפוי לרדת" };
-function applyHomeLite() { document.body.classList.toggle("home-lite", homeLite); drawHomeChips(); const p = document.querySelector('[data-p="homelite"]'); if (p) { p.textContent = homeLite ? "פועל" : "כבוי"; p.className = "set-pill " + (homeLite ? "on" : "off"); } }
-function drawHomeChips() {
-  const box = $("homeChips"); if (!box) return;
-  if (!homeLite) { box.innerHTML = ""; return; }
-  const keys = (layout ? layout.flow : []).filter(k => k !== "ins");
-  const items = keys.map(k => [k, arrEl(k)]).filter(([k, el]) => el && !el.hidden && el.dataset.off === undefined);
-  const fun = $("funCard"); if (fun && !fun.hidden) items.push(["fun", fun]);
-  box.innerHTML = items.map(([k]) => `<button type="button" data-peek="${k}">${k === "fun" ? "אתגרים" : (HC_NAMES[k] || ARR_NAMES[k])}</button>`).join("");
-}
-function renderRecent() {
-  const box = $("recentList"); if (!box || !homeLite) return;
-  const list = tx.filter(t => !t.deleted).map((t, i) => [t, i]).sort((a, b) => (b[0].date - a[0].date) || (b[1] - a[1])).slice(0, 3).map(x => x[0]);
-  box.innerHTML = list.map(t => txRowHtml(t, true)).join("");
-}
-let peekEl = null, peekMark = null;
-function openPeek(k) {
-  const el = k === "fun" ? $("funCard") : arrEl(k); if (!el) return;
-  closePeek(true);
-  peekMark = document.createComment("peek"); el.before(peekMark); peekEl = el;
-  $("peekBody").append(el); $("peekBg").hidden = false;
-  try { render(); } catch (e) {}
-}
-function closePeek(quiet) {
-  if (peekEl && peekMark) { peekMark.replaceWith(peekEl); }
-  peekEl = null; peekMark = null;
-  if (!quiet) { $("peekBg").hidden = true; try { render(); } catch (e) {} }
-}
-$("homeChips").addEventListener("click", e => { const b = e.target.closest("[data-peek]"); if (b) openPeek(b.dataset.peek); });
-$("peekX").onclick = () => closePeek();
-$("peekBg").addEventListener("click", e => { if (e.target.id === "peekBg") closePeek(); });
-$("recentAll").onclick = () => showView("tx");
-$("recentList").addEventListener("click", onTxListClick);
-{ const r0 = render; render = function () { const out = r0.apply(this, arguments); try { renderRecent(); drawHomeChips(); } catch (e) {} return out; }; }
-async function setHomeLite(on) {
-  homeLite = on; try { localStorage.setItem("homeLite", on ? "1" : "0"); } catch (e) {}
-  applyHomeLite(); try { render(); } catch (e) {}
-  try { await writeRange("'הגדרות'!V12", [[on ? "1" : "0"]]); } catch (e) {}
-}
-applyHomeLite();
-{ const rs = window.renderSetMenu; if (rs) window.renderSetMenu = function () { const o = rs.apply(this, arguments); const p = document.querySelector('[data-p="homelite"]'); if (p) { p.textContent = homeLite ? "פועל" : "כבוי"; p.className = "set-pill " + (homeLite ? "on" : "off"); } return o; }; }
-
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -9251,7 +9177,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031020609";
+const BUILD_ID = "20261031021135";
 let updToast = null;
 async function checkUpdate() {
   try {
