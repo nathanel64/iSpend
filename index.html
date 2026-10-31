@@ -8478,7 +8478,15 @@ function askLocal(q) {
   const intent = askIntent(qq); if (!intent) return null;
   const per = askPeriod(qq);
   let rest = qq; if (per && per.used) rest = rest.replace(per.used, " ");
-  return { intent, kind: askKind(qq), period: per, ...askSubject(rest.replace(/ב?-?\d+\s*(ימים|חודשים|שבועות)\s*אחרונים/, " ")) };
+  rest = rest.replace(/ב?-?\d+\s*(ימים|חודשים|שבועות)\s*אחרונים/, " ");
+  const Q = { intent, kind: askKind(qq), period: per, ...askSubject(rest) };
+  // sure = every word of the question was understood here, so there is no need to wait for the AI
+  const low = s => String(s || "").toLowerCase(), strip = w => /^[בלוהשמכ][֐-׿]{2,}/.test(w) ? w.slice(1) : w;
+  const left = rest.split(/\s+/).map(w => w.replace(/[?!.,״"']/g, "")).filter(w => w && !ASK_STOP.has(w) && !ASK_STOP.has(strip(w)));
+  const hay = tx.length ? tx.map(t => [t.merchant, t.rawMerchant, t.category].map(low).join(" | ")) : [];
+  const known = w => [w, strip(w)].some(x => x.length >= 2 && ((Q.cat && low(Q.cat).includes(low(x))) || (Q.cards && Q.cards.some(c => low(c).includes(low(x)))) || (Q.anyLabel && Q.anyLabel === x) || hay.some(h => h.includes(low(x)))));
+  Q.sure = left.every(known) && (!Q.words || !Q.words.length || hay.some(h => Q.words.every(w => h.includes(low(w)))));
+  return Q;
 }
 // the AI's query, checked: only names that exist here are kept
 function askFromAI(o) {
@@ -8575,15 +8583,20 @@ function askSuggest() {
   const sig = L.join("|"); if (box.dataset.sig === sig) return; box.dataset.sig = sig;
   box.innerHTML = L.map(q => `<button type="button">${esc(q)}</button>`).join("");
 }
+const askMemo = new Map();
 async function askAnswer(q) {
   const ans = $("askAns"); q = String(q || "").trim(); if (!q) { ans.hidden = true; return; }
-  let Q = null, how = "local";
-  // with the AI on the server, every question goes to it first (like a search engine); the local reader answers when it is not there or fails
-  if (window.ispendAsk) {
-    ans.hidden = false; ans.className = "ask-ans think"; ans.textContent = "חושב";
-    try { const r = await window.ispendAsk(q, { cats: CATS, cards: PAY, today: iso(today) }); Q = askFromAI(r); if (Q) how = "ai"; } catch (e) {}
+  let Q = askLocal(q);
+  // understood here: answer at once. Otherwise ask the AI (a question asked before is answered from memory)
+  if (!(Q && Q.sure) && window.ispendAsk) {
+    const key = q.replace(/\s+/g, " ");
+    let r = askMemo.get(key);
+    if (!r) {
+      ans.hidden = false; ans.className = "ask-ans think"; ans.textContent = "חושב";
+      try { r = await window.ispendAsk(q, { cats: CATS, cards: PAY, today: iso(today) }); if (r) askMemo.set(key, r); } catch (e) {}
+    }
+    Q = (r && askFromAI(r)) || Q;
   }
-  if (!Q) Q = askLocal(q);
   const out = Q && askRun(Q);
   ans.hidden = false; ans.className = "ask-ans";
   if (!out) { ans.innerHTML = `לא הבנתי את השאלה. נסו למשל: ״כמה הוצאתי על סופר מינואר?״, ״מתי הייתי לאחרונה בארומה?״ או ״באיזה חודש הוצאתי הכי הרבה השנה?״`; return; }
@@ -9278,7 +9291,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031024713";
+const BUILD_ID = "20261031025206";
 let updToast = null;
 async function checkUpdate() {
   try {
