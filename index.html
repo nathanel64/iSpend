@@ -3506,7 +3506,7 @@ function render() {
     const chip = $("projChip"), pm = $("projMark"), st = $("status");
     let show = false;
     if (isCurrent && incomeExpected > 0 && elapsed >= 3 && daysLeft > 0) {
-      const fixedLeft = Math.max(0, (fixedExpected || 0) - f.fixed), proj = f.fixed + fixedLeft + f.variable / elapsed * days + (spent - f.fixed - f.variable > 0 ? spent - f.fixed - f.variable : 0);
+      const proj = monthForecast(f, spent, elapsed, days, fixedExpected);
       const pf = Math.min(proj / incomeExpected, 1), bad = proj > incomeExpected;
       st.classList.toggle("proj-bad", bad);
       $("ringProj").style.strokeDashoffset = String(100 - Math.max(pf, fill) * 100);
@@ -3958,6 +3958,16 @@ function renderGoal(a, sal) {
 
 /* cumulative spending day by day, against the pace that ends the month at the savings goal */
 let burnArgs = null;
+/* where the month ends at this pace: what was spent, the fixed charges still to come, and the everyday spending
+   at its daily pace so far (one-off purchases over ₪1,500 do not set the pace). The gauge and the chart both use it. */
+function monthForecast(f, spent, elapsed, days, fixedExpected) {
+  const val = t => t.refund ? -t.amount : t.amount;
+  const fixedLeft = Math.max(0, (fixedExpected || 0) - (f.fixed || 0));
+  const everyday = f.spend.filter(t => !(t.inst || t.gen) && !FIXED.has(t.category) && t.date <= today);
+  const big = everyday.filter(t => !t.refund && t.amount > 1500).reduce((s, t) => s + t.amount, 0);
+  const pace = Math.max(0, (everyday.reduce((s, t) => s + val(t), 0) - big) / Math.max(elapsed, 1));
+  return spent + fixedLeft + pace * Math.max(0, days - elapsed);
+}
 function renderBurn(f, income, goal, isCurrent, days, elapsed, prev) {
   burnArgs = [f, income, goal, isCurrent, days, elapsed, prev];
   const box = $("burn"), card = $("burnCard");
@@ -3969,7 +3979,7 @@ function renderBurn(f, income, goal, isCurrent, days, elapsed, prev) {
   const now = cum(f.spend, f.start, days), last = daysBetween(prev.start, prev.end) + 1, before = cum(prev.spend, prev.start, last);
   const shown = isCurrent ? elapsed : days, spent = now[shown], allow = income - goal;
   const big = f.spend.filter(t => !t.refund && t.amount > 1500 && t.date <= today).reduce((s, t) => s + t.amount, 0);
-  const pace = isCurrent ? Math.max(0, (spent - big) / Math.max(elapsed, 1)) : 0, proj = isCurrent ? spent + pace * (days - elapsed) : spent;
+  const proj = isCurrent ? monthForecast(f, spent, elapsed, days, vibeCtx && vibeCtx.fixedExpected) : spent;
   const ymax = Math.max(proj, income, ...now.slice(0, shown + 1), ...before) * 1.08 || 1;
   const L = 6, R = 44, T = 10, B = 22;
   const X = d => L + (d - 1) / Math.max(days - 1, 1) * (W - L - R), Y = v => T + (1 - Math.max(0, v) / ymax) * (H - T - B);
@@ -9411,7 +9421,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031214933";
+const BUILD_ID = "20261031215728";
 let updToast = null;
 async function checkUpdate() {
   try {
