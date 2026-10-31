@@ -8396,7 +8396,7 @@ $("addDesc").addEventListener("input", () => {
    and returns the query. The numbers are always counted here, from your own data: nothing about your spending leaves the phone. */
 const ASK_STOP = new Set(["כמה", "מה", "מתי", "איפה", "איזה", "איזו", "באיזה", "באיזו", "על", "של", "את", "לי", "שלי", "אני", "היה", "הייתה", "היו", "זה", "סך", "בסך", "הכל", "הכול", "סה״כ", "סה\"כ", "בערך", "יש", "עד", "כבר", "רק", "גם", "פעם", "?",
   "הוצאתי", "הוצאנו", "יצא", "יצאו", "עלה", "עלו", "עולה", "שילמתי", "שילמנו", "קניתי", "הייתי", "קיבלתי", "נכנס", "נכנסו", "הרווחתי", "הוצאה", "הוצאות", "ההוצאה", "ההוצאות", "הכנסה", "הכנסות",
-  "הפעם", "האחרונה", "לאחרונה", "פעמים", "הכי", "הרבה", "יותר", "גדולה", "הגדולה", "יקרה", "היקרה", "קטנה", "חודש", "עסק", "קטגוריה", "ממוצע", "בממוצע", "לחודש", "בחודש", "נשאר", "נשארו", "לשים", "כסף", "הכסף"]);
+  "הפעם", "האחרונה", "לאחרונה", "פעמים", "הכי", "הרבה", "יותר", "גדולה", "הגדולה", "יקרה", "היקרה", "קטנה", "חודש", "עסק", "קטגוריה", "ממוצע", "בממוצע", "לחודש", "בחודש", "נשאר", "נשארו", "לשים", "כסף", "הכסף", "ליום", "ביום", "יומי", "לשבוע", "שבועי", "לקנייה", "לפעם", "לעסקה", "לתנועה", "לביקור", "אחוז", "אחוזים", "מהמשכורת", "מההכנסה", "מהכנסה", "לעומת", "מול", "השוואה", "תשווה", "השווה", "יום", "בשבוע", "מוציא", "מוציאה", "אוציא", "תחשב", "חשב", "תגיד", "תראה", "הראה"]);
 function askPeriod(q) {
   const [cy, cm] = curYM(), cur = period(cy, cm), d0 = x => new Date(x.getFullYear(), x.getMonth(), x.getDate());
   const P = (from, to, label, used) => ({ from: d0(from), to: d0(to), label, used });
@@ -8431,6 +8431,10 @@ function askPeriod(q) {
   return null;
 }
 function askIntent(q) {
+  if (/(לעומת|\sמול\s|השוו|השוואה|יותר או פחות|פחות או יותר)/.test(q)) return "compare";
+  if (/(אחוז|%)/.test(q)) return "pct_income";
+  if (/(באיזה|איזה) יום/.test(q) && !/(באיזה|איזה) יום (ב|של )?(החודש|חודש)/.test(q)) return "weekday";
+  if (/(ממוצע|בממוצע)/.test(q) && /(ליום|ביום|יומי|לשבוע|בשבוע|שבועי|לקני|לפעם|לעסקה|לתנועה|לביקור|לקבלה)/.test(q)) return "avg";
   if (/כמה פעמים/.test(q)) return "count";
   if (/מתי/.test(q)) return /(ראשונה|הראשון)/.test(q) ? "first" : "last";
   if (/(באיזה|איזה) חודש/.test(q)) return /(הכי מעט|פחות)/.test(q) ? "low_month" : "top_month";
@@ -8480,6 +8484,18 @@ function askLocal(q) {
   let rest = qq; if (per && per.used) rest = rest.replace(per.used, " ");
   rest = rest.replace(/ב?-?\d+\s*(ימים|חודשים|שבועות)\s*אחרונים/, " ");
   const Q = { intent, kind: askKind(qq), period: per, ...askSubject(rest) };
+  if (intent === "pct_income" || intent === "weekday") Q.kind = askKind(qq.replace(/(מהמשכורת|מההכנסה|מהכנסה|משכורת)/g, " "));
+  if (intent === "avg") Q.unit = /(ליום|ביום|יומי)/.test(qq) ? "day" : /(לשבוע|בשבוע|שבועי)/.test(qq) ? "week" : "tx";
+  if (intent === "compare") {
+    // the second period: what comes after "לעומת / מול", or the same span a step earlier
+    const parts = qq.split(/\s(?:לעומת|מול)\s|\sו?ל(?=(?:ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר|החודש|השנה|שנה|חודש))/);
+    const p1 = askPeriod(" " + parts[0] + " "), p2 = parts[1] ? askPeriod(" " + parts[1] + " ") : null;
+    const [cy, cm] = curYM(), cur = period(cy, cm), [py, pm] = prevYM(cy, cm), prv = period(py, pm);
+    Q.period = p1 || { from: cur.start, to: cur.end, label: "החודש" };
+    Q.period2 = p2 || (p1 && p1.label !== "החודש" ? { from: cur.start, to: cur.end, label: "החודש" } : { from: prv.start, to: prv.end, label: "בחודש שעבר" });
+    const rest2 = parts.map(x => { const a = askPeriod(" " + x + " "); return a && a.used ? x.replace(a.used, " ") : x; }).join(" ");
+    Object.assign(Q, askSubject(rest2.replace(/(לעומת|מול|השוואה|השוו|תשווה|יותר או פחות|פחות או יותר)/g, " ")));
+  }
   // sure = every word of the question was understood here, so there is no need to wait for the AI
   const low = s => String(s || "").toLowerCase(), strip = w => /^[בלוהשמכ][֐-׿]{2,}/.test(w) ? w.slice(1) : w;
   const left = rest.split(/\s+/).map(w => w.replace(/[?!.,״"']/g, "")).filter(w => w && !ASK_STOP.has(w) && !ASK_STOP.has(strip(w)));
@@ -8491,14 +8507,16 @@ function askLocal(q) {
 // the AI's query, checked: only names that exist here are kept
 function askFromAI(o) {
   if (!o || typeof o !== "object") return null;
-  const intents = ["sum", "count", "last", "first", "max", "min", "top_month", "low_month", "top_cat", "top_merchant", "avg_month", "left", "by_month", "list"];
+  const intents = ["sum", "count", "last", "first", "max", "min", "top_month", "low_month", "top_cat", "top_merchant", "avg_month", "left", "by_month", "list", "avg", "compare", "pct_income", "weekday"];
   if (!intents.includes(o.intent)) return null;
   const d = s => { const x = /^\d{4}-\d{2}-\d{2}$/.test(String(s || "")) ? parseDate(s) : null; return x && !isNaN(x) ? x : null; };
-  const from = d(o.from), to = d(o.to);
+  const from = d(o.from), to = d(o.to), from2 = d(o.from2), to2 = d(o.to2);
   const cats = (Array.isArray(o.categories) ? o.categories : [o.category]).filter(c => CATS.includes(c));
   return { intent: o.intent, kind: o.kind === "inc" ? "inc" : "exp", cat: cats.length === 1 ? cats[0] : undefined, cats: cats.length > 1 ? cats : undefined, card: PAY.includes(o.card) ? o.card : undefined,
     words: Array.isArray(o.words) ? o.words.map(w => String(w).slice(0, 30)).filter(Boolean).slice(0, 4) : undefined,
-    period: from && to ? { from, to, label: String(o.period_label || "").slice(0, 30) || (iso(from) === iso(to) ? dd(from) : dd(from) + "–" + dd(to)) } : null };
+    period: from && to ? { from, to, label: String(o.period_label || "").slice(0, 30) || (iso(from) === iso(to) ? dd(from) : dd(from) + "–" + dd(to)) } : null,
+    period2: from2 && to2 ? { from: from2, to: to2, label: String(o.period2_label || "").slice(0, 30) || dd(from2) + "–" + dd(to2) } : null,
+    unit: ["day", "week", "month", "tx"].includes(o.unit) ? o.unit : undefined };
 }
 function askRun(Q) {
   const low = s => String(s || "").toLowerCase();
@@ -8511,7 +8529,8 @@ function askRun(Q) {
   const kindOk = t => Q.kind === "inc" ? (t.income && !t.refund) : !t.income;
   // a question with no period: totals look at this month, "when" and "which month" look at everything
   const [cy, cm] = curYM(), cur = period(cy, cm);
-  const per = Q.period || (["sum", "count", "max", "min", "top_cat", "top_merchant", "left", "list"].includes(Q.intent) ? { from: cur.start, to: cur.end, label: "החודש" } : null);
+  if (Q.intent === "avg" && !Q.period) { const f = addDays(today, -89); Q.period = { from: new Date(f.getFullYear(), f.getMonth(), f.getDate()), to: today, label: "ב-3 החודשים האחרונים" }; }
+  const per = Q.period || (["sum", "count", "max", "min", "top_cat", "top_merchant", "left", "list", "pct_income", "compare"].includes(Q.intent) ? { from: cur.start, to: cur.end, label: "החודש" } : null);
   const inP = t => !per || (t.date >= per.from && t.date <= addDays(per.to, 1) - 1 && t.date <= today);
   // a question about spending looks at purchases (a refund or a friend paying back is not a visit)
   const all = tx.filter(t => kindOk(t) && subj(t) && !(Q.kind === "exp" && t.refund)), L = all.filter(inP);
@@ -8536,6 +8555,39 @@ function askRun(Q) {
       const src = per ? L : all; if (!src.length) return R(`לא מצאתי ${what} ${pl}.`, "", false);
       const t = src.slice().sort((a, b) => Q.intent === "last" ? b.date - a.date : a.date - b.date)[0], ago = Math.round((today - t.date) / 864e5);
       return R(`${Q.intent === "last" ? "הפעם האחרונה" : "הפעם הראשונה"} ${what}: <b>${dd(t.date)}</b>${ago > 0 && Q.intent === "last" ? ` (לפני ${ago === 1 ? "יום" : ago + " ימים"})` : ago === 0 ? " (היום)" : ""}, ${money(val(t))} ב${esc(t.merchant)}.`, (all.length === 1 ? "רק פעם אחת עד עכשיו." : `${all.length} פעמים בסך הכל.`));
+    }
+    case "avg": {
+      const s = L.reduce((a, t) => a + val(t), 0), to = per.to > today ? today : per.to;
+      const days = Math.max(1, Math.round((to - per.from) / 864e5) + 1), unit = Q.unit || "tx";
+      if (!L.length) return R(`לא מצאתי ${what} ${pl}.`, "", false);
+      const v = unit === "day" ? s / days : unit === "week" ? s / (days / 7) : unit === "month" ? s / Math.max(1, days / 30.44) : s / L.length;
+      const un = { day: "ליום", week: "לשבוע", month: "לחודש", tx: "לפעם" }[unit];
+      return R(`בממוצע ${verb} ${what} <b>${v < 100 ? fmt2(v) : fmt(Math.round(v))}</b> ${un}${pl ? ", " + pl : ""}.`, `סך הכול ${fmt(Math.round(s))} ב-${L.length} ${L.length === 1 ? "פעם" : "פעמים"}, לאורך ${days} ימים.`);
+    }
+    case "compare": {
+      const p2 = Q.period2; if (!p2) return null;
+      const in2 = t => t.date >= p2.from && t.date <= addDays(p2.to, 1) - 1 && t.date <= today;
+      const s1 = L.reduce((a, t) => a + val(t), 0), L2 = all.filter(in2), s2 = L2.reduce((a, t) => a + val(t), 0), d = s1 - s2;
+      const pc = s2 ? Math.round(Math.abs(d) / s2 * 100) : null;
+      const head = `${pl} ${verb} ${what} ${money(s1)}, ${p2.label} ${money(s2)}.`.replace(/\s+/g, " ").trim();
+      return R(head, Math.round(d) === 0 ? "בדיוק אותו סכום." : `${pl} ${fmt(Math.round(Math.abs(d)))} ${d > 0 ? "יותר" : "פחות"}${pc != null ? ` (${d > 0 ? "+" : "−"}${pc}%)` : ""}.`.trim(), false);
+    }
+    case "pct_income": {
+      const s = L.reduce((a, t) => a + val(t), 0);
+      let inc = 0; const to = per.to > today ? today : per.to;
+      for (let k = per.from.getFullYear() * 12 + per.from.getMonth(); k <= to.getFullYear() * 12 + to.getMonth(); k++) { const sl = salaryFor(Math.floor(k / 12), k % 12, false); if (sl && !sl.missing && sl.amount) inc += sl.amount; }
+      inc += tx.filter(t => t.income && !t.refund && t.date >= per.from && t.date <= to).reduce((a, t) => a + t.amount, 0);
+      if (!inc) return R(`${pl} ${verb} ${what} ${money(s)}. אין הכנסה רשומה לתקופה הזו, אז אין ממה לחשב אחוז.`, "", false);
+      return R(`${pl} ${what ? "הלכו " + what : "יצאו"} ${money(s)}, שהם <b>${Math.round(s / inc * 1000) / 10}%</b> מההכנסה.`.replace(/\s+/g, " "), `ההכנסה בתקופה: ${fmt(Math.round(inc))}.`);
+    }
+    case "weekday": {
+      const by = new Array(7).fill(0), days = new Array(7).fill(0), seen = new Set();
+      const src = per ? L : all; if (!src.length) return R(`לא מצאתי ${what}.`, "", false);
+      src.forEach(t => { by[t.date.getDay()] += val(t); });
+      const f0 = per ? per.from : src.reduce((m, t) => t.date < m ? t.date : m, today);
+      for (let d = new Date(f0); d <= (per && per.to < today ? per.to : today); d = addDays(d, 1)) { const k = iso(d); if (!seen.has(k)) { seen.add(k); days[d.getDay()]++; } }
+      const avg = by.map((v, i) => days[i] ? v / days[i] : 0), top = avg.indexOf(Math.max(...avg)), low = avg.indexOf(Math.min(...avg));
+      return R(`הכי הרבה ${Q.kind === "inc" ? "נכנס" : "יוצא"} ${what} ביום <b>${WEEKDAYS[top]}</b>: בממוצע ${money(avg[top])} ביום כזה.`, `הכי מעט ביום ${WEEKDAYS[low]} (${fmt(Math.round(avg[low]))}).`, false);
     }
     case "min": { const t = L.slice().sort((a, b) => a.amount - b.amount)[0]; if (!t) return R(`לא מצאתי ${what} ${pl}.`, "", false); return R(`${Q.kind === "inc" ? "ההכנסה" : "ההוצאה"} הכי קטנה ${what} ${pl}: ${money(t.amount)} ב${esc(t.merchant)}, ${dd(t.date)}.`, ""); }
     case "by_month": {
@@ -9291,7 +9343,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031025206";
+const BUILD_ID = "20261031025520";
 let updToast = null;
 async function checkUpdate() {
   try {
