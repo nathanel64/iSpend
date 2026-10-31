@@ -1814,7 +1814,7 @@ html.modal-open .to-top { opacity: 0; pointer-events: none; }
 .ask-in button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .ask-sug { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .ask-sug::-webkit-scrollbar { display: none; }
-.ask-sug:empty { display: none; }
+.ask-sug:empty, .ask-sug { display: none; }
 .ask-sug button { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-size: .8rem; min-height: 34px; white-space: nowrap; }
 .ask-ans { background: var(--surface); border-radius: 18px; padding: 12px 14px; border: 1px solid var(--line); font-size: .95rem; line-height: 1.55; animation: askIn .25s ease; }
 .ask-ans b { color: var(--brand-text); font-variant-numeric: tabular-nums; }
@@ -8410,6 +8410,21 @@ function askPeriod(q) {
   const n = q.match(/ב?-?(\d+|שלושה|שלוש|שני|שניים|שישה|שש)\s*(ה?ימים|ה?חודשים|ה?שבועות)\s*ה?אחרונים/);
   if (n) { const w = { שלושה: 3, שלוש: 3, שני: 2, שניים: 2, שישה: 6, שש: 6 }[n[1]] || +n[1], u = n[2].replace(/^ה/, ""), from = u === "ימים" ? addDays(today, -w + 1) : u === "שבועות" ? addDays(today, -7 * w + 1) : new Date(today.getFullYear(), today.getMonth() - w + 1, 1); return P(from, today, n[0].trim(), new RegExp(n[0].replace(/[-]/g, "\\-"))); }
   if (/(בחודשיים האחרונים)/.test(q)) return P(new Date(today.getFullYear(), today.getMonth() - 1, 1), today, "בחודשיים האחרונים", /בחודשיים האחרונים/);
+  // a range: "מפברואר 2026", "מאז מרץ", "בין ינואר למאי", "מינואר עד אפריל 2025"
+  const MR = "(ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)";
+  const mIdx = x => MONTHS.indexOf(x === "מרס" ? "מרץ" : x), yFor = (mi, yy) => { let y = yy ? +yy : today.getFullYear(); if (!yy && y * 12 + mi > cy * 12 + cm) y--; return y; };
+  const rf = q.match(new RegExp("(?:^|\\s)(?:מאז\\s+|מתחילת\\s+|החל\\s+מ-?|בין\\s+|מ-?)" + MR + "(?:\\s+(20\\d\\d))?"));
+  if (rf) {
+    const fi = mIdx(rf[1]), fy = yFor(fi, rf[2]), from = period(fy, fi).start;
+    const rt = q.slice(rf.index + rf[0].length).match(new RegExp("(?:\\s+עד\\s+(?:סוף\\s+)?|\\s+ו?ל-?|\\s*-\\s*)" + MR + "(?:\\s+(20\\d\\d))?"));
+    let to = today, tl = "עד היום";
+    if (rt) { const ti = mIdx(rt[1]); let ty = rt[2] ? +rt[2] : (rf[2] ? fy : yFor(ti)); if (ty * 12 + ti < fy * 12 + fi) ty++; to = period(ty, ti).end; if (to > today) to = today; tl = "עד " + MONTHS[ti] + (rt[2] || ty !== fy ? " " + ty : ""); }
+    const span = q.slice(rf.index, rf.index + rf[0].length + (rt ? rt.index + rt[0].length : 0)).trim(), used = new RegExp(span.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    return P(from, to, "מ" + MONTHS[fi] + (rf[2] || fy !== today.getFullYear() ? " " + fy : "") + " " + tl, used);
+  }
+  // a whole year: "ב-2025", "בשנת 2025"
+  const yr = q.match(/(?:^|\s)(?:בשנת\s+|ב-?|ל-?)?(20\d\d)(?=\s|$|\?)/);
+  if (yr && !new RegExp(MR + "\\s+" + yr[1]).test(q)) { const y = +yr[1], to = new Date(y, 11, 31); return P(new Date(y, 0, 1), to > today ? today : to, "ב-" + y, new RegExp(yr[0].trim())); }
   const m = q.match(/(?:^|\s)[בל]?(ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)(?:\s+(20\d\d))?/);
   if (m) { const mi = MONTHS.indexOf(m[1] === "מרס" ? "מרץ" : m[1]); let y = m[2] ? +m[2] : today.getFullYear(); if (!m[2] && y * 12 + mi > cy * 12 + cm) y--; const pp = period(y, mi); return P(pp.start, pp.end, "ב" + MONTHS[mi] + (m[2] || y !== today.getFullYear() ? " " + y : ""), new RegExp(m[0].trim())); }
   if (/(^|\s)החודש(\s|$|\?)/.test(q)) return P(cur.start, cur.end, "החודש", /החודש/);
@@ -8468,11 +8483,12 @@ function askLocal(q) {
 // the AI's query, checked: only names that exist here are kept
 function askFromAI(o) {
   if (!o || typeof o !== "object") return null;
-  const intents = ["sum", "count", "last", "first", "max", "top_month", "low_month", "top_cat", "top_merchant", "avg_month", "left"];
+  const intents = ["sum", "count", "last", "first", "max", "min", "top_month", "low_month", "top_cat", "top_merchant", "avg_month", "left", "by_month", "list"];
   if (!intents.includes(o.intent)) return null;
   const d = s => { const x = /^\d{4}-\d{2}-\d{2}$/.test(String(s || "")) ? parseDate(s) : null; return x && !isNaN(x) ? x : null; };
   const from = d(o.from), to = d(o.to);
-  return { intent: o.intent, kind: o.kind === "inc" ? "inc" : "exp", cat: CATS.includes(o.category) ? o.category : undefined, card: PAY.includes(o.card) ? o.card : undefined,
+  const cats = (Array.isArray(o.categories) ? o.categories : [o.category]).filter(c => CATS.includes(c));
+  return { intent: o.intent, kind: o.kind === "inc" ? "inc" : "exp", cat: cats.length === 1 ? cats[0] : undefined, cats: cats.length > 1 ? cats : undefined, card: PAY.includes(o.card) ? o.card : undefined,
     words: Array.isArray(o.words) ? o.words.map(w => String(w).slice(0, 30)).filter(Boolean).slice(0, 4) : undefined,
     period: from && to ? { from, to, label: String(o.period_label || "").slice(0, 30) || (iso(from) === iso(to) ? dd(from) : dd(from) + "–" + dd(to)) } : null };
 }
@@ -8480,14 +8496,14 @@ function askRun(Q) {
   const low = s => String(s || "").toLowerCase();
   const val = t => t.refund ? -t.amount : t.amount;
   if (Q.card && !Q.cards) Q.cards = [Q.card];
-  const what = [Q.cat ? `על ${Q.cat}` : Q.words && Q.words.length ? `ב״${Q.words.join(" ")}״` : Q.any ? `על ${Q.anyLabel}` : "", Q.cards ? `ב${Q.cardLabel || Q.cards[0]}` : ""].filter(Boolean).join(" ");
+  const what = [Q.cats ? `על ${Q.cats.join(", ")}` : Q.cat ? `על ${Q.cat}` : Q.words && Q.words.length ? `ב״${Q.words.join(" ")}״` : Q.any ? `על ${Q.anyLabel}` : "", Q.cards ? `ב${Q.cardLabel || Q.cards[0]}` : ""].filter(Boolean).join(" ");
   const hayOf = t => [t.merchant, t.rawMerchant, t.category].map(low).join(" | ");
-  const subj = t => (!Q.cat || t.category === Q.cat) && (!Q.cards || Q.cards.includes(t.account) || Q.cards.includes(accOf(t)))
+  const subj = t => (!Q.cat || t.category === Q.cat) && (!Q.cats || Q.cats.includes(t.category)) && (!Q.cards || Q.cards.includes(t.account) || Q.cards.includes(accOf(t)))
     && (!Q.words || !Q.words.length || Q.words.every(w => hayOf(t).includes(low(w)))) && (!Q.any || Q.any.some(w => hayOf(t).includes(low(w))));
   const kindOk = t => Q.kind === "inc" ? (t.income && !t.refund) : !t.income;
   // a question with no period: totals look at this month, "when" and "which month" look at everything
   const [cy, cm] = curYM(), cur = period(cy, cm);
-  const per = Q.period || (["sum", "count", "max", "top_cat", "top_merchant", "left"].includes(Q.intent) ? { from: cur.start, to: cur.end, label: "החודש" } : null);
+  const per = Q.period || (["sum", "count", "max", "min", "top_cat", "top_merchant", "left", "list"].includes(Q.intent) ? { from: cur.start, to: cur.end, label: "החודש" } : null);
   const inP = t => !per || (t.date >= per.from && t.date <= addDays(per.to, 1) - 1 && t.date <= today);
   // a question about spending looks at purchases (a refund or a friend paying back is not a visit)
   const all = tx.filter(t => kindOk(t) && subj(t) && !(Q.kind === "exp" && t.refund)), L = all.filter(inP);
@@ -8504,13 +8520,25 @@ function askRun(Q) {
       if (!L.length) return R(`${pl ? pl[0].toUpperCase() + pl.slice(1) + " " : ""}לא נרשמו ${Q.kind === "inc" ? "הכנסות" : "הוצאות"} ${what}${Q.kind === "inc" ? "" : " 🌿"}`.replace(/\s+/g, " ").trim(), "", false);
       let cmp = "";
       if (per && per.label === "החודש") { const [py, pm] = prevYM(cy, cm), pp = period(py, pm), k = Math.round((today - cur.start) / 864e5); const ps = all.filter(t => t.date >= pp.start && t.date <= addDays(pp.start, k)).reduce((a, t) => a + val(t), 0); if (ps) cmp = Math.round(s) === Math.round(ps) ? `בדיוק כמו באותה נקודה ב${MONTHS[pm]}.` : `באותה נקודה ב${MONTHS[pm]}: ${fmt(Math.round(ps))} (${s >= ps ? "▲" : "▼"} ${fmt(Math.abs(Math.round(s - ps)))})`; }
-      return R(`${pl ? pl[0].toUpperCase() + pl.slice(1) + " " : ""}${verb} ${what} ${money(s)}, ${L.length === 1 ? "בפעם אחת" : `ב-${L.length} פעמים`}.`, cmp || (L.length > 1 ? `בממוצע ${fmt(Math.round(s / L.length))} לפעם.` : ""));
+      const months = per ? Math.max(1, (per.to.getFullYear() - per.from.getFullYear()) * 12 + per.to.getMonth() - per.from.getMonth() + 1) : 1;
+      return R(`${pl ? pl[0].toUpperCase() + pl.slice(1) + " " : ""}${verb} ${what} ${money(s)}, ${L.length === 1 ? "בפעם אחת" : `ב-${L.length} פעמים`}.`, cmp || (months > 1 ? `בממוצע ${fmt(Math.round(s / months))} לחודש, לאורך ${months} חודשים.` : L.length > 1 ? `בממוצע ${fmt(Math.round(s / L.length))} לפעם.` : ""));
     }
     case "count": { const s = L.reduce((a, t) => a + val(t), 0); return R(`${pl ? pl + " " : ""}${L.length ? (L.length === 1 ? `<b>פעם אחת</b> ${what}` : `<b>${L.length}</b> פעמים ${what}`) : `אף פעם ${what}`}${L.length ? ", " + `ביחד ${money(s)}` : ""}.`, ""); }
     case "last": case "first": {
       const src = per ? L : all; if (!src.length) return R(`לא מצאתי ${what} ${pl}.`, "", false);
       const t = src.slice().sort((a, b) => Q.intent === "last" ? b.date - a.date : a.date - b.date)[0], ago = Math.round((today - t.date) / 864e5);
       return R(`${Q.intent === "last" ? "הפעם האחרונה" : "הפעם הראשונה"} ${what}: <b>${dd(t.date)}</b>${ago > 0 && Q.intent === "last" ? ` (לפני ${ago === 1 ? "יום" : ago + " ימים"})` : ago === 0 ? " (היום)" : ""}, ${money(val(t))} ב${esc(t.merchant)}.`, (all.length === 1 ? "רק פעם אחת עד עכשיו." : `${all.length} פעמים בסך הכל.`));
+    }
+    case "min": { const t = L.slice().sort((a, b) => a.amount - b.amount)[0]; if (!t) return R(`לא מצאתי ${what} ${pl}.`, "", false); return R(`${Q.kind === "inc" ? "ההכנסה" : "ההוצאה"} הכי קטנה ${what} ${pl}: ${money(t.amount)} ב${esc(t.merchant)}, ${dd(t.date)}.`, ""); }
+    case "by_month": {
+      const by = new Map(); (per ? L : all).forEach(t => { const k = t.date.getFullYear() * 12 + t.date.getMonth(); by.set(k, (by.get(k) || 0) + val(t)); });
+      const ent = [...by.entries()].sort((a, b) => b[0] - a[0]).slice(0, 12); if (!ent.length) return R(`לא מצאתי ${what} ${pl}.`, "", false);
+      return R(`${verb} ${what} ${pl} לפי חודשים:`, ent.map(([k, v]) => `${MONTHS[k % 12]} ${Math.floor(k / 12)}: <b>${fmt(Math.round(v))}</b>`).join("<br>"));
+    }
+    case "list": {
+      if (!L.length) return R(`לא מצאתי ${what} ${pl}.`, "", false);
+      const top = L.slice().sort((a, b) => b.date - a.date).slice(0, 6);
+      return R(`${L.length === 1 ? "תנועה אחת" : L.length + " תנועות"} ${what} ${pl}, ביחד ${money(L.reduce((a, t) => a + val(t), 0))}:`, top.map(t => `${dd(t.date)} · ${esc(t.merchant)} · <b>${fmt2(t.amount)}</b>`).join("<br>") + (L.length > 6 ? "<br>…" : ""));
     }
     case "max": { const t = L.slice().sort((a, b) => b.amount - a.amount)[0]; return R(`${Q.kind === "inc" ? "ההכנסה" : "ההוצאה"} הכי גדולה ${what} ${pl}: ${money(t.amount)} ב${esc(t.merchant)}, ${dd(t.date)}.`, ""); }
     case "top_month": case "low_month": {
@@ -8549,18 +8577,16 @@ function askSuggest() {
 }
 async function askAnswer(q) {
   const ans = $("askAns"); q = String(q || "").trim(); if (!q) { ans.hidden = true; return; }
-  let Q = askLocal(q), how = "local";
-  const low = s => String(s || "").toLowerCase();
-  const nothing = Q && Q.words && Q.words.length && !tx.some(t => Q.words.every(w => [t.merchant, t.rawMerchant, t.category].map(low).join(" | ").includes(low(w))));
-  if (!Q || nothing || (!Q.cat && !Q.cards && !Q.any && !(Q.words && Q.words.length) && !["top_cat", "top_merchant", "top_month", "low_month", "left", "sum", "count", "max", "avg_month"].includes(Q.intent))) {
-    if (window.ispendAsk) {
-      ans.hidden = false; ans.className = "ask-ans think"; ans.textContent = "חושב";
-      try { const r = await window.ispendAsk(q, { cats: CATS, cards: PAY, today: iso(today) }); Q = askFromAI(r) || Q; how = "ai"; } catch (e) {}
-    }
+  let Q = null, how = "local";
+  // with the AI on the server, every question goes to it first (like a search engine); the local reader answers when it is not there or fails
+  if (window.ispendAsk) {
+    ans.hidden = false; ans.className = "ask-ans think"; ans.textContent = "חושב";
+    try { const r = await window.ispendAsk(q, { cats: CATS, cards: PAY, today: iso(today) }); Q = askFromAI(r); if (Q) how = "ai"; } catch (e) {}
   }
+  if (!Q) Q = askLocal(q);
   const out = Q && askRun(Q);
   ans.hidden = false; ans.className = "ask-ans";
-  if (!out) { ans.innerHTML = `לא הבנתי את השאלה. נסו למשל: ״כמה הוצאתי על סופר החודש?״, ״מתי הייתי לאחרונה בארומה?״ או ״באיזה חודש הוצאתי הכי הרבה?״`; return; }
+  if (!out) { ans.innerHTML = `לא הבנתי את השאלה. נסו למשל: ״כמה הוצאתי על סופר מינואר?״, ״מתי הייתי לאחרונה בארומה?״ או ״באיזה חודש הוצאתי הכי הרבה השנה?״`; return; }
   ans.innerHTML = `${out.text}${out.sub ? `<span class="ask-sub">${out.sub}</span>` : ""}<div class="ask-acts">${out.search ? `<button type="button" data-ask-show>הצגת התנועות</button>` : ""}<button type="button" class="ghost" data-ask-clear>סגירה</button></div>`;
   ans.dataset.search = out.search || "";
 }
@@ -9252,7 +9278,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031023925";
+const BUILD_ID = "20261031024713";
 let updToast = null;
 async function checkUpdate() {
   try {

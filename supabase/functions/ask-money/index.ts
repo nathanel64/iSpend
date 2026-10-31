@@ -9,7 +9,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
-const DAILY_CAP = 60;
+const DAILY_CAP = 120;
 const clean = (v: unknown, max = 40) => String(v ?? "").replace(/[<>"'`\\\n\r]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
 async function ask(prompt: string): Promise<string> {
@@ -50,20 +50,23 @@ Deno.serve(async req => {
   const { data: use } = await sb.from("ask_usage").select("n").eq("user_id", u.user.id).eq("day", day).maybeSingle();
   if ((use?.n || 0) >= DAILY_CAP) return json({ error: "daily limit" }, 429);
   await sb.from("ask_usage").upsert({ user_id: u.user.id, day, n: (use?.n || 0) + 1 });
-  const prompt = `אתה מתרגם שאלה בעברית על הוצאות והכנסות לשאילתה. היום ${today}. השבוע מתחיל ביום ראשון.
+  const prompt = `אתה מנוע חיפוש לכסף: מתרגם שאלה בעברית על הוצאות והכנסות לשאילתה. היום ${today}. השבוע מתחיל ביום ראשון.
 קטגוריות קיימות: ${cats.map(c => `"${c}"`).join(", ")}.
 אמצעי תשלום קיימים: ${cards.map(c => `"${c}"`).join(", ")}.
 החזר JSON בלבד בצורה:
-{"intent":"sum|count|last|first|max|top_month|low_month|top_cat|top_merchant|avg_month|left","kind":"exp|inc","category":"שם קטגוריה מהרשימה או ריק","card":"אמצעי תשלום מהרשימה או ריק","words":["מילים לחיפוש בשם העסק, בלי מילות שאלה"],"from":"YYYY-MM-DD או ריק","to":"YYYY-MM-DD או ריק","period_label":"תיאור קצר של התקופה בעברית, למשל החודש / בספטמבר / השנה"}
-sum = כמה יצא/נכנס בסך הכל. count = כמה פעמים. last/first = מתי הפעם האחרונה/הראשונה. max = ההוצאה הכי גדולה. top_month/low_month = באיזה חודש הכי הרבה/מעט. top_cat = על מה (איזו קטגוריה) הכי הרבה. top_merchant = באיזה עסק הכי הרבה. avg_month = ממוצע לחודש. left = כמה נשאר החודש.
-אם אין תקופה בשאלה, השאר from ו-to ריקים. "החודש" = מהיום הראשון של החודש הנוכחי עד היום.
+{"intent":"sum|count|last|first|max|min|top_month|low_month|top_cat|top_merchant|avg_month|left|by_month|list","kind":"exp|inc","categories":["שמות קטגוריות מהרשימה בלבד, אחת או יותר, או ריק"],"card":"אמצעי תשלום מהרשימה או ריק","words":["מילים לחיפוש בשם העסק, בלי מילות שאלה ובלי שם קטגוריה"],"from":"YYYY-MM-DD או ריק","to":"YYYY-MM-DD או ריק","period_label":"תיאור קצר של התקופה בעברית"}
+sum = כמה יצא/נכנס בסך הכל. count = כמה פעמים. last/first = מתי הפעם האחרונה/הראשונה. max/min = ההוצאה הכי גדולה/קטנה. top_month/low_month = באיזה חודש הכי הרבה/מעט. top_cat = על מה (איזו קטגוריה) הכי הרבה. top_merchant = באיזה עסק הכי הרבה. avg_month = ממוצע לחודש. left = כמה נשאר החודש. by_month = פירוט לפי חודשים. list = הצג/תראה לי את התנועות.
+התאם מילים לקטגוריה הקרובה ביותר ברשימה, גם כשהניסוח שונה (למשל "קניות לבית" -> הקטגוריה שהכי מתאימה לקניות לבית; "אוכל בחוץ" -> מסעדות/אוכל ושתיה). אם מילה היא שם של עסק, שים אותה ב-words ולא בקטגוריה.
+תקופות: "מפברואר 2026" = from 2026-02-01, to היום. "מאז מרץ" = מתחילת מרץ האחרון עד היום. "בין ינואר למאי" = 1 בינואר עד סוף מאי. "בפברואר" = כל פברואר. "ב-2025" = כל השנה. "השנה" = מ-1 בינואר השנה עד היום. "החודש" = מהיום הראשון של החודש הנוכחי עד היום. חודש בלי שנה = המופע האחרון שלו שלא בעתיד.
+אם אין תקופה בשאלה, השאר from ו-to ריקים. period_label תמיד בצורה שמתאימה להתחלת משפט, למשל "מפברואר 2026 עד היום", "בספטמבר", "השנה".
 השאלה: ${q}`;
   try {
     const text = await ask(prompt);
     const m = text.match(/\{[\s\S]*\}/); if (!m) return json({ error: "no answer" }, 502);
     const o = JSON.parse(m[0]);
     const date = (s: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || "")) ? String(s) : "";
-    return json({ query: { intent: clean(o.intent, 20), kind: o.kind === "inc" ? "inc" : "exp", category: cats.includes(clean(o.category)) ? clean(o.category) : "", card: cards.includes(clean(o.card)) ? clean(o.card) : "",
+    const catList = (Array.isArray(o.categories) ? o.categories : [o.category]).map((c: unknown) => clean(c)).filter((c: string) => cats.includes(c)).slice(0, 6);
+    return json({ query: { intent: clean(o.intent, 20), kind: o.kind === "inc" ? "inc" : "exp", category: catList[0] || "", categories: catList, card: cards.includes(clean(o.card)) ? clean(o.card) : "",
       words: (Array.isArray(o.words) ? o.words : []).map((w: unknown) => clean(w, 30)).filter(Boolean).slice(0, 4), from: date(o.from), to: date(o.to), period_label: clean(o.period_label, 30) } });
   } catch (e) { console.error("ask failed", e); return json({ error: /no AI key/.test(String((e as Error)?.message)) ? "no AI key" : "ai failed" }, 502); }
 });
