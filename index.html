@@ -1509,8 +1509,8 @@ body.arrange .arr-open { display: none !important; }
 .card h2 { font-size: 1.1rem; }
 /* the gauge already says what came in and went out: no second row for it, and the line under the gauge reads stronger */
 #slipOpen { display: none; }
-.g-under .sub { font-size: .95rem; color: var(--ink); font-weight: 500; }
-.g-under .sub b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.g-under .sub { font-size: .88rem; color: color-mix(in srgb, var(--ink) 70%, var(--muted)); font-weight: 400; }
+.g-under .sub b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -9181,7 +9181,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031022041";
+const BUILD_ID = "20261031022400";
 let updToast = null;
 async function checkUpdate() {
   try {
