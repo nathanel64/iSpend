@@ -1507,6 +1507,10 @@ body.arrange .arr-open { display: none !important; }
 .wrap { gap: 22px; }
 .card { padding: 20px; gap: 14px; }
 .card h2 { font-size: 1.1rem; }
+/* the gauge already says what came in and went out: no second row for it, and the line under the gauge reads stronger */
+#slipOpen { display: none; }
+.g-under .sub { font-size: .95rem; color: var(--ink); font-weight: 500; }
+.g-under .sub b { font-weight: 700; font-variant-numeric: tabular-nums; }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -3429,7 +3433,7 @@ function render() {
     if (stage === "ok") {
       $("statusLabel").textContent = "יתרה מההכנסה החודשית";
       countTo($("statusBig"), incomeExpected - spent, fmt);
-      $("statusSub").textContent = "הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected) + (goal ? " · יעד החיסכון: " + fmt(goal) : "");
+      $("statusSub").innerHTML = "הוצאת <b>" + fmt(spent) + "</b> מתוך <b>" + fmt(incomeExpected) + "</b>" + (goal ? " · יעד החיסכון: <b>" + fmt(goal) + "</b>" : "");
       if (goal && isCurrent) { plus.hidden = false; plus.textContent = "אפשר להוציא עוד " + fmt(allow - spent) + " ולעמוד ביעד"; }
       pill.textContent = isCurrent ? daysTxt : goal ? "עמדת ביעד וחסכת " + fmt(incomeExpected - spent) : "סיימת את החודש בפלוס";
     } else if (stage === "goal") {
@@ -3438,12 +3442,12 @@ function render() {
       countTo($("statusBig"), incomeExpected - spent, fmt);
       plus.hidden = false;
       plus.textContent = "חרגת מיעד החיסכון ב-" + fmt(spent - allow);
-      $("statusSub").textContent = "היעד היה לחסוך " + fmt(goal) + " · הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected);
+      $("statusSub").innerHTML = "היעד היה לחסוך <b>" + fmt(goal) + "</b> · הוצאת <b>" + fmt(spent) + "</b> מתוך <b>" + fmt(incomeExpected) + "</b>";
       pill.textContent = isCurrent ? daysTxt : "החודש לא עמדת ביעד";
     } else {
       $("statusLabel").textContent = "חרגת מההכנסה החודשית ב-";
       countTo($("statusBig"), spent - incomeExpected, fmt);
-      $("statusSub").textContent = "הוצאת " + fmt(spent) + " מתוך " + fmt(incomeExpected) + (goal ? " · היעד היה לחסוך " + fmt(goal) : "");
+      $("statusSub").innerHTML = "הוצאת <b>" + fmt(spent) + "</b> מתוך <b>" + fmt(incomeExpected) + "</b>" + (goal ? " · היעד היה לחסוך <b>" + fmt(goal) + "</b>" : "");
       pill.textContent = isCurrent ? daysTxt : "סיימת את החודש במינוס";
     }
   }
@@ -9177,7 +9181,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031021135";
+const BUILD_ID = "20261031022041";
 let updToast = null;
 async function checkUpdate() {
   try {
