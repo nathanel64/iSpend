@@ -2180,6 +2180,7 @@ function makeSupaAdapter(uid) {
     txRows.forEach(r => { const d = String((r.vals || [])[0] || ""); const m = d.match(/^(\d{4})-(\d{2})/); if (m) FIRST_MONTH = Math.min(FIRST_MONTH, +m[1] * 12 + +m[2] - 1); });
     return txRows;
   };
+  let txLoading = null; // three reads of the same table at once share one request
   const loadSettings = async () => {
     const { data, error } = await sb.from("profiles").select("settings").eq("id", uid).single(); if (error) fail(error);
     return Array.isArray(data.settings) ? data.settings : [];
@@ -2198,7 +2199,7 @@ function makeSupaAdapter(uid) {
     }
     const p = parse(input.range);
     if (tool === "get_values") {
-      if (p.tab === "עסקאות") { const rows = await loadTx(); return { payload: { values: trim(rows.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r.vals || []).slice(p.c0, p.c1 + 1))) } }; }
+      if (p.tab === "עסקאות") { const rows = await (txLoading || (txLoading = loadTx().finally(() => { txLoading = null; }))); return { payload: { values: trim(rows.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r.vals || []).slice(p.c0, p.c1 + 1))) } }; }
       if (p.tab === "הגדרות") { const g = await loadSettings(); return { payload: { values: trim(g.slice(p.r0 - 2, p.r1 === Infinity ? undefined : p.r1 - 1).map(r => (r || []).slice(p.c0, p.c1 + 1))) } }; }
       return { payload: { values: [] } };
     }
@@ -5217,19 +5218,19 @@ let mcp = null;
 const SOURCES = { settings: R_SETTINGS, manual: R_MANUAL, apple: R_APPLE, bank: R_BANK };
 async function refresh() {
   if (!mcp) return;
-  for (const [key, range] of Object.entries(SOURCES)) {
+  // everything at once, not one after another; older years come in the background
+  await Promise.all(Object.entries(SOURCES).map(async ([key, range]) => {
     try {
       const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: SHEET_ID, range }, { cache: { refresh: true } });
       onData(key, res.payload, res);
     } catch (err) { handleError(key, err); }
-  }
-  for (const id of HISTORY) {
+  }));
+  if (HISTORY.length) Promise.all(HISTORY.map(async id => {
     try {
       const res = await mcp.callTool(SERVER, "get_values", { spreadsheetId: id, range: R_MANUAL }, { cache: { refresh: true } });
       data.hist[id] = (res.payload && res.payload.values) || [];
     } catch (err) {}
-  }
-  afterData();
+  })).then(() => scheduleBuild());
 }
 
 function goalFor(y, m) {
@@ -9181,7 +9182,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031022400";
+const BUILD_ID = "20261031022546";
 let updToast = null;
 async function checkUpdate() {
   try {
