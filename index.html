@@ -4468,7 +4468,9 @@ function renderWrappedPill(isCurrent) {
   const pill = $("wrappedPill");
   // in the first week of a month, offer last month's summary; otherwise the month on screen
   let y = view.y, m = view.m, label;
-  if (isCurrent && today.getDate() <= 7) { [y, m] = prevYM(view.y, view.m); label = "חדש: הסיכום של " + MONTHS[m]; }
+  // counted from the first day of this month's period (the billing day), not from the 1st of the calendar month
+  const intoMonth = Math.round((today - period(view.y, view.m).start) / 864e5);
+  if (isCurrent && intoMonth < 7) { [y, m] = prevYM(view.y, view.m); label = "חדש: הסיכום של " + MONTHS[m]; }
   else label = isCurrent ? "הסיכום של " + MONTHS[m] + " עד עכשיו" : "הסיכום של " + MONTHS[m];
   if (y * 12 + m < FIRST_MONTH || !wrappedFor(y, m)) { pill.hidden = true; return; }
   pill.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.2 6.8H21l-5.5 4 2.1 6.7L12 15.4l-5.6 4.1 2.1-6.7L3 8.8h6.8z"/></svg>${label}`;
@@ -9417,7 +9419,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101000656";
+const BUILD_ID = "20261101001434";
 let updToast = null;
 async function checkUpdate() {
   try {
