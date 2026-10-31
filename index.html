@@ -755,7 +755,17 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .ns.pad-goal #salGoalRange, .ns.pad-goal #salGoalChips, .ns.pad-goal #nsPreview, .ns.pad-goal #nsBack, .ns.pad-goal #salPopSave, .ns.pad-goal .sal-later { display: none !important; }
 .ns.pad-goal .ns .sal-amount.small, .ns.pad-goal .sal-amount.small { border-color: #f2b63c; }
 .ns.st-a .sal-amount:not(.small) { border-color: var(--brand); }
-@media (max-height: 640px) { .ns.np-mode .ns-gauge, .ns.np-mode .ns-kicker { display: none; } .ns.np-mode .np-keys button { height: 42px; } }
+@media (max-height: 700px) { .ns.np-mode .ns-gauge, .ns.np-mode .ns-kicker { display: none; } .ns.np-mode .np-keys button { height: 42px; } }
+.ns-day { display: flex; flex-direction: column; gap: 6px; }
+.ns-day[hidden] { display: none; }
+.ns-dot.day { background: #2a9d8f; }
+.ns-day-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ns-day-row button { border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 12px; min-width: 40px; padding: 5px 9px; font: inherit; font-weight: 700; font-size: .92rem; cursor: pointer; }
+.ns-day-row button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.ns-day-row select { border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 12px; padding: 7px 8px; font: inherit; font-size: 16px; }
+.ns-day-row select.on { border-color: var(--brand); color: var(--brand); font-weight: 700; }
+.ns-day-note { margin: 0; font-size: .76rem; color: var(--muted); }
+.ns.st-a #nsDay, .ns.pad-goal #nsDay { display: none !important; }
 .sal-later { border: 0; background: none; color: var(--muted); font-size: .85rem; padding: 4px; }
 
 /* ===== redesign: calm & clear ===== */
@@ -2711,6 +2721,11 @@ function makeSupaAdapter(uid) {
         <div class="np-keys"><button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k="00">00</button><button type="button" data-k="0">0</button><button type="button" data-k="del" aria-label="מחיקת ספרה">⌫</button></div>
         <button type="button" class="np-done" id="salPadDone">המשך ›</button>
       </div>
+      <div class="ns-day" id="nsDay" hidden>
+        <div class="ns-lbl"><span class="ns-dot day"></span>באיזה יום בחודש יורד החיוב באשראי?</div>
+        <div class="ns-day-row" id="nsDayChips" role="group" aria-label="יום החיוב"></div>
+        <p class="ns-day-note">החודש באתר יתחיל ביום הזה. אפשר לשנות בהגדרות.</p>
+      </div>
       <div class="ns-preview" id="nsPreview" hidden></div>
       <p class="form-msg" id="salPopMsg"></p>
       <div class="ns-back" id="nsBack" hidden>
@@ -3535,6 +3550,9 @@ function askSalary() {
   if (last != null) { $("salSame").innerHTML = `כמו ב${MONTHS[pm]} · ${fmt(last)}`; $("salSame").dataset.v = last; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); $("salAmount").focus(); }; }
   $("salAmount").value = ""; fitSal(); $("salPopMsg").textContent = "";
   $("salPopSave").disabled = false; $("salPopSave").textContent = "שומרים ומתחילים"; nsUpdate(true);
+  { // a new account: which day the card is charged (the month starts on it)
+    const nd = $("nsDay"); nd.hidden = !!tx.length; salDayPick = null; if (!nd.hidden) drawSalDay();
+  }
   { // a new account: offer to open earlier months as well
     const nb = $("nsBack"), fresh = !tx.length; nb.hidden = !fresh; $("nsBackChips").hidden = true;
     if (fresh) {
@@ -3545,6 +3563,21 @@ function askSalary() {
   $("salBg").hidden = false;
   setTimeout(() => $("salAmount").focus(), 50);
 }
+let salDayPick = null;
+function drawSalDay() {
+  const cur = salDayPick || startDay, quick = [1, 2, 10, 15];
+  $("nsDayChips").innerHTML = quick.map(d => `<button type="button" data-day="${d}" aria-pressed="${cur === d}">${d}</button>`).join("") +
+    `<select id="nsDaySel" aria-label="יום אחר" class="${quick.includes(cur) ? "" : "on"}"><option value="">יום אחר</option>${Array.from({ length: 28 }, (_, i) => i + 1).map(d => `<option value="${d}"${!quick.includes(cur) && cur === d ? " selected" : ""}>${d}</option>`).join("")}</select>`;
+}
+// picking a day moves the month shown in the window right away (a month that starts on the 10th, say)
+function pickSalDay(d) {
+  if (!(d >= 1 && d <= 28)) return; salDayPick = d; useStartDay(d);
+  let y = now.getFullYear(), m = now.getMonth(); if (now.getDate() < startDay) { m--; if (m < 0) { m = 11; y--; } }
+  salKey = mkey(y, m); $("salKicker").textContent = "חודש חדש · " + MONTHS[m] + " " + y; $("salTitle").textContent = MONTHS[m] + " מתחיל";
+  drawSalDay(); try { nsUpdate(true); } catch (e) {}
+}
+$("nsDayChips").addEventListener("click", e => { const b = e.target.closest("[data-day]"); if (b) pickSalDay(+b.dataset.day); });
+$("nsDayChips").addEventListener("change", e => { if (e.target.id === "nsDaySel" && e.target.value) pickSalDay(+e.target.value); });
 function salGoalChips(last, pm) {
   $("salGoalChips").innerHTML = last != null ? `<button type="button" data-g="${last}">כמו ב${MONTHS[pm]} · ${fmt(last)}</button>` : "";
   $("salGoalChips").dataset.last = last == null ? "" : last; $("salGoalChips").dataset.pm = pm;
@@ -3596,6 +3629,7 @@ $("salForm").addEventListener("submit", async e => {
   const gRaw = $("salGoal").value.replace(/[^\d.]/g, ""), gv = gRaw === "" ? null : Math.round(parseFloat(gRaw));
   // the window closes at once; both amounts save behind it
   const jobs = [writeSalaries({ ...salaries, [salKey]: v })];
+  if (salDayPick) { afterData(); jobs.push(writeRange("'הגדרות'!V2", [[salDayPick]])); salDayPick = null; }
   if (gv != null && gv !== goals[salKey]) { const ym = salKey.split("-"); const keep = view; view = { y: +ym[0], m: +ym[1] - 1 }; try { jobs.push(saveGoal(gv)); } finally { view = keep; render(); } }
   closeSal(); try { renderSal(); } catch (err) {}
   Promise.all(jobs).catch(err => { toast("המשכורת לא נשמרה. " + writeError(err), 5000); salAsked = false; });
@@ -9035,7 +9069,8 @@ const TOUR = [
   { t: "#tabYear", h: "שנתי", b: "כל השנה בגרף אחד, כדי לראות מגמות. לחיצה על חודש פותחת את הסיכום שלו." },
   { t: "#tabAdmin", h: "הגדרות", b: "כאן מתאימים את האתר אליכם, בקבוצות קצרות. בואו נציץ." },
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
-  { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "משכורת, יום החיוב בכרטיס והחודשים באתר. ככה החישובים מדויקים לכם." },
+  { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "המשכורת של כל חודש, יעד החיסכון והחודשים שמופיעים באתר." },
+  { t: '#setMenu [data-go="sal"]', view: "admin", h: "יום החיוב החודשי", b: "היום בחודש שבו יורד החיוב באשראי. החודש באתר מתחיל ממנו, כך שכל הוצאה נספרת בחודש של החיוב שלה. משנים ב״משכורות ומועד החיוב״." },
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -9344,7 +9379,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261031025927";
+const BUILD_ID = "20261031033259";
 let updToast = null;
 async function checkUpdate() {
   try {
