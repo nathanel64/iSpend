@@ -8977,17 +8977,21 @@ function maybeWeekLink() {
     weekTried = true; openRecap(w.r);
   }, 900);
 }
-// a tap on "נרשם ב-iSpend" (./?tx) opens the newest payment, to check its category
-const wantsTx = (() => { try { return new URLSearchParams(location.search).has("tx"); } catch (e) { return false; } })();
+// a tap on "נרשם ב-iSpend" (./?tx=ap-…) opens that payment straight in the edit window
+const wantsTx = (() => { try { const q = new URLSearchParams(location.search); return q.has("tx") ? (q.get("tx") || "*") : null; } catch (e) { return null; } })();
 let txLinkDone = false;
 function maybeTxLink() {
   if (txLinkDone || !wantsTx || !(data.manual !== null || data.apple !== null) || !tx.length) return;
   txLinkDone = true;
   try { const u = new URL(location.href); u.searchParams.delete("tx"); history.replaceState(null, "", u.pathname + u.search + u.hash); } catch (e) {}
   setTimeout(() => {
+    const id = t => (t.del && t.del.raw && t.del.raw[7]) || "";
+    const t = (wantsTx !== "*" && tx.find(t => id(t) === wantsTx))
+      || tx.filter(t => /^ap-/.test(id(t))).sort((a, b) => id(b).localeCompare(id(a), undefined, { numeric: true }))[0];
     showView("tx");
-    const t = tx.filter(t => t.del && t.del.raw && /^ap-/.test(t.del.raw[7] || "")).sort((a, b) => String(b.del.raw[7]).localeCompare(String(a.del.raw[7]), undefined, { numeric: true }))[0];
-    if (t && txKey(t)) openReceipt(txKey(t));
+    if (!t) return;
+    if (isPendingTx(t)) { if (txKey(t)) openReceipt(txKey(t)); return; }
+    openEdit(t);
   }, 700);
 }
 window.openWeekNow = () => { const w = recapWeek(); if (!w) { toast("בשבוע שעבר היו פחות משלוש רכישות, אז אין סיכום הפעם.", 3200); return; } openRecap(w.r); };
@@ -9428,7 +9432,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101114440";
+const BUILD_ID = "20261101115003";
 let updToast = null;
 async function checkUpdate() {
   try {

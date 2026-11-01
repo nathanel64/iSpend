@@ -57,7 +57,7 @@ Deno.serve(async req => {
 
   // an Apple Pay payment was saved: tell that person's phones (the personal Apple Pay key says who)
   if (url.searchParams.has("paid")) {
-    let b: { token?: string; amount?: unknown; merchant?: unknown; payments?: unknown } = {};
+    let b: { token?: string; amount?: unknown; merchant?: unknown; payments?: unknown; id?: unknown } = {};
     try { b = await req.json(); } catch (e) { return json({ error: "bad request" }, 400); }
     const token = String(b.token || "").replace(/\s/g, "");
     if (!/^[0-9a-f]{32,64}$/.test(token)) return json({ error: "key" }, 403);
@@ -67,7 +67,7 @@ Deno.serve(async req => {
     const m = String(b.merchant ?? "").replace(/[<>\n\r]/g, " ").trim().slice(0, 60) || "ללא שם";
     const n = Math.max(1, Math.min(36, parseInt(String(b.payments ?? "1"), 10) || 1));
     const money = "₪" + amt.toLocaleString("en-US", { minimumFractionDigits: amt % 1 ? 2 : 0, maximumFractionDigits: 2 });
-    const msg = { title: "💳 נרשם ב-iSpend", body: `${money} ב${m}${n > 1 ? ` · ${n} תשלומים` : ""}. לחיצה פותחת לבדיקת הקטגוריה.`, url: "./?tx", tag: "ispend-pay-" + Date.now() };
+    const msg = { title: "💳 נרשם ב-iSpend", body: `${m} · ${money}${n > 1 ? ` · ${n} תשלומים` : ""}\nלחיצה פותחת את התנועה לעריכה`, url: "./?tx=" + (/^ap-\d{10,16}$/.test(String(b.id ?? "")) ? String(b.id) : ""), tag: "ispend-pay-" + Date.now() };
     const { data: subs } = await sb.from("push_subs").select("endpoint, sub").eq("user_id", prof.id);
     let sent = 0; for (const s of subs || []) if (await send(s, msg)) sent++;
     return json({ sent });
