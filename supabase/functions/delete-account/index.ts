@@ -19,7 +19,7 @@ Deno.serve(async req => {
   if (body.confirm !== "DELETE") return json({ error: "not confirmed" }, 400);
   const id = u.user.id;
   // the rows first (in case a table was made without cascade), then the sign-in itself
-  for (const t of ["push_subs", "ai_usage", "tx"]) await sb.from(t).delete().eq("user_id", id);
+  for (const t of ["push_subs", "ai_usage", "ask_usage", "merchant_votes", "tx"]) await sb.from(t).delete().eq("user_id", id);
   await sb.from("profiles").delete().eq("id", id);
   const { error } = await sb.auth.admin.deleteUser(id);
   if (error) { console.error("delete failed", error); return json({ error: "delete failed" }, 500); }

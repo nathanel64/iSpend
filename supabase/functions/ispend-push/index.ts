@@ -63,6 +63,11 @@ Deno.serve(async req => {
     if (!/^[0-9a-f]{32,64}$/.test(token)) return json({ error: "key" }, 403);
     const { data: prof } = await sb.from("profiles").select("id, settings").eq("pay_token", token).maybeSingle();
     if (!prof) return json({ error: "key" }, 403);
+    // at most 30 of these an hour per person, so a leaked key can't flood the phone
+    { const hour = new Date().toISOString().slice(0, 13);
+      const { data: use } = await sb.from("pay_push_usage").select("n").eq("user_id", prof.id).eq("hour", hour).maybeSingle();
+      if ((use?.n || 0) >= 30) return json({ error: "too many" }, 429);
+      await sb.from("pay_push_usage").upsert({ user_id: prof.id, hour, n: (use?.n || 0) + 1 }); }
     const amt = Math.abs(parseFloat(String(b.amount ?? "").replace(/[^\d.]/g, ""))) || 0;
     const m = String(b.merchant ?? "").replace(/[<>\n\r]/g, " ").trim().slice(0, 60) || "ללא שם";
     const n = Math.max(1, Math.min(36, parseInt(String(b.payments ?? "1"), 10) || 1));

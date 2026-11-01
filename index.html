@@ -2135,13 +2135,18 @@ async function startApp() {
       const snap = { t: moveTotals() };
       // 3. into the account; anything already there is replaced
       say("שומר " + rows.length + " תנועות בחשבון…");
-      const { count } = await sb.from("tx").select("id", { count: "exact", head: true }).eq("user_id", uid);
-      if (count) { const { error } = await sb.from("tx").delete().eq("user_id", uid); if (error) throw error; }
-      for (let i = 0; i < rows.length; i += 400) {
-        const { error } = await sb.from("tx").insert(rows.slice(i, i + 400).map(vals => ({ user_id: uid, vals })));
-        if (error) throw error;
-        say("שומר… " + Math.min(rows.length, i + 400) + "/" + rows.length);
-      }
+      // the account's earlier rows are removed only after all the new ones are saved; a failure halfway removes the half
+      let oldIds = [];
+      for (let from = 0; ; from += 1000) { const { data: part, error } = await sb.from("tx").select("id").eq("user_id", uid).order("id").range(from, from + 999); if (error) throw error; oldIds = oldIds.concat((part || []).map(r => r.id)); if (!part || part.length < 1000) break; }
+      const added = [];
+      try {
+        for (let i = 0; i < rows.length; i += 400) {
+          const { data: got, error } = await sb.from("tx").insert(rows.slice(i, i + 400).map(vals => ({ user_id: uid, vals }))).select("id");
+          if (error) throw error; added.push(...(got || []).map(r => r.id));
+          say("שומר… " + Math.min(rows.length, i + 400) + "/" + rows.length);
+        }
+      } catch (e) { for (let i = 0; i < added.length; i += 200) await sb.from("tx").delete().in("id", added.slice(i, i + 200)); throw e; }
+      for (let i = 0; i < oldIds.length; i += 200) { const { error } = await sb.from("tx").delete().in("id", oldIds.slice(i, i + 200)); if (error) throw error; }
       const grid = settings.map(r => (r || []).map(x => x == null ? "" : String(x)));
       const { error: e2 } = await sb.from("profiles").update({ settings: grid, sheet_api: null }).eq("id", uid);
       if (e2) throw e2;
@@ -8654,7 +8659,8 @@ function askRun(Q) {
   const low = s => String(s || "").toLowerCase();
   const val = t => t.refund ? -t.amount : t.amount;
   if (Q.card && !Q.cards) Q.cards = [Q.card];
-  const what = [Q.cats ? `על ${Q.cats.join(", ")}` : Q.cat ? `על ${Q.cat}` : Q.words && Q.words.length ? `ב״${Q.words.join(" ")}״` : Q.any ? `על ${Q.anyLabel}` : "", Q.cards ? `ב${Q.cardLabel || Q.cards[0]}` : ""].filter(Boolean).join(" ");
+  // escaped: words can come from the AI's reading of the question
+  const what = [Q.cats ? `על ${esc(Q.cats.join(", "))}` : Q.cat ? `על ${esc(Q.cat)}` : Q.words && Q.words.length ? `ב״${esc(Q.words.join(" "))}״` : Q.any ? `על ${esc(Q.anyLabel)}` : "", Q.cards ? `ב${esc(Q.cardLabel || Q.cards[0])}` : ""].filter(Boolean).join(" ");
   const hayOf = t => [t.merchant, t.rawMerchant, t.category].map(low).join(" | ");
   const subj = t => (!Q.cat || t.category === Q.cat) && (!Q.cats || Q.cats.includes(t.category)) && (!Q.cards || Q.cards.includes(t.account) || Q.cards.includes(accOf(t)))
     && (!Q.words || !Q.words.length || Q.words.every(w => hayOf(t).includes(low(w)))) && (!Q.any || Q.any.some(w => hayOf(t).includes(low(w))));
@@ -8666,7 +8672,7 @@ function askRun(Q) {
   const inP = t => !per || (t.date >= per.from && t.date <= addDays(per.to, 1) - 1 && t.date <= today);
   // a question about spending looks at purchases (a refund or a friend paying back is not a visit)
   const all = tx.filter(t => kindOk(t) && subj(t) && !(Q.kind === "exp" && t.refund)), L = all.filter(inP);
-  const pl = per ? per.label : "";
+  const pl = per ? esc(per.label) : "";
   const search = [Q.words ? Q.words.join(" ") : Q.cat || (Q.cards && Q.cards.length === 1 ? Q.cards[0] : "") || "", per && (() => { for (let y = per.from.getFullYear() - 1; y <= per.from.getFullYear() + 1; y++) for (let m = 0; m < 12; m++) { const pp = period(y, m); if (iso(pp.start) === iso(per.from) && (iso(pp.end) === iso(per.to) || per.to >= today && pp.end >= today)) return MONTHS[m] + " " + y; } return ""; })()].join(" ").trim();
   const R = (text, sub, show) => ({ text, sub, search: show === false ? null : search || null, list: L });
   const money = v => `<b>${fmt(Math.round(v))}</b>`;
@@ -8701,7 +8707,7 @@ function askRun(Q) {
       const in2 = t => t.date >= p2.from && t.date <= addDays(p2.to, 1) - 1 && t.date <= today;
       const s1 = L.reduce((a, t) => a + val(t), 0), L2 = all.filter(in2), s2 = L2.reduce((a, t) => a + val(t), 0), d = s1 - s2;
       const pc = s2 ? Math.round(Math.abs(d) / s2 * 100) : null;
-      const head = `${pl} ${verb} ${what} ${money(s1)}, ${p2.label} ${money(s2)}.`.replace(/\s+/g, " ").trim();
+      const head = `${pl} ${verb} ${what} ${money(s1)}, ${esc(p2.label)} ${money(s2)}.`.replace(/\s+/g, " ").trim();
       return R(head, Math.round(d) === 0 ? "בדיוק אותו סכום." : `${pl} ${fmt(Math.round(Math.abs(d)))} ${d > 0 ? "יותר" : "פחות"}${pc != null ? ` (${d > 0 ? "+" : "−"}${pc}%)` : ""}.`.trim(), false);
     }
     case "pct_income": {
@@ -9494,7 +9500,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101121748";
+const BUILD_ID = "20261101124600";
 let updToast = null;
 async function checkUpdate() {
   try {
