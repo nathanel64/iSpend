@@ -2100,6 +2100,56 @@ async function startApp() {
     location.reload();
   };
   document.getElementById("sheetOff").onclick = async () => { await sb.from("profiles").update({ sheet_api: null }).eq("id", uid); location.reload(); };
+  // after a move: compare the months here with the ones counted from the sheets just before it
+  try {
+    const snap = JSON.parse(localStorage.getItem("moveSnap-" + uid) || "null");
+    if (snap && !sh) setTimeout(function chk(tries) {
+      tries = tries || 0;
+      if (!tx.length && tries < 20) { setTimeout(() => chk(tries + 1), 700); return; }
+      const now = moveTotals(), bad = Object.keys({ ...snap.t, ...now }).filter(k => Math.abs((snap.t[k] || 0) - (now[k] || 0)) > 0.5);
+      localStorage.removeItem("moveSnap-" + uid);
+      toast(bad.length ? "ההעברה הסתיימה, אבל " + bad.length + " חודשים לא תואמים. כתבו לי ואבדוק." : "✓ ההעברה הסתיימה: " + tx.filter(t => !t.gen).length + " תנועות, כל החודשים תואמים לגיליון.", 7000);
+    }, 1500);
+  } catch (e) {}
+  if (sh) document.getElementById("sheetMove").hidden = false;
+  document.getElementById("sheetMoveGo").onclick = async () => {
+    const msg = document.getElementById("sheetMoveMsg"), btn = document.getElementById("sheetMoveGo");
+    const say = t => { msg.textContent = t; };
+    const ok = await askDialog({ kick: "העברה לחשבון", title: "להעביר את כל הנתונים לחשבון באתר?", text: "התנועות וההגדרות יועתקו לחשבון, והאתר יפסיק לעבוד מול הגיליונות. הגיליונות לא נמחקים.", buttons: [{ label: "העברה", value: "go" }, { label: "ביטול", value: "", cls: "ghost" }] }).catch(() => "");
+    if (ok !== "go") return;
+    btn.disabled = true;
+    try {
+      // 1. everything from the sheets: this file's transactions and daily tab, the older files, and the settings
+      say("קורא את הגיליונות…");
+      const get = async (id, range) => { const r = await mcp.callTool(SERVER, "get_values", { spreadsheetId: id, range }, { cache: { refresh: true } }); return (r.payload && r.payload.values) || []; };
+      const main = await get(SHEET_ID, R_APPLE), settings = await get(SHEET_ID, R_SETTINGS), daily = [[SHEET_ID, await get(SHEET_ID, R_MANUAL)]];
+      for (let k = 0; k < HISTORY.length; k++) { say("קורא קובץ " + (k + 1) + " מתוך " + HISTORY.length + "…"); daily.push([HISTORY[k], await get(HISTORY[k], R_MANUAL)]); }
+      // 2. one row format: the daily tabs become rows like the transactions tab
+      const rows = main.filter(v => v && parseDate(v[0]) && parseAmount(v[1])).map(v => { const r = v.slice(0, 9).map(x => x == null ? "" : String(x)); while (r.length < 9) r.push(""); return r; });
+      daily.forEach(([id, vals], f) => vals.forEach((v, i) => {
+        const type = String(v[1] || "").trim(); if (!type) return;
+        const d = parseDate(v[0]), amt = parseAmount(v[5]); if (!d || amt === null || amt === 0) return;
+        const t2 = type === "הוצאה" && amt < 0 ? "החזר" : type;
+        rows.push([iso(d), String(Math.abs(amt)), String(v[3] || "").trim() || "ללא תיאור", String(v[4] || "").trim(), String(v[2] || "").trim() || (type === "הכנסה" ? "הכנסה" : "לא מסווג"), t2, "ידני", "m-h" + f + "-" + i, ""]);
+      }));
+      const snap = { t: moveTotals() };
+      // 3. into the account; anything already there is replaced
+      say("שומר " + rows.length + " תנועות בחשבון…");
+      const { count } = await sb.from("tx").select("id", { count: "exact", head: true }).eq("user_id", uid);
+      if (count) { const { error } = await sb.from("tx").delete().eq("user_id", uid); if (error) throw error; }
+      for (let i = 0; i < rows.length; i += 400) {
+        const { error } = await sb.from("tx").insert(rows.slice(i, i + 400).map(vals => ({ user_id: uid, vals })));
+        if (error) throw error;
+        say("שומר… " + Math.min(rows.length, i + 400) + "/" + rows.length);
+      }
+      const grid = settings.map(r => (r || []).map(x => x == null ? "" : String(x)));
+      const { error: e2 } = await sb.from("profiles").update({ settings: grid, sheet_api: null }).eq("id", uid);
+      if (e2) throw e2;
+      try { localStorage.setItem("moveSnap-" + uid, JSON.stringify(snap)); Object.keys(localStorage).filter(k => k.startsWith("c1:") || k.startsWith("sheetcfg-") || k.startsWith("profile-")).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+      say("✓ הועבר. טוען מחדש…");
+      setTimeout(() => location.reload(), 800);
+    } catch (e) { say("ההעברה נכשלה: " + (e && e.message || e) + ". שום דבר בגיליונות לא השתנה."); btn.disabled = false; }
+  };
   if (sh && sh.url && sh.key) {
     try {
       const cKey = "sheetcfg-" + uid;
@@ -2119,6 +2169,8 @@ async function startApp() {
   return withCache(makeSupaAdapter(uid), uid);
 }
 
+// the money of each month, to check that a move kept everything
+function moveTotals() { const o = {}; (typeof tx !== "undefined" ? tx : []).filter(t => !t.gen).forEach(t => { const k = t.date.getFullYear() + "-" + (t.date.getMonth() + 1) + (t.income ? "i" : t.refund ? "r" : "e"); o[k] = Math.round(((o[k] || 0) + t.amount) * 100) / 100; }); return o; }
 /* show the last data saved on this device immediately, then replace it with fresh data as it arrives */
 function withCache(ad, ns) {
   const key = input => "c1:" + ns + ":" + input.spreadsheetId + ":" + input.range;
@@ -2192,7 +2244,12 @@ function makeSupaAdapter(uid) {
   const fail = error => { throw { code: "tool_error", message: error && error.message }; };
   let txRows = [];
   const loadTx = async () => {
-    const { data, error } = await sb.from("tx").select("id,vals").order("id"); if (error) fail(error);
+    // in pages: the server gives at most 1000 rows per request
+    let data = [];
+    for (let from = 0; ; from += 1000) {
+      const { data: part, error } = await sb.from("tx").select("id,vals").order("id").range(from, from + 999); if (error) fail(error);
+      data = data.concat(part || []); if (!part || part.length < 1000) break;
+    }
     // rows emptied by a month deletion are removed for good here (emptying keeps rows in place while the writes run)
     const empty = (data || []).filter(r => !(r.vals || []).some(x => String(x == null ? "" : x).trim()));
     if (empty.length) { await Promise.all(empty.map(r => sb.from("tx").delete().eq("id", r.id))); }
@@ -2619,6 +2676,11 @@ function makeSupaAdapter(uid) {
       <div class="field"><label for="sheetUrl">כתובת ה-Web App (מסתיימת ב-/exec)</label><input id="sheetUrl" type="url" dir="ltr" autocomplete="off"></div>
       <div class="field"><label for="sheetKey">מפתח גישה</label><input id="sheetKey" type="password" dir="ltr" autocomplete="off"></div>
       <div class="save-row"><button class="btn" type="button" id="sheetSave">חיבור</button><button class="btn ghost" type="button" id="sheetOff">ניתוק</button><span class="note" id="sheetMsg"></span></div>
+      <div id="sheetMove" hidden style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px;display:flex;flex-direction:column;gap:8px">
+        <b>להעביר הכול לחשבון באתר</b>
+        <p class="note" style="margin:0">כל התנועות (גם מהשנים הקודמות) וכל ההגדרות עוברים לחשבון שלך באתר, והאתר מפסיק לקרוא ולכתוב לגיליונות. הגיליונות עצמם לא נמחקים. אחרי זה Apple Pay עובד כמו אצל כולם, עם הקיצור iSpend.</p>
+        <div class="save-row"><button class="btn" type="button" id="sheetMoveGo">העברה לחשבון</button><span class="note" id="sheetMoveMsg" role="status"></span></div>
+      </div>
     </section>
 
   </div>
@@ -9432,7 +9494,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101115003";
+const BUILD_ID = "20261101121748";
 let updToast = null;
 async function checkUpdate() {
   try {
