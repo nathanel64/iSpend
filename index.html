@@ -3630,6 +3630,18 @@ function render() {
 
 /* a new month without a salary: ask for it once when the site opens ("אחר כך" waits until tomorrow) */
 let salAsked = false, salKey = null;
+// "same as last month": also when the settings arrive after the window opened (an older copy was shown first)
+function salSameChip(pm, last) {
+  $("salSame").hidden = last == null;
+  if (last != null) { $("salSame").innerHTML = `כמו ב${MONTHS[pm]} · ${fmt(last)}`; $("salSame").dataset.v = last; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); $("salAmount").focus(); }; }
+}
+function refreshSalSame() {
+  if ($("salBg").hidden || !salKey || nsNum("salAmount")) return;
+  const [y, m] = salKey.split("-").map(Number), [py, pm] = prevYM(y, m - 1);
+  salSameChip(pm, salaries[mkey(py, pm)]);
+  if (Object.keys(salaries).length || tx.length) { $("nsDay").hidden = true; $("nsBack").hidden = true; }
+  if (!$("salGoal").value) { const g = goalFor(y, m - 1); if (!g.missing) { $("salGoal").value = withCommas(String(g.amount)); salGoalChips(g.amount, pm); } }
+}
 function askSalary() {
   if (salAsked) return; salAsked = true;
   let y = now.getFullYear(), m = now.getMonth();
@@ -3645,12 +3657,11 @@ function askSalary() {
   const g = goalFor(y, m);
   $("salGoal").value = g.missing ? "" : withCommas(String(g.amount));
   salGoalChips(g.missing ? null : g.amount, pm);
-  $("salSame").hidden = last == null;
-  if (last != null) { $("salSame").innerHTML = `כמו ב${MONTHS[pm]} · ${fmt(last)}`; $("salSame").dataset.v = last; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); $("salAmount").focus(); }; }
+  salSameChip(pm, last);
   $("salAmount").value = ""; fitSal(); $("salPopMsg").textContent = "";
   $("salPopSave").disabled = false; $("salPopSave").textContent = "שומרים ומתחילים"; nsUpdate(true);
   { // a new account: which day the card is charged (the month starts on it)
-    const nd = $("nsDay"); nd.hidden = !!tx.length; salDayPick = null; if (!nd.hidden) drawSalDay();
+    const nd = $("nsDay"); nd.hidden = !!tx.length || Object.keys(salaries).length > 0; salDayPick = null; if (!nd.hidden) drawSalDay();
   }
   { // a new account: offer to open earlier months as well
     const nb = $("nsBack"), fresh = !tx.length; nb.hidden = !fresh; $("nsBackChips").hidden = true;
@@ -3706,7 +3717,7 @@ function nsUpdate(fromGoal) {
 $("salGoalRange").addEventListener("input", e => { const sal = nsNum("salAmount"); if (!sal) return; $("salGoal").value = withCommas(String(Math.round(sal * e.target.value / 100 / 50) * 50)); nsUpdate(false); });
 $("salGoalChips").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (b) { $("salGoal").value = withCommas(b.dataset.g); nsUpdate(true); } });
 $("salGoal").addEventListener("input", e => { e.target.value = withCommas(e.target.value); nsUpdate(true); });
-const closeSal = () => { $("salBg").hidden = true; };
+const closeSal = () => { $("salBg").hidden = true; setTimeout(() => { try { maybeMonthRecap(); } catch (e) {} }, 500); };
 $("nsBackQ").onclick = () => { $("nsBackChips").hidden = false; };
 $("nsBackChips").addEventListener("click", async e => {
   const b = e.target.closest("[data-back]"); if (!b) return;
@@ -5247,6 +5258,22 @@ function weekSlides() {
   slides.push({ h: d > 0 ? 8 : 152, html: `<div class="w-k">לעומת השבוע שלפניו</div><div class="w-big num">${d > 0 ? "▲" : "▼"} ${fmt(Math.abs(d))}</div><div class="w-sub">${d > 0 ? "יותר" : "פחות"} מ-${fmt(ptotal)} בשבוע של ${dd(a2)}${top ? ` · היום הכי יקר: ${WEEKDAYS[parseDate(top[0]).getDay()]} (${fmt(top[1])})` : ""}</div>` });
   return { slides, key: iso(ws) };
 }
+/* a new month: in its first three days, last month's summary opens once by itself (after the salary window) */
+let monthRecapTried = false;
+function maybeMonthRecap() {
+  if (monthRecapTried || wantsWeek || data.settings === null || !(data.manual !== null || data.apple !== null) || !splashGone || !tx.length) return false;
+  const [cy, cm] = curYM(), into = Math.round((today - period(cy, cm).start) / 864e5);
+  if (into > 2) { monthRecapTried = true; return false; }
+  const [py, pm] = prevYM(cy, cm), key = mkey(py, pm);
+  let seen = ""; try { seen = localStorage.getItem("monthRecap") || ""; } catch (e) {}
+  if (seen === key) { monthRecapTried = true; return false; }
+  const r = recapMonth(py, pm); if (!r) { monthRecapTried = true; return false; }
+  if (!$("salBg").hidden || !$("sheetBg").hidden || !$("recap").hidden || document.documentElement.classList.contains("touring")) return true; // wait for the window in front
+  monthRecapTried = true;
+  try { localStorage.setItem("monthRecap", key); } catch (e) {}
+  setTimeout(() => openRecap(r), 600);
+  return true;
+}
 function maybeWeekRecap() {
   if (wantsWeek) return;
   if (weekTried || data.settings === null || !(data.manual !== null || data.apple !== null) || !splashGone) return;
@@ -5306,7 +5333,7 @@ function afterData() {
   if (viewIdx() < FIRST_MONTH) view = { y: Math.floor(FIRST_MONTH / 12), m: FIRST_MONTH % 12 };
   try { applyStartMonth(); } catch (e) {} // the start month box always shows where the site starts
   render(); renderBankStatus(); renderCardMap();
-  try { maybeWeekRecap(); } catch (e) { console.error(e); }
+  try { if (!maybeMonthRecap()) maybeWeekRecap(); } catch (e) { console.error(e); }
   try { renderYear(); renderCatSheet(); } catch (e) { console.error(e); }
   try { if (currentView === "admin") { renderMonths(); renderSetMenu(); } } catch (e) { console.error(e); }
 }
@@ -5342,7 +5369,7 @@ function onData(key, payload, result) {
   fresh[key] = !(result && (result.cached || (result.cache && result.cache.storedAt && Date.now() - new Date(result.cache.storedAt) > 10 * 60e3)));
   if (fresh[key]) retryLoad[key] = 0;
   const values = (payload && payload.values) || [];
-  if (key === "settings") { applySettings(values); if (!TOUR_PENDING) askSalary(); }
+  if (key === "settings") { applySettings(values); if (!TOUR_PENDING) askSalary(); try { refreshSalSame(); } catch (e) {} }
   else data[key] = values;
   if (key === "apple") {
     const have = new Set(values.map(r => r[7])), wait = readPending().filter(r => !have.has(r[7]));
@@ -9500,7 +9527,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101124600";
+const BUILD_ID = "20261101172013";
 let updToast = null;
 async function checkUpdate() {
   try {
