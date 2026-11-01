@@ -8222,7 +8222,7 @@ document.addEventListener("click", e => {
 let pushTouched = "";
 function pushTouch() { const d = iso(today); if (pushTouched === d || !window.ispendPushTouch) return; if (tx.some(t => iso(t.date) === d && !t.gen && (t.source === "manual" || t.source === "applepay"))) { pushTouched = d; window.ispendPushTouch(d); } }
 // only what you added yourself (by hand or Apple Pay) stops the evening reminder; charges the bank or card company sent in do not
-function renderTrial() { try { pushTouch(); } catch (e) {} try { weekStatsTouch(); } catch (e) {} try { maybeWeekLink(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
+function renderTrial() { try { pushTouch(); } catch (e) {} try { weekStatsTouch(); } catch (e) {} try { maybeWeekLink(); } catch (e) {} try { maybeTxLink(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
 // one card at the bottom of the home screen, with three tabs
 let funTab = lsGet("funTab", "chal");
 function showFunTab(t) {
@@ -8977,6 +8977,19 @@ function maybeWeekLink() {
     weekTried = true; openRecap(w.r);
   }, 900);
 }
+// a tap on "נרשם ב-iSpend" (./?tx) opens the newest payment, to check its category
+const wantsTx = (() => { try { return new URLSearchParams(location.search).has("tx"); } catch (e) { return false; } })();
+let txLinkDone = false;
+function maybeTxLink() {
+  if (txLinkDone || !wantsTx || !(data.manual !== null || data.apple !== null) || !tx.length) return;
+  txLinkDone = true;
+  try { const u = new URL(location.href); u.searchParams.delete("tx"); history.replaceState(null, "", u.pathname + u.search + u.hash); } catch (e) {}
+  setTimeout(() => {
+    showView("tx");
+    const t = tx.filter(t => t.del && t.del.raw && /^ap-/.test(t.del.raw[7] || "")).sort((a, b) => String(b.del.raw[7]).localeCompare(String(a.del.raw[7]), undefined, { numeric: true }))[0];
+    if (t && txKey(t)) openReceipt(txKey(t));
+  }, 700);
+}
 window.openWeekNow = () => { const w = recapWeek(); if (!w) { toast("בשבוע שעבר היו פחות משלוש רכישות, אז אין סיכום הפעם.", 3200); return; } openRecap(w.r); };
 /* ===== accessibility: dialogs take focus, keep it, and give it back; buttons made of divs answer the keyboard ===== */
 (function a11y() {
@@ -9415,7 +9428,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101002047";
+const BUILD_ID = "20261101114440";
 let updToast = null;
 async function checkUpdate() {
   try {

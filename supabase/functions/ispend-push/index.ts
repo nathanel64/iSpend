@@ -3,6 +3,7 @@
 // iSpend: evening reminders (Supabase Edge Function "ispend-push").
 // GET  ?vapid=1  -> the public key the phone subscribes with (the key pair is made on first use and kept in push_keys)
 // POST ?test=1   -> a test push to the signed-in user
+// POST ?paid     -> { token, amount, merchant, payments }: "נרשם ב-iSpend" to the owner of that Apple Pay key
 // POST (every 15 minutes, from cron) -> at each person's chosen time (Israel time, 21:00 if not chosen), a reminder if nothing was added that day
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -53,6 +54,24 @@ Deno.serve(async req => {
     try { await webpush.sendNotification(s.sub as any, JSON.stringify(msg)); return true; }
     catch (e) { const c = (e as { statusCode?: number }).statusCode; if (c === 404 || c === 410) await sb.from("push_subs").delete().eq("endpoint", s.endpoint); return false; }
   };
+
+  // an Apple Pay payment was saved: tell that person's phones (the personal Apple Pay key says who)
+  if (url.searchParams.has("paid")) {
+    let b: { token?: string; amount?: unknown; merchant?: unknown; payments?: unknown } = {};
+    try { b = await req.json(); } catch (e) { return json({ error: "bad request" }, 400); }
+    const token = String(b.token || "").replace(/\s/g, "");
+    if (!/^[0-9a-f]{32,64}$/.test(token)) return json({ error: "key" }, 403);
+    const { data: prof } = await sb.from("profiles").select("id").eq("pay_token", token).maybeSingle();
+    if (!prof) return json({ error: "key" }, 403);
+    const amt = Math.abs(parseFloat(String(b.amount ?? "").replace(/[^\d.]/g, ""))) || 0;
+    const m = String(b.merchant ?? "").replace(/[<>\n\r]/g, " ").trim().slice(0, 60) || "ללא שם";
+    const n = Math.max(1, Math.min(36, parseInt(String(b.payments ?? "1"), 10) || 1));
+    const money = "₪" + amt.toLocaleString("en-US", { minimumFractionDigits: amt % 1 ? 2 : 0, maximumFractionDigits: 2 });
+    const msg = { title: "💳 נרשם ב-iSpend", body: `${money} ב${m}${n > 1 ? ` · ${n} תשלומים` : ""}. לחיצה פותחת לבדיקת הקטגוריה.`, url: "./?tx", tag: "ispend-pay-" + Date.now() };
+    const { data: subs } = await sb.from("push_subs").select("endpoint, sub").eq("user_id", prof.id);
+    let sent = 0; for (const s of subs || []) if (await send(s, msg)) sent++;
+    return json({ sent });
+  }
 
   // a test from the settings: only to the person who asked
   if (url.searchParams.has("test")) {
