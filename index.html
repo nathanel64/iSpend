@@ -1543,6 +1543,10 @@ body.arrange .arr-open { display: none !important; }
 .rc-t.lead .lead-t { font: 700 1.08rem/1.35 var(--font-display); }
 .rc-t.lead.good { background: color-mix(in srgb, #1f9a6b 13%, #fff); color: #145c42; } .rc-t.lead.bad { background: color-mix(in srgb, #d4574a 12%, #fff); color: #8c2f26; }
 .rc-share { grid-column: span 2; justify-self: center; border: 0; border-radius: 999px; padding: 11px 22px; font: inherit; font-weight: 700; background: var(--brand); color: #fff; cursor: pointer; }
+.ns-when { display: flex; flex-direction: column; gap: 6px; background: var(--bg); border-radius: 16px; padding: 10px 12px; }
+.ns-when[hidden] { display: none; }
+.ns-day-row button[data-sday] { border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 12px; min-width: 40px; padding: 5px 9px; font: inherit; font-weight: 700; font-size: .92rem; cursor: pointer; }
+.ns-day-row button[data-sday][aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -2825,6 +2829,11 @@ function makeSupaAdapter(uid) {
         <div class="ns-chips" id="nsBackChips" hidden></div>
       </div>
       <button type="submit" class="ns-save" id="salPopSave">שומרים ומתחילים</button>
+      <div class="ns-when" id="nsWhen" hidden>
+        <div class="ns-lbl"><span class="ns-dot in"></span>באיזה יום בחודש נכנסת המשכורת?</div>
+        <div class="ns-day-row" id="nsWhenChips" role="group" aria-label="יום המשכורת"></div>
+        <p class="ns-day-note">החלון ייפתח ביום הזה בכל חודש. בוחרים יום אחר כאן בכל פעם שצריך.</p>
+      </div>
       <div class="sal-laters"><button type="button" class="sal-later" id="salLater">אזכיר לך מחר</button><span aria-hidden="true">·</span><button type="button" class="sal-later" id="salNotYet">המשכורת עוד לא נכנסה</button></div>
     </div>
   </form>
@@ -3640,7 +3649,14 @@ function render() {
 }
 
 /* a new month without a salary: ask for it once when the site opens ("אחר כך" waits until tomorrow) */
-let salAsked = false, salKey = null, salSkipKey = "";
+let salAsked = false, salKey = null, salDay = 0;
+try { salDay = +(localStorage.getItem("salDay") || 0) || 0; } catch (e) {}
+// the first day of the month on screen that is the salary day (or right after the month starts, if that day already passed it)
+function salDueDate(y, m) {
+  const p = period(y, m); if (!salDay) return p.start;
+  for (let d = new Date(p.start); d <= p.end; d.setDate(d.getDate() + 1)) if (d.getDate() === salDay) return new Date(d);
+  return p.start;
+}
 // "same as last month": also when the settings arrive after the window opened (an older copy was shown first)
 function salSameChip(pm, last) {
   $("salSame").hidden = last == null;
@@ -3661,8 +3677,8 @@ function askSalary() {
   if (now.getDate() < startDay) { m--; if (m < 0) { m = 11; y--; } }
   salKey = mkey(y, m);
   if (salaries[salKey] != null) return;
-  try { if (localStorage.getItem("salLater") === iso(today) + "|" + salKey || localStorage.getItem("salSkip") === salKey) return; } catch (e) {}
-  if (salSkipKey === salKey) return;
+  try { if (localStorage.getItem("salLater") === iso(today) + "|" + salKey) return; } catch (e) {}
+  if (today < salDueDate(y, m)) return; // the salary comes in later this month: the window opens on its day
   const [py, pm] = prevYM(y, m), last = salaries[mkey(py, pm)];
   $("salKicker").textContent = "חודש חדש · " + MONTHS[m] + " " + y;
   $("salTitle").textContent = MONTHS[m] + " מתחיל";
@@ -3724,9 +3740,11 @@ function nsUpdate(fromGoal) {
   const pv = $("nsPreview");
   if (!sal || !salKey) { pv.hidden = true; return; }
   const [y, m] = salKey.split("-").map(Number), days = new Date(y, m, 0).getDate();
-  const fixed = Math.max(0, monthFigures(...prevYM(y, m - 1)).fixed);
+  // the fixed charges of a month: the average of every month so far (not counting this one)
+  const ms = []; for (let k = FIRST_MONTH; k < y * 12 + m - 1; k++) { if (hiddenMonths.has(k)) continue; const mf = monthFigures(Math.floor(k / 12), k % 12); if (mf.fixed + mf.variable > 0) ms.push(Math.max(0, mf.fixed)); }
+  const fixed = ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : 0;
   pv.hidden = false;
-  pv.innerHTML = `<div><div class="k">נשאר להוציא</div><div class="v num">${fmt(sal - goal)}</div></div><div><div class="k">לשבוע, אחרי קבועות</div><div class="v num">${fmt(Math.max(0, sal - goal - fixed) * 7 / days)}</div></div>${fixed > 0 ? `<p class="ns-pv-note">הקבועות לפי ${MONTHS[prevYM(y, m - 1)[1]]}: ${fmt(fixed)} בחודש</p>` : ""}`;
+  pv.innerHTML = `<div><div class="k">נשאר להוציא, אחרי קבועות</div><div class="v num">${fmt(Math.max(0, sal - goal - fixed))}</div></div><div><div class="k">לשבוע</div><div class="v num">${fmt(Math.max(0, sal - goal - fixed) * 7 / days)}</div></div>${ms.length ? `<p class="ns-pv-note">הקבועות לפי הממוצע של ${ms.length === 1 ? "החודש הקודם" : ms.length + " החודשים עד עכשיו"}: ${fmt(fixed)} בחודש</p>` : ""}`;
 }
 $("salGoalRange").addEventListener("input", e => { const sal = nsNum("salAmount"); if (!sal) return; $("salGoal").value = withCommas(String(Math.round(sal * e.target.value / 100 / 50) * 50)); nsUpdate(false); });
 $("salGoalChips").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (b) { $("salGoal").value = withCommas(b.dataset.g); nsUpdate(true); } });
@@ -3742,13 +3760,26 @@ $("nsBackChips").addEventListener("click", async e => {
 });
 // the salary comes in later this month: no more asking for this month; it is typed in the home screen when it arrives
 function salNotYet() {
-  try { localStorage.setItem("salSkip", salKey); } catch (e) {}
-  salSkipKey = salKey; writeRange("'הגדרות'!V13", [[salKey]]).catch(() => {});
-  closeSal(); toast("בסדר. כשהמשכורת תיכנס, מזינים אותה במסך הבית ב״משכורת " + MONTHS[+salKey.slice(5) - 1] + "״.", 4200);
+  const box = $("nsWhen"); box.hidden = !box.hidden; if (box.hidden) return;
+  const cur = salDay || 0, quick = [1, 5, 10, 15];
+  $("nsWhenChips").innerHTML = quick.map(d => `<button type="button" data-sday="${d}" aria-pressed="${cur === d}">${d}</button>`).join("") +
+    `<select id="nsWhenSel" aria-label="יום אחר"><option value="">יום אחר</option>${Array.from({ length: 31 }, (_, i) => i + 1).map(d => `<option value="${d}"${!quick.includes(cur) && cur === d ? " selected" : ""}>${d}</option>`).join("")}</select>`;
+  box.scrollIntoView({ block: "nearest" });
+}
+// a day picked: kept for every month from now on; the window comes back on that day
+function pickSalDayIn(d) {
+  if (!(d >= 1 && d <= 31)) return;
+  salDay = d; try { localStorage.setItem("salDay", d); } catch (e) {}
+  writeRange("'הגדרות'!V13", [[d]]).catch(() => {});
+  const [y, m] = salKey.split("-").map(Number), due = salDueDate(y, m - 1);
+  closeSal();
+  toast(due > today ? `נשמר. ב-${dd(due)} ייפתח החלון של המשכורת, וכך בכל חודש.` : `נשמר: המשכורת נכנסת ב-${d} לחודש. מהחודש הבא החלון ייפתח ביום הזה.`, 4800);
 }
 function salLater() { try { localStorage.setItem("salLater", iso(today) + "|" + salKey); } catch (e) {} closeSal(); }
 $("salLater").onclick = salLater;
 $("salNotYet").onclick = salNotYet;
+$("nsWhenChips").addEventListener("click", e => { const b = e.target.closest("[data-sday]"); if (b) pickSalDayIn(+b.dataset.sday); });
+$("nsWhenChips").addEventListener("change", e => { if (e.target.id === "nsWhenSel" && e.target.value) pickSalDayIn(+e.target.value); });
 $("salClose").onclick = salLater;
 $("salBg").addEventListener("click", e => { if (e.target.id === "salBg") salLater(); });
 const fitSal = () => { const el = $("salAmount"); el.style.width = Math.max(1, (el.value || el.placeholder).length) * 0.62 + 0.4 + "em"; };
@@ -5497,7 +5528,7 @@ function applySettings(values) {
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
   { const hj = String((values[6] || [])[21] || "").trim(); if (hj && !monthBusy) { try { const a = JSON.parse(hj); if (Array.isArray(a)) { const n = new Set(a.map(x => { const m = String(x).match(/^(\d{4})-(\d{2})$/); return m ? +m[1] * 12 + +m[2] - 1 : NaN; }).filter(k => !isNaN(k))); if ([...n].sort().join() !== [...hiddenMonths].sort().join()) { hiddenMonths = n; saveHiddenLocal(); setTimeout(() => { try { if (txAll.length) afterData(); renderMonths(); } catch (e) {} }, 0); } } } catch (e) {} } }
   { const sm = String((values[5] || [])[21] || "").trim().match(/^(\d{4})-(\d{1,2})$/); if (sm) { startMonthPref = +sm[1] * 12 + +sm[2] - 1; applyStartMonth(); } }
-  { const sk = String((values[11] || [])[21] || "").trim(); if (/^\d{4}-\d{2}$/.test(sk)) salSkipKey = sk; }
+  { const sd = parseInt(String((values[11] || [])[21] || ""), 10); if (sd >= 1 && sd <= 31 && sd !== salDay) { salDay = sd; try { localStorage.setItem("salDay", sd); } catch (e) {} } }
   { const oj = String((values[9] || [])[21] || "").trim(); try { const a = oj ? JSON.parse(oj) : []; if (Array.isArray(a) && JSON.stringify(a) !== JSON.stringify(walletOrder) && !wlArranging) { walletOrder = a; try { localStorage.setItem("walletOrder", JSON.stringify(a)); } catch (e) {} } } catch (e) {} }
   { const cj = String((values[8] || [])[21] || "").trim(); if (cj) { try { const o = JSON.parse(cj); if (o && typeof o === "object" && JSON.stringify(o) !== JSON.stringify(cardColors)) { cardColors = o; try { localStorage.setItem("cardColors", cj); } catch (e) {} } } catch (e) {} } }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
@@ -9603,7 +9634,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101175329";
+const BUILD_ID = "20261101180356";
 let updToast = null;
 async function checkUpdate() {
   try {
