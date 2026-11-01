@@ -1532,6 +1532,17 @@ body.arrange .arr-open { display: none !important; }
 .proj[hidden] { display: none; }
 .proj::before { content: ""; width: 10px; height: 3px; border-radius: 2px; background: currentColor; }
 .proj.bad { background: color-mix(in srgb, var(--bad) 13%, transparent); color: var(--bad); }
+/* the new-month window: "same as last month" is the main way in */
+.ns #salSame { align-self: stretch; border-radius: 14px; padding: 11px 14px; font-size: .95rem; font-weight: 700; background: var(--brand-soft); color: var(--brand); border: 1.5px solid color-mix(in srgb, var(--brand) 30%, transparent); }
+.ns #salSame b { font-weight: 800; }
+.sal-laters { display: flex; justify-content: center; align-items: center; gap: 6px; color: var(--muted); font-size: .85rem; }
+.ns-preview .ns-pv-note { grid-column: 1 / -1; margin: 0; font-size: .74rem; color: var(--muted); text-align: center; background: none; padding: 0; }
+/* the month summary: a sentence first, and the goal */
+.rc-t.lead { flex-direction: row; align-items: center; gap: 12px; padding: 14px 16px; }
+.rc-t.lead .e { font-size: 1.8rem; line-height: 1; }
+.rc-t.lead .lead-t { font: 700 1.08rem/1.35 var(--font-display); }
+.rc-t.lead.good { background: color-mix(in srgb, #1f9a6b 13%, #fff); color: #145c42; } .rc-t.lead.bad { background: color-mix(in srgb, #d4574a 12%, #fff); color: #8c2f26; }
+.rc-share { grid-column: span 2; justify-self: center; border: 0; border-radius: 999px; padding: 11px 22px; font: inherit; font-weight: 700; background: var(--brand); color: #fff; cursor: pointer; }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -2814,7 +2825,7 @@ function makeSupaAdapter(uid) {
         <div class="ns-chips" id="nsBackChips" hidden></div>
       </div>
       <button type="submit" class="ns-save" id="salPopSave">שומרים ומתחילים</button>
-      <button type="button" class="sal-later" id="salLater">אזכיר לך מחר</button>
+      <div class="sal-laters"><button type="button" class="sal-later" id="salLater">אזכיר לך מחר</button><span aria-hidden="true">·</span><button type="button" class="sal-later" id="salNotYet">המשכורת עוד לא נכנסה</button></div>
     </div>
   </form>
 </div>
@@ -3629,11 +3640,11 @@ function render() {
 }
 
 /* a new month without a salary: ask for it once when the site opens ("אחר כך" waits until tomorrow) */
-let salAsked = false, salKey = null;
+let salAsked = false, salKey = null, salSkipKey = "";
 // "same as last month": also when the settings arrive after the window opened (an older copy was shown first)
 function salSameChip(pm, last) {
   $("salSame").hidden = last == null;
-  if (last != null) { $("salSame").innerHTML = `כמו ב${MONTHS[pm]} · ${fmt(last)}`; $("salSame").dataset.v = last; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); $("salAmount").focus(); }; }
+  if (last != null) { $("salSame").innerHTML = `✓ כמו ב${MONTHS[pm]} · <b class="num">${last % 1 ? "₪" + last.toLocaleString("en-US", { minimumFractionDigits: 2 }) : fmt(last)}</b>`; $("salSame").dataset.v = last; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); $("salAmount").focus(); }; }
 }
 function refreshSalSame() {
   if ($("salBg").hidden || !salKey || nsNum("salAmount")) return;
@@ -3643,12 +3654,15 @@ function refreshSalSame() {
   if (!$("salGoal").value) { const g = goalFor(y, m - 1); if (!g.missing) { $("salGoal").value = withCommas(String(g.amount)); salGoalChips(g.amount, pm); } }
 }
 function askSalary() {
-  if (salAsked) return; salAsked = true;
+  if (salAsked) return;
+  if (typeof monthRecapPending === "function" && monthRecapPending()) return; // last month's summary comes first
+  salAsked = true;
   let y = now.getFullYear(), m = now.getMonth();
   if (now.getDate() < startDay) { m--; if (m < 0) { m = 11; y--; } }
   salKey = mkey(y, m);
   if (salaries[salKey] != null) return;
-  try { if (localStorage.getItem("salLater") === iso(today) + "|" + salKey) return; } catch (e) {}
+  try { if (localStorage.getItem("salLater") === iso(today) + "|" + salKey || localStorage.getItem("salSkip") === salKey) return; } catch (e) {}
+  if (salSkipKey === salKey) return;
   const [py, pm] = prevYM(y, m), last = salaries[mkey(py, pm)];
   $("salKicker").textContent = "חודש חדש · " + MONTHS[m] + " " + y;
   $("salTitle").textContent = MONTHS[m] + " מתחיל";
@@ -3712,12 +3726,12 @@ function nsUpdate(fromGoal) {
   const [y, m] = salKey.split("-").map(Number), days = new Date(y, m, 0).getDate();
   const fixed = Math.max(0, monthFigures(...prevYM(y, m - 1)).fixed);
   pv.hidden = false;
-  pv.innerHTML = `<div><div class="k">נשאר להוציא</div><div class="v num">${fmt(sal - goal)}</div></div><div><div class="k">לשבוע, אחרי קבועות</div><div class="v num">${fmt(Math.max(0, sal - goal - fixed) * 7 / days)}</div></div>`;
+  pv.innerHTML = `<div><div class="k">נשאר להוציא</div><div class="v num">${fmt(sal - goal)}</div></div><div><div class="k">לשבוע, אחרי קבועות</div><div class="v num">${fmt(Math.max(0, sal - goal - fixed) * 7 / days)}</div></div>${fixed > 0 ? `<p class="ns-pv-note">הקבועות לפי ${MONTHS[prevYM(y, m - 1)[1]]}: ${fmt(fixed)} בחודש</p>` : ""}`;
 }
 $("salGoalRange").addEventListener("input", e => { const sal = nsNum("salAmount"); if (!sal) return; $("salGoal").value = withCommas(String(Math.round(sal * e.target.value / 100 / 50) * 50)); nsUpdate(false); });
 $("salGoalChips").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (b) { $("salGoal").value = withCommas(b.dataset.g); nsUpdate(true); } });
 $("salGoal").addEventListener("input", e => { e.target.value = withCommas(e.target.value); nsUpdate(true); });
-const closeSal = () => { $("salBg").hidden = true; setTimeout(() => { try { maybeMonthRecap(); } catch (e) {} }, 500); };
+const closeSal = () => { $("salBg").hidden = true; };
 $("nsBackQ").onclick = () => { $("nsBackChips").hidden = false; };
 $("nsBackChips").addEventListener("click", async e => {
   const b = e.target.closest("[data-back]"); if (!b) return;
@@ -3726,8 +3740,15 @@ $("nsBackChips").addEventListener("click", async e => {
   await setStartMonth(k);
   $("nsBackQ").textContent = "✓ נפתח מ" + MONTHS[k % 12] + " " + Math.floor(k / 12) + ". עוברים בין החודשים בחיצים למעלה";
 });
+// the salary comes in later this month: no more asking for this month; it is typed in the home screen when it arrives
+function salNotYet() {
+  try { localStorage.setItem("salSkip", salKey); } catch (e) {}
+  salSkipKey = salKey; writeRange("'הגדרות'!V13", [[salKey]]).catch(() => {});
+  closeSal(); toast("בסדר. כשהמשכורת תיכנס, מזינים אותה במסך הבית ב״משכורת " + MONTHS[+salKey.slice(5) - 1] + "״.", 4200);
+}
 function salLater() { try { localStorage.setItem("salLater", iso(today) + "|" + salKey); } catch (e) {} closeSal(); }
 $("salLater").onclick = salLater;
+$("salNotYet").onclick = salNotYet;
 $("salClose").onclick = salLater;
 $("salBg").addEventListener("click", e => { if (e.target.id === "salBg") salLater(); });
 const fitSal = () => { const el = $("salAmount"); el.style.width = Math.max(1, (el.value || el.placeholder).length) * 0.62 + 0.4 + "em"; };
@@ -4416,6 +4437,7 @@ function rcIcon(t) {
 }
 function rcTile(t, i) {
   const d = `style="--d:${i * 70}ms${t.hue != null ? ";--h:" + t.hue : ""}"`;
+  if (t.type === "lead") return `<section class="rc-t w2 lead ${t.tone || ""}" ${d}><span class="e" aria-hidden="true">${t.e}</span><span class="lead-t">${t.text}</span></section>`;
   if (t.type === "hero") return `<section class="rc-t w2 hero ${t.tone || ""}" ${d}><span class="k">${t.k}</span><b class="v num" data-count="${t.v}">${fmt(0)}</b>${t.sub ? `<span class="s">${t.sub}</span>` : ""}
     ${t.meter ? `<div class="rc-meter"><i style="width:${Math.min(100, t.meter.p).toFixed(1)}%"></i>${t.meter.p > 100 ? `<u style="right:${(100 / t.meter.p * 100).toFixed(1)}%"></u>` : ""}</div><div class="rc-ml"><span>${t.meter.a}</span><span>${t.meter.b}</span></div>` : ""}</section>`;
   if (t.type === "bars") { const mx = Math.max(1, ...t.rows.map(r => r.v)); return `<section class="rc-t w2" ${d}><span class="k">${t.k}</span><div class="rc-bars">${t.rows.map((r, j) => { const [, hue] = iconFor(r.cat); return `<div class="rc-br" style="--h:${hue};--w:${(r.v / mx * 100).toFixed(1)}%;--d2:${i * 70 + j * 60 + 200}ms">${rcIcon({ cat: r.cat })}<span class="n">${esc(r.cat)}</span><span class="a num">${fmt(r.v)}</span><span class="b"><i></i></span></div>`; }).join("")}</div></section>`; }
@@ -4424,7 +4446,8 @@ function rcTile(t, i) {
 }
 function openRecap(r) {
   $("rcKick").textContent = r.kick; $("rcTitle").textContent = r.title;
-  $("rcBody").innerHTML = r.tiles.filter(Boolean).map(rcTile).join("") + `<p class="rc-end">${r.end || ""}</p>`;
+  $("rcBody").innerHTML = r.tiles.filter(Boolean).map(rcTile).join("") + (r.share ? `<button type="button" class="rc-share" id="rcShare">שיתוף כתמונה</button>` : "") + `<p class="rc-end">${r.end || ""}</p>`;
+  if (r.share) $("rcShare").onclick = e => shareRecap(r.share, e.currentTarget);
   $("recap").hidden = false; $("rcBody").scrollTop = 0; document.body.style.overflow = "hidden";
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   $("rcBody").querySelectorAll("[data-count]").forEach(el => {
@@ -4434,7 +4457,7 @@ function openRecap(r) {
     requestAnimationFrame(step);
   });
 }
-function closeRecap() { $("recap").hidden = true; document.body.style.overflow = ""; setTimeout(() => { try { render(); } catch (e) {} }, 200); }
+function closeRecap() { $("recap").hidden = true; document.body.style.overflow = ""; setTimeout(() => { try { render(); } catch (e) {} }, 200); if (recapAfter) { const f = recapAfter; recapAfter = null; setTimeout(f, 450); } }
 $("rcClose").onclick = closeRecap;
 $("recap").addEventListener("click", e => { if (e.target.id === "recap") closeRecap(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("recap").hidden) closeRecap(); });
@@ -4444,10 +4467,18 @@ function recapMonth(y, m) {
   const buys = netPurchases(f.spend).filter(t => t.net > 0); if (buys.length < 3) return null;
   const total = f.fixed + f.variable, isCur = today >= f.start && today <= f.end, income = salaryFor(y, m, isCur).amount + f.income, name = MONTHS[m];
   const tiles = [];
-  const left = income - total;
+  const left = income - total, gg = goalFor(y, m), goal = gg.missing ? 0 : gg.amount;
+  // one sentence that says how the month went
+  if (income > 0) tiles.push({ type: "lead",
+    e: left < 0 ? "😬" : goal > 0 && left >= goal ? "🎉" : "👏",
+    tone: left < 0 ? "bad" : "good",
+    text: left < 0 ? `${isCur ? "עד עכשיו יצאו" : "יצאו"} ${fmt(-left)} יותר ממה שנכנס`
+      : goal > 0 && left >= goal ? `${isCur ? "בינתיים נשארו" : "חסכת"} ${fmt(left)}, ${left - goal >= 1 ? fmt(left - goal) + " יותר מהיעד" : "בדיוק ביעד"}`
+      : `${isCur ? "בינתיים נשארו" : "סיימת בפלוס:"} ${fmt(left)}${goal > 0 ? `, ${fmt(goal - left)} פחות מהיעד` : ""}` });
   tiles.push({ type: "hero", k: income > 0 ? "יצא החודש, מתוך " + fmt(income) + " שנכנסו" : "יצא החודש", v: Math.round(total), tone: income > 0 ? (left >= 0 ? "good" : "bad") : "",
     sub: `${buys.length} רכישות` + (income > 0 ? (left >= 0 ? ` · נשארו <b>${fmt(left)}</b> (${Math.round(left / income * 100)}%)` : ` · <b>${fmt(-left)}</b> מעבר להכנסה`) : ""),
     meter: income > 0 ? { p: total / income * 100, a: "₪0", b: fmt(income) } : null });
+  if (goal > 0 && income > 0) tiles.push({ e: "🎯", k: "יעד החיסכון", v: fmt(goal), tone: left >= goal ? "good" : "bad", sub: left >= goal ? `נחסכו ${fmt(Math.max(0, left))} ✓` : `נחסכו ${fmt(Math.max(0, left))} · חסרו ${fmt(goal - Math.max(0, left))}` });
   const [py, pm] = prevYM(y, m);
   if (py * 12 + pm >= FIRST_MONTH) { const pf = monthFigures(py, pm), pt = pf.fixed + pf.variable; if (pt > 0) { const ch = Math.round((total - pt) / pt * 100); tiles.push({ e: ch > 0 ? "📈" : "📉", k: "לעומת " + MONTHS[pm], v: `${ch > 0 ? "▲" : "▼"} ${Math.abs(ch)}%`, tone: rcTone(ch), sub: `${fmt(total)} מול ${fmt(pt)}` }); } }
   const big = buys.slice().sort((a, b) => b.net - a.net)[0];
@@ -4466,7 +4497,9 @@ function recapMonth(y, m) {
   const vals = []; let mxd = null; for (let d = new Date(f.start); d <= f.end; d.setDate(d.getDate() + 1)) { const v = byDay.get(iso(d)) || 0; vals.push({ label: dd(d), v: d > end ? 0 : v, tick: d.getDate() % 5 === 0 }); if (!mxd || v > mxd.v) mxd = { v, label: d.getDate() + " ב" + MONTHS[d.getMonth()], i: vals.length - 1 }; }
   if (mxd) vals[mxd.i].hi = true;
   tiles.push({ type: "spark", k: "יום אחרי יום", sub: mxd && mxd.v > 0 ? `היום הכי יקר: ${mxd.label}, ${fmt(mxd.v)}` : "", vals });
-  return { kick: isCur ? "עד עכשיו" : "סיכום חודשי", title: name + " " + y, tiles, end: isCur ? "הסיכום מתעדכן עד סוף החודש" : "" };
+  const lead = tiles.find(t => t && t.type === "lead");
+  const share = { title: "סיכום " + name + " " + y, lead: lead ? lead.e + " " + lead.text : "", total, income, left, goal, buys: buys.length, cats: cats.slice(0, 5) };
+  return { kick: isCur ? "עד עכשיו" : "סיכום חודשי", title: name + " " + y, tiles, share, end: isCur ? "הסיכום מתעדכן עד סוף החודש" : "" };
 }
 function recapWeek() {
   const ws = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay()), a = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 7), b = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() - 1);
@@ -5258,19 +5291,25 @@ function weekSlides() {
   slides.push({ h: d > 0 ? 8 : 152, html: `<div class="w-k">לעומת השבוע שלפניו</div><div class="w-big num">${d > 0 ? "▲" : "▼"} ${fmt(Math.abs(d))}</div><div class="w-sub">${d > 0 ? "יותר" : "פחות"} מ-${fmt(ptotal)} בשבוע של ${dd(a2)}${top ? ` · היום הכי יקר: ${WEEKDAYS[parseDate(top[0]).getDay()]} (${fmt(top[1])})` : ""}</div>` });
   return { slides, key: iso(ws) };
 }
-/* a new month: in its first three days, last month's summary opens once by itself (after the salary window) */
-let monthRecapTried = false;
+/* a new month: in its first three days, last month's summary opens once by itself, and the new month's salary right after it */
+let monthRecapTried = false, recapAfter = null;
+function monthRecapPending() {
+  if (monthRecapTried) return false;
+  const [cy, cm] = curYM(); if (Math.round((today - period(cy, cm).start) / 864e5) > 2) return false;
+  const [py, pm] = prevYM(cy, cm); let seen = ""; try { seen = localStorage.getItem("monthRecap") || ""; } catch (e) {}
+  return seen !== mkey(py, pm);
+}
 function maybeMonthRecap() {
-  if (monthRecapTried || wantsWeek || data.settings === null || !(data.manual !== null || data.apple !== null) || !splashGone || !tx.length) return false;
-  const [cy, cm] = curYM(), into = Math.round((today - period(cy, cm).start) / 864e5);
-  if (into > 2) { monthRecapTried = true; return false; }
-  const [py, pm] = prevYM(cy, cm), key = mkey(py, pm);
-  let seen = ""; try { seen = localStorage.getItem("monthRecap") || ""; } catch (e) {}
-  if (seen === key) { monthRecapTried = true; return false; }
-  const r = recapMonth(py, pm); if (!r) { monthRecapTried = true; return false; }
-  if (!$("salBg").hidden || !$("sheetBg").hidden || !$("recap").hidden || document.documentElement.classList.contains("touring")) return true; // wait for the window in front
+  if (monthRecapTried || data.settings === null || !(data.manual !== null || data.apple !== null) || !splashGone) return false;
+  const done = () => { monthRecapTried = true; setTimeout(() => { try { askSalary(); } catch (e) {} }, 300); return false; };
+  if (wantsWeek || !monthRecapPending()) return done();
+  if (!$("sheetBg").hidden || !$("recap").hidden || document.documentElement.classList.contains("touring")) return true; // wait for the window in front
+  const [cy, cm] = curYM(), [py, pm] = prevYM(cy, cm), key = mkey(py, pm);
+  // a copy kept on the phone may be old: decide only on fresh data
+  const r = tx.length ? recapMonth(py, pm) : null; if (!r) return dataFresh() ? done() : true;
   monthRecapTried = true;
   try { localStorage.setItem("monthRecap", key); } catch (e) {}
+  recapAfter = () => { try { askSalary(); } catch (e) {} };
   setTimeout(() => openRecap(r), 600);
   return true;
 }
@@ -5458,6 +5497,7 @@ function applySettings(values) {
   { const sd = parseInt(String((values[0] || [])[21] || ""), 10); if (sd >= 1 && sd <= 28 && sd !== startDay) useStartDay(sd); }
   { const hj = String((values[6] || [])[21] || "").trim(); if (hj && !monthBusy) { try { const a = JSON.parse(hj); if (Array.isArray(a)) { const n = new Set(a.map(x => { const m = String(x).match(/^(\d{4})-(\d{2})$/); return m ? +m[1] * 12 + +m[2] - 1 : NaN; }).filter(k => !isNaN(k))); if ([...n].sort().join() !== [...hiddenMonths].sort().join()) { hiddenMonths = n; saveHiddenLocal(); setTimeout(() => { try { if (txAll.length) afterData(); renderMonths(); } catch (e) {} }, 0); } } } catch (e) {} } }
   { const sm = String((values[5] || [])[21] || "").trim().match(/^(\d{4})-(\d{1,2})$/); if (sm) { startMonthPref = +sm[1] * 12 + +sm[2] - 1; applyStartMonth(); } }
+  { const sk = String((values[11] || [])[21] || "").trim(); if (/^\d{4}-\d{2}$/.test(sk)) salSkipKey = sk; }
   { const oj = String((values[9] || [])[21] || "").trim(); try { const a = oj ? JSON.parse(oj) : []; if (Array.isArray(a) && JSON.stringify(a) !== JSON.stringify(walletOrder) && !wlArranging) { walletOrder = a; try { localStorage.setItem("walletOrder", JSON.stringify(a)); } catch (e) {} } } catch (e) {} }
   { const cj = String((values[8] || [])[21] || "").trim(); if (cj) { try { const o = JSON.parse(cj); if (o && typeof o === "object" && JSON.stringify(o) !== JSON.stringify(cardColors)) { cardColors = o; try { localStorage.setItem("cardColors", cj); } catch (e) {} } } catch (e) {} } }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
@@ -6990,10 +7030,46 @@ function slipCanvas(slip) {
 }
 async function shareSlip(slip, btn) {
   try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
-  const cv = slipCanvas(slip), name = `iSpend-${slip.title.replace(/\s+/g, "-")}.png`;
+  return sharePicture(slipCanvas(slip), slip.title, btn);
+}
+async function shareRecap(sh, btn) {
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+  return sharePicture(recapCanvas(sh), sh.title, btn);
+}
+// the month summary as a picture: the sentence, the numbers, where the money went
+function recapCanvas(sh) {
+  const W = 720, S = 2, rows = sh.cats.length, H = 520 + rows * 58 + 70;
+  const cv = document.createElement("canvas"); cv.width = W * S; cv.height = H * S;
+  const x = cv.getContext("2d"); x.scale(S, S); x.direction = "rtl";
+  const font = (w, px) => `${w} ${px}px Rubik, Assistant, "Segoe UI", Arial, sans-serif`, clean = t => String(t).replace(/<[^>]+>/g, "").replace(/[\u2066-\u2069]/g, "");
+  const rr = (a, b, w, h, r) => { x.beginPath(); if (x.roundRect) x.roundRect(a, b, w, h, r); else x.rect(a, b, w, h); };
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#efeafe"); g.addColorStop(1, "#fbf3ff"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const card = (y, h) => { x.fillStyle = "#fff"; rr(32, y, W - 64, h, 26); x.fill(); };
+  x.textAlign = "center"; x.fillStyle = "#6c5fe0"; x.font = font(800, 22); x.fillText("iSpend", W / 2, 62);
+  x.fillStyle = "#1d1b26"; x.font = font(700, 38); x.fillText(sh.title, W / 2, 110);
+  if (sh.lead) { x.font = font(600, 24); x.fillStyle = sh.left < 0 ? "#b33a32" : "#13784f"; x.fillText(clean(sh.lead), W / 2, 152); }
+  card(184, 196);
+  x.fillStyle = "#7a7584"; x.font = font(500, 20); x.fillText(sh.income > 0 ? "יצא מתוך " + clean(fmt(sh.income)) : "יצא", W / 2, 224);
+  x.direction = "ltr"; x.fillStyle = "#1d1b26"; x.font = font(800, 60); x.fillText(clean(fmt(sh.total)), W / 2, 292); x.direction = "rtl";
+  const sub = [sh.buys + " רכישות", sh.income > 0 ? (sh.left >= 0 ? "נשארו " + clean(fmt(sh.left)) : clean(fmt(-sh.left)) + " מעבר להכנסה") : "", sh.goal > 0 ? "יעד " + clean(fmt(sh.goal)) : ""].filter(Boolean).join(" · ");
+  x.fillStyle = "#7a7584"; x.font = font(500, 20); x.fillText(sub, W / 2, 340);
+  card(404, 70 + rows * 58);
+  x.textAlign = "right"; x.fillStyle = "#1d1b26"; x.font = font(700, 22); x.fillText("לאן הלך הכסף", W - 64, 446);
+  const mx = Math.max(1, ...sh.cats.map(c => c[1])), colors = ["#e0705a", "#e6a23c", "#5b8def", "#27a77f", "#9a6af0"];
+  sh.cats.forEach(([c, v], i) => {
+    const y = 494 + i * 58;
+    x.textAlign = "right"; x.fillStyle = "#1d1b26"; x.font = font(500, 21); x.fillText(c, W - 64, y);
+    x.textAlign = "left"; x.direction = "ltr"; x.font = font(700, 21); x.fillText(clean(fmt(v)), 64, y); x.direction = "rtl";
+    x.fillStyle = "#efecf4"; rr(64, y + 12, W - 128, 8, 4); x.fill();
+    const w = Math.max(8, (W - 128) * v / mx); x.fillStyle = colors[i % colors.length]; rr(W - 64 - w, y + 12, w, 8, 4); x.fill();
+  });
+  return cv;
+}
+async function sharePicture(cv, title, btn) {
+  const name = `iSpend-${String(title).replace(/\s+/g, "-")}.png`;
   const blob = await new Promise(r => cv.toBlob(r, "image/png")); if (!blob) { toast("לא הצלחתי ליצור תמונה."); return; }
   const file = new File([blob], name, { type: "image/png" });
-  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: slip.title }); return; } }
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title }); return; } }
   catch (e) { if (e && e.name === "AbortError") return; }
   // no share sheet (a computer): save the picture instead
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove();
@@ -9527,7 +9603,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101172013";
+const BUILD_ID = "20261101175329";
 let updToast = null;
 async function checkUpdate() {
   try {
