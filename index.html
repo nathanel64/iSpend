@@ -1556,6 +1556,8 @@ body.arrange .arr-open { display: none !important; }
 .sugg button b { font-weight: 700; }
 .sugg button small { color: var(--muted); font-size: .76rem; }
 .sugg button:active { transform: scale(.96); }
+.auto-tg { margin-top: 2px; position: relative; }
+.auto-tg[hidden] { display: none; }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -2786,6 +2788,7 @@ function makeSupaAdapter(uid) {
       <div class="field" id="instField"><label for="addInst">תשלומים</label><select id="addInst"></select></div>
     </div>
     <p class="note dt" id="instHint" style="margin:0" hidden></p>
+    <label class="ce-tg auto-tg dt" id="autoRow" hidden><span><b>להוסיף לבד בכל חודש</b><small id="autoSub"></small></span><input type="checkbox" id="addAuto"><span class="ce-sw" aria-hidden="true"></span></label>
     <p class="note dt" id="addHint" style="margin:0" hidden>העברה מחבר על הוצאה משותפת? בחרו את הקטגוריה של ההוצאה והיא תקוזז ממנה. משכורת או הכנסה אחרת: בחרו "הכנסה".</p>
     <p class="form-msg" id="addMsg"></p>
     <p class="add-sum dt" id="addSum" aria-live="polite"></p>
@@ -3444,9 +3447,11 @@ function build() {
   });
   HISTORY.forEach((id, k) => daily(data.hist[id], 10000 + k * 2000, id, "hist-" + id));
   daily(data.manual, 50000, SHEET_ID, "manual");
+  const autoSeen = new Set();
   (data.apple || []).forEach((v, i) => {
     const date = parseDate(v[0]); const amt = parseAmount(v[1]);
     if (!date || amt === null || amt === 0) return;
+    if (/^auto-/.test(v[7] || "")) { if (autoSeen.has(v[7])) return; autoSeen.add(v[7]); }
     const payments = Math.min(MAX_INST, Math.max(1, parseInt(v[8], 10) || 1));
     // shown once: hide an Apple Pay entry when the card company already reported the same charge
     if (payments === 1 && seen(Math.abs(amt), date)) return;
@@ -3782,7 +3787,7 @@ $("salForm").addEventListener("submit", async e => {
 
 /* the next payment of a purchase typed month by month: suggested from the charge day, added with one tap */
 function renderInstSuggest() {
-  const due = instPlans.filter(p => p.due);
+  const due = instPlans.filter(p => p.due && !autoInst(p.last));
   $("instSuggest").innerHTML = due.map((p, i) => `<div class="insight">${catIcon(p.last.category, true)}
     <span>${daysBetween(p.next, today) === 0 ? "יורד היום" : "ירד ב-" + dd(p.next)} תשלום <b><bdi>${esc(p.last.merchant)}</bdi> <bdi dir="ltr">(${p.last.inst.k + 1}/${p.last.inst.n})</bdi></b> של ${fmt2(p.last.amount)}. להוסיף אותו?</span>
     <span class="acts"><button class="btn add" data-inst-add="${i}">הוספה</button></span></div>`).join("");
@@ -5391,6 +5396,7 @@ function afterData() {
   try { if (!maybeMonthRecap()) maybeWeekRecap(); } catch (e) { console.error(e); }
   try { renderYear(); renderCatSheet(); } catch (e) { console.error(e); }
   try { if (currentView === "admin") { renderMonths(); renderSetMenu(); } } catch (e) { console.error(e); }
+  setTimeout(() => { try { runAuto(); } catch (e) { console.error(e); } }, 400);
 }
 
 /* 5: expenses added without a connection wait on the phone (by their id in column H) and go out when it is back */
@@ -5515,6 +5521,7 @@ function applySettings(values) {
   { const sm = String((values[5] || [])[21] || "").trim().match(/^(\d{4})-(\d{1,2})$/); if (sm) { startMonthPref = +sm[1] * 12 + +sm[2] - 1; applyStartMonth(); } }
   { const oj = String((values[9] || [])[21] || "").trim(); try { const a = oj ? JSON.parse(oj) : []; if (Array.isArray(a) && JSON.stringify(a) !== JSON.stringify(walletOrder) && !wlArranging) { walletOrder = a; try { localStorage.setItem("walletOrder", JSON.stringify(a)); } catch (e) {} } } catch (e) {} }
   { const cj = String((values[8] || [])[21] || "").trim(); if (cj) { try { const o = JSON.parse(cj); if (o && typeof o === "object" && JSON.stringify(o) !== JSON.stringify(cardColors)) { cardColors = o; try { localStorage.setItem("cardColors", cj); } catch (e) {} } } catch (e) {} } }
+  { const aj = String((values[12] || [])[21] || "").trim(); if (aj) loadAuto(aj); }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -7166,6 +7173,7 @@ $("addForm").addEventListener("submit", async e => {
   if (editTx && (editTx.del.key === "apple" || editTx.del.key === "bank")) {
     // no waiting: the change shows at once, the window closes, and it is written in the background (with "ביטול" for a few seconds)
     const t = editTx, cat = $("addCat").value, card = $("addCard").value, kind = addKind, inst = +$("addInst").value;
+    if (autoShown()) setAutoFor(t.merchant, $("addAuto").checked, { name: desc, amount, cat, card, date });
     fastEdit(t, amount, desc, date, cat, card, kind, inst);
     openTx = null; confirmTx = null; if (mine()) closeAdd(); afterData();
     return;
@@ -7184,6 +7192,7 @@ $("addForm").addEventListener("submit", async e => {
   }
   const nInst = addKind === "exp" ? +$("addInst").value : 1;
   const row = [date, amount, desc, $("addCard").value, $("addCat").value, addKind === "inc" ? "הכנסה" : "הוצאה", "ידני", "m-" + Date.now(), nInst > 1 ? nInst : ""];
+  if (autoShown() && $("addAuto").checked) setAutoFor(null, true, { name: desc, amount, cat: row[4], card: row[3], date });
   const btn = $("addSave"); btn.disabled = true; btn.textContent = "שומר…"; $("addMsg").textContent = "";
   // no connection: keep it on the phone and send it when the connection is back
   const keepLocal = () => {
@@ -9055,6 +9064,80 @@ $("askAns").addEventListener("click", e => {
   { const oa = openAdd; openAdd = function () { picked = ""; box.hidden = true; return oa.apply(this, arguments); }; }
 })();
 
+/* automatic rows on the first day of a new month (the billing day):
+   - a fixed expense marked "להוסיף לבד בכל חודש" in the add window
+   - the next payment of a purchase typed month by month ("ספה (3/10)")
+   Each row gets a fixed id (column H) that is kept in the settings (V14): added once, also with two phones open,
+   and one that was deleted is not added again */
+let autoCfg = { rec: [], done: [] }, autoBusy = false;
+const autoNorm = v => String(v || "").trim().toLowerCase().replace(/\s+/g, " ");
+const recFor = name => autoCfg.rec.find(r => autoNorm(r.name) === autoNorm(name));
+const ymStr = k => Math.floor(k / 12) + "-" + String(k % 12 + 1).padStart(2, "0");
+// payments typed by hand or from Apple Pay; the ones the card company reports come in with its file
+const autoInst = t => t.source === "manual" || t.source === "applepay";
+function loadAuto(j) {
+  try { const o = JSON.parse(j); if (o && Array.isArray(o.rec)) autoCfg = { rec: o.rec.filter(r => r && r.name && +r.amount > 0 && /^\d{4}-\d{2}$/.test(r.from)), done: Array.isArray(o.done) ? o.done.slice(-300) : [] }; } catch (e) {}
+}
+const saveAuto = () => writeRange("'הגדרות'!V14", [[JSON.stringify({ rec: autoCfg.rec, done: autoCfg.done.slice(-300) })]]);
+// the switch shows for a single expense in a fixed category (a subscription, insurance, rent...)
+function autoShown() { return addKind === "exp" && FIXED.has($("addCat").value) && +$("addInst").value === 1 && (!editTx || editTx.del.key === "apple"); }
+function autoSync(first) {
+  const on = autoShown(); $("autoRow").hidden = !on;
+  if (first) $("addAuto").checked = !!(editTx && recFor(editTx.merchant));
+  $("autoSub").textContent = `נכנסת ב-${startDay} לחודש, היום הראשון של כל חודש חדש`;
+}
+// turned on: kept (or updated) from the month after this one; turned off: no more from next month
+function setAutoFor(oldName, on, v) {
+  const had = recFor(oldName || v.name);
+  if (!on && !had) return;
+  if (on) {
+    const d = parseDate(v.date) || today, from = ymStr(mIdxOf(d));
+    if (had) Object.assign(had, { name: v.name, amount: v.amount, cat: v.cat, card: v.card });
+    else autoCfg.rec.push({ id: Date.now().toString(36), name: v.name, amount: v.amount, cat: v.cat, card: v.card, from });
+    if (!had) setTimeout(() => toast(`מעכשיו "${v.name}" תיכנס לבד ב-${startDay} בכל חודש`, 4200), 1900);
+  } else { autoCfg.rec = autoCfg.rec.filter(r => r !== had); setTimeout(() => toast(`"${had.name}" לא תיכנס יותר לבד`, 3200), 600); }
+  saveAuto().catch(() => toast("ההגדרה של ההוספה האוטומטית לא נשמרה. נסו שוב.", 4200));
+}
+async function runAuto() {
+  if (autoBusy || !mcp || data.settings == null || fresh.settings === false || !dataFresh()) return;
+  const have = new Set([...(data.apple || []), ...readPending()].map(r => r[7]));
+  const done = new Set(autoCfg.done), rows = [], names = [];
+  const cur = mIdxOf(today);
+  autoCfg.rec.forEach(r => {
+    const [fy, fm] = r.from.split("-").map(Number), from = fy * 12 + fm - 1;
+    // a month or two missed (the site was not opened) is filled in too
+    for (let k = Math.max(from + 1, cur - 2); k <= cur; k++) {
+      const id = "auto-f-" + r.id + "-" + ymStr(k);
+      if (have.has(id) || done.has(id)) continue;
+      rows.push([iso(period(Math.floor(k / 12), k % 12).start), r.amount, r.name, r.card || "", r.cat, "הוצאה", "ידני", id, ""]); names.push(r.name);
+    }
+  });
+  instPlans.forEach(p => {
+    if (!p.due || !autoInst(p.last)) return;
+    const l = p.last, k = l.inst.k + 1;
+    const id = "auto-i-" + autoNorm(l.merchant).replace(/[^\w֐-׿]+/g, "_").slice(0, 40) + "-" + k + "-" + l.inst.n + "-" + iso(p.next);
+    if (have.has(id) || done.has(id)) return;
+    rows.push([iso(p.next), l.amount, l.merchant + " (" + k + "/" + l.inst.n + ")", l.rawCard || l.account || "", l.category, "הוצאה", "ידני", id, ""]);
+    names.push(l.merchant + " " + k + "/" + l.inst.n);
+  });
+  if (!rows.length) return;
+  autoBusy = true;
+  try {
+    // marked first, so another phone that reads the settings now does not add them again
+    autoCfg.done.push(...rows.map(r => r[7])); await saveAuto();
+    await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1", values: rows });
+    data.apple = [...(data.apple || []), ...rows];
+    try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+    afterData();
+    toast("נוסף לבד לחודש החדש: " + names.join(", "), 5200);
+  } catch (e) {
+    const ids = new Set(rows.map(r => r[7])); autoCfg.done = autoCfg.done.filter(id => !ids.has(id)); saveAuto().catch(() => {});
+  } finally { autoBusy = false; }
+}
+["input", "change"].forEach(ev => $("addForm").addEventListener(ev, () => requestAnimationFrame(() => autoSync(false))));
+{ const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); autoSync(true); return r; };
+  const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); autoSync(true); return r; }; }
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -9339,7 +9422,7 @@ const TOUR = [
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "הוצאות שחוזרות על עצמן? לחיצה אחת ממלאת את כל הפרטים מהפעם הקודמת." },
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
-  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo2, h: "תאריך אחר ותשלומים", b: "לקנייה מיום אחר או בתשלומים. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם." },
+  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo2, h: "תאריך אחר ותשלומים", b: "לקנייה מיום אחר או בתשלומים. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר לסמן ״להוסיף לבד בכל חודש״, והיא תיכנס ביום הראשון של כל חודש חדש. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והסכום, העסק והכרטיס מתמלאים לבד." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כרטיס לכל אמצעי תשלום. לחיצה שולפת אותו עם הסכום המדויק, ולחיצה מחוץ לו מחזירה. ״סידור״ קובע את הסדר." },
@@ -9661,7 +9744,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261102170832";
+const BUILD_ID = "20261102234632";
 let updToast = null;
 async function checkUpdate() {
   try {
