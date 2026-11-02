@@ -1547,6 +1547,15 @@ body.arrange .arr-open { display: none !important; }
 .ns-when[hidden] { display: none; }
 .ns-day-row button[data-sday] { border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 12px; min-width: 40px; padding: 5px 9px; font: inherit; font-weight: 700; font-size: .92rem; cursor: pointer; }
 .ns-day-row button[data-sday][aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+/* the description: names you used before, as you type */
+.sugg { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 6px 0 2px; }
+.sugg::-webkit-scrollbar { display: none; }
+.sugg[hidden] { display: none; }
+.sugg button { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .88rem; cursor: pointer; max-width: 80vw; }
+.sugg button bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sugg button b { font-weight: 700; }
+.sugg button small { color: var(--muted); font-size: .76rem; }
+.sugg button:active { transform: scale(.96); }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -2762,7 +2771,7 @@ function makeSupaAdapter(uid) {
     </div>
     <div class="quick-k st1only" id="quickK" hidden>מהאחרונים, לחיצה אחת ממלאת הכול</div>
     <div class="quick st1only" id="quickChips" role="group" aria-label="הוספה מהירה מהאחרונים" hidden></div>
-    <div class="field dt"><label for="addDesc">תיאור</label><input id="addDesc" type="text" placeholder="למשל: קניות בסופר" autocomplete="off"></div>
+    <div class="field dt"><label for="addDesc">תיאור</label><input id="addDesc" type="text" placeholder="למשל: קניות בסופר" autocomplete="off" aria-autocomplete="list" aria-controls="descSugg"><div class="sugg" id="descSugg" role="listbox" aria-label="השלמות מהתנועות שלך" hidden></div></div>
     <div class="pk dt" id="pk">
       <div class="pk-l">קטגוריה</div><div class="pk-cats" id="pkCats" role="group" aria-label="קטגוריה"></div>
       <div class="pk-l" id="pkCardL">שולם עם</div><div class="pk-cards" id="pkCards" role="group" aria-label="אמצעי תשלום"></div>
@@ -9001,6 +9010,49 @@ $("askAns").addEventListener("click", e => {
   stage("a");
 })();
 
+/* the description: as you type, names you used before come up; a tap fills them (and with them the category and the card) */
+(function descSuggest() {
+  const inp = $("addDesc"), box = $("descSugg");
+  const norm = v => String(v || "").trim().toLowerCase().replace(/\s+/g, " ");
+  let picked = "";
+  const draw = () => {
+    const q = norm(inp.value);
+    if (q.length < 2 || q === picked) { box.hidden = true; box.innerHTML = ""; return; }
+    const inc = addKind === "inc", by = new Map();
+    tx.forEach(t => {
+      if (t.gen || !!t.income !== inc && !(inc && t.refund)) return;
+      const name = String(t.merchant || "").trim(), k = norm(name); if (!k || k === q) return;
+      // the start of the name, or the start of any word in it ("אוף" finds "קלאש אוף קלאנס")
+      if (!(k.startsWith(q) || k.split(" ").some(w => w.startsWith(q)))) return;
+      const e = by.get(k) || { name, n: 0, last: t.date, cat: t.category, amount: t.amount };
+      e.n++; if (t.date >= e.last) { e.last = t.date; e.cat = t.category; e.amount = t.amount; e.name = name; } by.set(k, e);
+    });
+    const list = [...by.values()].sort((a, b) => (norm(b.name).startsWith(q) - norm(a.name).startsWith(q)) || b.n - a.n || b.last - a.last).slice(0, 5);
+    if (!list.length) { box.hidden = true; box.innerHTML = ""; return; }
+    box.innerHTML = list.map((e, i) => {
+      const nm = esc(e.name), at = norm(e.name).indexOf(q);
+      const shown = at >= 0 ? esc(e.name.slice(0, at)) + "<b>" + esc(e.name.slice(at, at + q.length)) + "</b>" + esc(e.name.slice(at + q.length)) : nm;
+      return `<button type="button" role="option" data-i="${i}"><bdi>${shown}</bdi><small>${esc(e.cat || "")}</small></button>`;
+    }).join("");
+    box._list = list; box.hidden = false;
+  };
+  inp.addEventListener("input", draw);
+  inp.addEventListener("focus", draw);
+  // pressed before the field loses focus, so the tap is not lost
+  box.addEventListener("pointerdown", e => { if (e.target.closest("button")) e.preventDefault(); });
+  box.addEventListener("click", e => {
+    const b = e.target.closest("button[data-i]"); if (!b) return;
+    const it = box._list[+b.dataset.i]; picked = norm(it.name);
+    inp.value = it.name; box.hidden = true;
+    inp.dispatchEvent(new Event("input", { bubbles: true })); // the category and the card follow, as when typed
+    if (it.cat && [...$("addCat").options].some(o => o.value === it.cat) && !catTouched) { $("addCat").value = it.cat; $("addCat").dispatchEvent(new Event("change")); catTouched = false; }
+    if (window.addPickers) addPickers(true);
+    inp.focus();
+  });
+  inp.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== inp) box.hidden = true; }, 150));
+  { const oa = openAdd; openAdd = function () { picked = ""; box.hidden = true; return oa.apply(this, arguments); }; }
+})();
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -9607,7 +9659,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261102083421";
+const BUILD_ID = "20261102083747";
 let updToast = null;
 async function checkUpdate() {
   try {
