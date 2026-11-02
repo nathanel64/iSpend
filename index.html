@@ -3652,7 +3652,10 @@ function salSameChip(pm, last) {
   if (last != null) { $("salSame").innerHTML = `✓ כמו ב${MONTHS[pm]} · <b class="num">${last % 1 ? "₪" + last.toLocaleString("en-US", { minimumFractionDigits: 2 }) : fmt(last)}</b>`; $("salSame").dataset.v = last; $("salSame").onclick = () => { $("salAmount").value = withCommas(String(last)); fitSal(); const c = $("salGoalChips"); salGoalChips(c.dataset.last === "" ? null : +c.dataset.last, +c.dataset.pm); $("salAmount").focus(); }; }
 }
 function refreshSalSame() {
-  if ($("salBg").hidden || !salKey || nsNum("salAmount")) return;
+  if ($("salBg").hidden || !salKey) return;
+  // the salary is already saved (on another phone, or before an older copy was shown): the window is not needed
+  if (salaries[salKey] != null) { closeSal(); return; }
+  if (nsNum("salAmount")) return;
   const [y, m] = salKey.split("-").map(Number), [py, pm] = prevYM(y, m - 1);
   salSameChip(pm, salaries[mkey(py, pm)]);
   if (Object.keys(salaries).length || tx.length) { $("nsDay").hidden = true; $("nsBack").hidden = true; }
@@ -3661,6 +3664,8 @@ function refreshSalSame() {
 function askSalary() {
   if (salAsked) return;
   if (typeof monthRecapPending === "function" && monthRecapPending()) return; // last month's summary comes first
+  // the settings kept on the phone can be older than the account (a salary saved since): ask only on fresh ones
+  if (fresh.settings === false) return;
   salAsked = true;
   let y = now.getFullYear(), m = now.getMonth();
   if (now.getDate() < startDay) { m--; if (m < 0) { m = 11; y--; } }
@@ -9602,7 +9607,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261101181414";
+const BUILD_ID = "20261102083421";
 let updToast = null;
 async function checkUpdate() {
   try {
