@@ -9084,7 +9084,7 @@ function autoShown() { return addKind === "exp" && FIXED.has($("addCat").value) 
 function autoSync(first) {
   const on = autoShown(); $("autoRow").hidden = !on;
   if (first) $("addAuto").checked = !!(editTx && recFor(editTx.merchant));
-  $("autoSub").textContent = `נכנסת ב-${startDay} לחודש, היום הראשון של כל חודש חדש`;
+  $("autoSub").textContent = startDay === 1 ? "תיכנס לבד בתחילת כל חודש, ב-1 לחודש" : `תיכנס לבד בתחילת כל חודש, ב-${startDay} לחודש (יום החיוב)`;
 }
 // turned on: kept (or updated) from the month after this one; turned off: no more from next month
 function setAutoFor(oldName, on, v) {
@@ -9744,7 +9744,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261102235633";
+const BUILD_ID = "20261103000425";
 let updToast = null;
 async function checkUpdate() {
   try {
