@@ -3755,7 +3755,7 @@ const closeSal = () => { $("salBg").hidden = true; };
 $("nsBackQ").onclick = () => { $("nsBackChips").hidden = false; };
 $("nsBackChips").addEventListener("click", async e => {
   const b = e.target.closest("[data-back]"); if (!b) return;
-  const k = now.getFullYear() * 12 + now.getMonth() - +b.dataset.back;
+  const [cy, cm] = curYM(), k = cy * 12 + cm - +b.dataset.back; // counted from the month running now (by the billing day)
   $("nsBackChips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
   await setStartMonth(k);
   $("nsBackQ").textContent = "✓ נפתח מ" + MONTHS[k % 12] + " " + Math.floor(k / 12) + ". עוברים בין החודשים בחיצים למעלה";
@@ -5383,6 +5383,8 @@ function afterData() {
   // the start month chosen in the settings is exact; without one, the site starts at the first transaction
   if (startMonthPref != null) FIRST_MONTH = startMonthPref;
   else tx.forEach(t => { const k = mIdxOf(t.date); if (k < FIRST_MONTH) FIRST_MONTH = k; });
+  // the month running now (by the billing day: before the 10th it is still last month) is always there
+  { const [cy, cm] = curYM(); if (startMonthPref == null && cy * 12 + cm < FIRST_MONTH) FIRST_MONTH = cy * 12 + cm; }
   if (viewIdx() < FIRST_MONTH) view = { y: Math.floor(FIRST_MONTH / 12), m: FIRST_MONTH % 12 };
   try { applyStartMonth(); } catch (e) {} // the start month box always shows where the site starts
   render(); renderBankStatus(); renderCardMap();
@@ -9659,7 +9661,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261102130558";
+const BUILD_ID = "20261102144636";
 let updToast = null;
 async function checkUpdate() {
   try {
