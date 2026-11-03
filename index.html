@@ -1558,6 +1558,25 @@ body.arrange .arr-open { display: none !important; }
 .sugg button:active { transform: scale(.96); }
 .auto-tg { margin-top: 2px; position: relative; }
 .auto-tg[hidden] { display: none; }
+/* the last payment of installments */
+.last-pay { grid-column: 2; justify-self: start; margin-top: 5px; position: relative; display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 12px 3px 11px; overflow: hidden; isolation: isolate;
+  background: linear-gradient(120deg, #5b4cf0, #8a4fe0 55%, #b05ad6); color: #fff; font-weight: 700; font-size: .76rem; line-height: 1.4; box-shadow: 0 2px 8px -2px color-mix(in srgb, #6a4cf0 55%, transparent); }
+.last-pay .lp-t { position: relative; z-index: 1; }
+.last-pay::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%); transform: translateX(-120%); animation: lpShine 3.2s ease-in-out infinite; z-index: 1; }
+.lp-cf { position: absolute; inset: 0; pointer-events: none; }
+.lp-cf i { position: absolute; top: -8px; width: 4px; height: 7px; border-radius: 1px; opacity: .95; animation: lpFall 2.6s linear infinite; }
+.lp-cf i:nth-child(1) { left: 6%; background: #ffd166; animation-delay: 0s; }
+.lp-cf i:nth-child(2) { left: 18%; background: #7df0c8; animation-delay: .9s; width: 3px; }
+.lp-cf i:nth-child(3) { left: 30%; background: #ff8fab; animation-delay: 1.7s; }
+.lp-cf i:nth-child(4) { left: 42%; background: #fff; animation-delay: .4s; width: 3px; height: 3px; border-radius: 50%; }
+.lp-cf i:nth-child(5) { left: 54%; background: #ffd166; animation-delay: 1.3s; }
+.lp-cf i:nth-child(6) { left: 66%; background: #8fd3ff; animation-delay: .2s; width: 3px; }
+.lp-cf i:nth-child(7) { left: 76%; background: #ff8fab; animation-delay: 2.1s; }
+.lp-cf i:nth-child(8) { left: 86%; background: #7df0c8; animation-delay: 1s; width: 3px; height: 3px; border-radius: 50%; }
+.lp-cf i:nth-child(9) { left: 94%; background: #fff; animation-delay: 1.9s; }
+@keyframes lpFall { 0% { transform: translateY(0) rotate(0); } 100% { transform: translateY(36px) rotate(320deg); } }
+@keyframes lpShine { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) { .lp-cf i, .last-pay::after { animation: none; } .lp-cf i { top: 30%; opacity: .5; } }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -5102,6 +5121,8 @@ function renderCats(f) {
   }).join("") : `<div class="empty">אין הוצאות ${catMode === "fixed" ? "קבועות" : "משתנות"} בחודש הזה.</div>`;
 }
 
+// the last payment of a purchase in installments: a purple tag with a little confetti
+const lastPayTag = () => `<span class="last-pay"><span class="lp-cf" aria-hidden="true">${"<i></i>".repeat(9)}</span><span class="lp-t">🎉 תשלום אחרון</span></span>`;
 function txRowHtml(t, withDate) {
   const pos = t.income || t.refund;
   const k = txKey(t);
@@ -5111,6 +5132,7 @@ function txRowHtml(t, withDate) {
     <div class="m">${t.inst ? `<bdi dir="ltr" class="inst">(${t.inst.k}/${t.inst.n})</bdi> ` : ""}<bdi>${esc(t.merchant)}</bdi></div>
     <div class="a num ${pos ? "in" : ""}">${pos ? ltr("+" + fmt2(t.amount)) : fmt2(t.amount)}</div>
     <div class="meta">${isPendingTx(t) ? `<span class="pend" title="נשמר בטלפון, יישלח כשיהיה חיבור"><svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 01-.5-9.97A6 6 0 0118 9a4.5 4.5 0 01-.5 9z"/></svg>ממתין · </span>` : ""}<span class="${t.category === "לא מסווג" ? "uncat" : ""}">${esc(t.category)}</span>${withDate === true ? " · " + dd(t.date) : ""} · ${esc(t.account)}${t.gen ? " · מתוך " + fmt(t.total) : ""}</div>
+    ${t.inst && t.inst.k === t.inst.n && t.inst.n > 1 && !pos ? lastPayTag() : ""}
   </div>`;
   if (!k) return row;
   if (pendingDel && pendingDel.k === k) return "";
@@ -9744,7 +9766,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261103000425";
+const BUILD_ID = "20261103154147";
 let updToast = null;
 async function checkUpdate() {
   try {
