@@ -1608,6 +1608,47 @@ body.arrange .arr-open { display: none !important; }
 .g-chips .ring-pill { background: var(--bg); color: color-mix(in srgb, var(--ink) 70%, var(--muted)); box-shadow: inset 0 0 0 1px var(--line); }
 .status.mid .g-chips .ring-pill, .status.neg .g-chips .ring-pill { background: var(--bg); color: color-mix(in srgb, var(--ink) 70%, var(--muted)); }
 .status.neg .g-plus { color: var(--bad); background: var(--bad-soft); }
+/* the daily jar */
+.today .td-ic.jar { width: 46px; height: 50px; border-radius: 15px; background: linear-gradient(160deg, #f3f0ff, #e4ddff); }
+.today[role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.today[role="button"]:active { transform: scale(.985); }
+.jar-svg { width: 100%; height: 100%; overflow: visible; }
+.jar-svg .jg { fill: color-mix(in srgb, #8c78f0 10%, transparent); stroke: #b3a6f2; stroke-width: 2.2; }
+.jar-svg .jl { fill: #cfc5f7; }
+.jar-svg .cn { fill: #f3b93c; stroke: #d3951c; stroke-width: 1.1; }
+.jar-svg .cn.new { animation: coinIn .55s cubic-bezier(.3, 1.4, .5, 1) both; }
+.jar-svg .fly { fill: #f3b93c; stroke: #d3951c; stroke-width: 1.1; animation: coinOut 1s ease-out both; }
+.today.over .jar-svg .jg { fill: color-mix(in srgb, var(--bad) 8%, transparent); stroke: color-mix(in srgb, var(--bad) 45%, transparent); }
+@keyframes coinIn { from { transform: translateY(-14px); opacity: 0; } }
+@keyframes coinOut { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(12px, -34px) rotate(40deg); opacity: 0; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .today .td-ic.jar { background: linear-gradient(160deg, #262041, #2f2752); } :root:not([data-theme="light"]) .jar-svg .jl { fill: #4a3f86; } }
+:root[data-theme="dark"] .today .td-ic.jar { background: linear-gradient(160deg, #262041, #2f2752); } :root[data-theme="dark"] .jar-svg .jl { fill: #4a3f86; }
+.jar-bg { position: fixed; inset: 0; z-index: 60; background: rgba(15, 12, 30, .45); display: flex; align-items: flex-end; justify-content: center; animation: jarFade .2s ease both; }
+.jar-sh { width: 100%; max-width: 480px; background: var(--surface); border-radius: 26px 26px 0 0; padding: 12px 18px calc(22px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; animation: jarUp .32s cubic-bezier(.2, .8, .2, 1) both; max-height: 88vh; overflow-y: auto; }
+.jar-sh .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); align-self: center; }
+.jar-sh .hd { display: flex; justify-content: space-between; align-items: center; }
+.jar-sh .hd b { font-size: 1.08rem; } .jar-sh .hd span { color: var(--muted); font-size: .82rem; }
+.jar-sh .x { border: 0; background: var(--bg); color: var(--ink); width: 34px; height: 34px; border-radius: 50%; font-size: 15px; cursor: pointer; }
+.jar-big { width: 150px; height: 168px; align-self: center; }
+.jar-num { text-align: center; font-size: 2rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.jar-num.bad { color: var(--bad); }
+.jar-k { text-align: center; color: var(--muted); font-size: .84rem; margin-top: -8px; }
+.jar-chip { align-self: center; border-radius: 999px; padding: 5px 12px; font-size: .8rem; font-weight: 700; background: var(--good-soft); color: var(--good); text-align: center; }
+.jar-chip.bad { background: var(--bad-soft); color: var(--bad); }
+.jar-log { background: var(--bg); border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; font-size: .88rem; }
+.jar-log div { display: flex; justify-content: space-between; gap: 10px; }
+.jar-log bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jar-log div > span:first-child { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.jar-log div > span:first-child > :first-child:not(bdi) { flex: none; width: 28px; height: 28px; border-radius: 9px; }
+.jar-log div > span:first-child > :first-child:not(bdi) svg { width: 16px; height: 16px; }
+.jar-log div { align-items: center; }
+.today .td-ic.jar svg { width: 40px; height: 44px; stroke: none; }
+.jar-log .o { color: var(--bad); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jar-log .i { color: var(--good); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jar-log .sep { border-top: 1px dashed var(--line); padding-top: 8px; }
+.jar-note { color: var(--muted); font-size: .76rem; text-align: center; margin: 0; }
+@keyframes jarFade { from { opacity: 0; } } @keyframes jarUp { from { transform: translateY(40px); opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { .jar-svg .cn.new, .jar-svg .fly, .jar-bg, .jar-sh { animation: none; } }
 .wl-c .m2{display:none}.wl-c.sel .m2{display:inline}.wl-c.sel .m0{display:none}
 .wl-all{margin-inline-start:auto;border:0;border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:700;color:var(--brand);background:var(--brand-soft);cursor:pointer;display:inline-flex;align-items:center;gap:4px;animation:wlAllIn .25s ease}
 .wl-all[hidden]{display:none}
@@ -4273,7 +4314,7 @@ function animateView(id) {
 // how much can still go out today, so the rest of the month stays covered
 function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
   const box = $("todayBox"); $("mbToday").innerHTML = "";
-  if (!isCurrent || !income) { box.hidden = true; return; }
+  if (!isCurrent || !income) { box.hidden = true; jarCtx = null; return; }
   const val = t => t.refund ? -t.amount : t.amount;
   const spentToday = f.spend.filter(t => iso(t.date) === iso(today)).reduce((s, t) => s + val(t), 0);
   const spent = f.fixed + f.variable;
@@ -4288,7 +4329,7 @@ function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
     // the month is already past what came in: still say what today took, and that every shekel adds to it
     cls = "over"; k = spentToday > 0 ? "היום יצאו" : spentToday < 0 ? "היום חזרו אליך" : "היום עוד לא יצא כלום";
     side = spentToday > 0 ? "כל הוצאה החודש<br>מגדילה את החריגה" : spentToday < 0 ? "החזרים מקטינים<br>את החריגה" : "יום בלי הוצאות<br>מקטין את החריגה";
-    box.className = "today flat " + (spentToday < 0 ? "back" : "over");
+    box.className = "today flat " + (spentToday < 0 ? "back" : "over"); box.removeAttribute("role"); box.removeAttribute("tabindex"); jarCtx = null;
     box.innerHTML = `<span class="td-ic">${sun}</span><div><div class="td-k">${k}</div><div class="td-v num" id="todayVal"></div></div><div class="td-side">${side}</div>`;
     $("mbToday").innerHTML = `היום: <b>${spentToday < 0 ? "+" + fmt(-spentToday) : fmt(spentToday)}</b>`;
     const tv = $("todayVal"); countTo(tv, Math.abs(spentToday), fmt); box.dataset.v = tv.dataset.v; box.hidden = false; return;
@@ -4317,7 +4358,12 @@ function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
     </g>
     <rect class="cap" x="6" y="2" width="28" height="3" rx="1.5"/><rect class="cap" x="6" y="41" width="28" height="3" rx="1.5"/></svg>`;
   box.className = "today " + cls;
-  box.innerHTML = `<span class="td-ic hg">${hg}</span><div><div class="td-k">${k}</div><div class="td-v num" id="todayVal"></div></div><div class="td-side num">${side}</div>`;
+  void hg;
+  // the daily jar: the coins are what is left of today's share; yesterday's leftovers (or overspending) are spread over the days ahead
+  const base = Math.max(0, (income - fixedExpected) / (daysBetween(f.start, f.end) + 1));
+  jarCtx = { perDay, left, spentToday, base, days, tomorrow: days > 1 ? (pool - spentToday) / (days - 1) : 0, items: f.spend.filter(t => iso(t.date) === iso(today)) };
+  box.innerHTML = `<span class="td-ic jar">${jarSvg(r, 9, poured)}</span><div><div class="td-k">${k === "אפשר להוציא היום" ? "נשאר בצנצנת להיום" : k}</div><div class="td-v num" id="todayVal"></div></div><div class="td-side num">${side}</div>`;
+  box.setAttribute("role", "button"); box.tabIndex = 0; box.setAttribute("aria-label", "פתיחת הצנצנת היומית");
   $("mbToday").innerHTML = left >= 0 ? `היום: <b>${fmt(left)}</b>` : `היום: <b style="color:var(--bad)">−${fmt(-left)}</b>`;
   const tv = $("todayVal"); tv.dataset.v = box.dataset.v || 0; countTo(tv, pool <= 0 ? pool : left >= 0 ? left : -left, fmt); box.dataset.v = tv.dataset.v;
   box.hidden = false;
@@ -4327,6 +4373,7 @@ function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
     if (top) top.style.transform = `scaleY(${r.toFixed(3)})`; if (bot) bot.style.transform = `scaleY(${Math.max(.04, 1 - r).toFixed(3)})`;
   }));
   if (poured) { void box.offsetWidth; box.classList.add("pour"); setTimeout(() => box.classList.remove("pour"), 2200); }
+  if ($("jarSheet")) openJar(true);
 }
 function readDismissed() { try { return JSON.parse(localStorage.getItem("insightsOff") || "{}"); } catch (e) { return {}; } }
 let insIdx = 0, insTimer = null, insHold = 0;
@@ -9253,6 +9300,53 @@ function tmShow(i) {
   $("gaugeTap").addEventListener("click", e => { if (tmAt) { e.stopImmediatePropagation(); tmShow(tmCtx.n - 1); } }, true);
 }
 
+/* the daily jar: coins for what is left of today's share. A spend takes coins out (they fly off), a tap opens the jar */
+var jarCtx = null, jarCoins = null;
+function jarSvg(r, max, poured, big) {
+  const n = r > 0 ? Math.max(1, Math.round(r * max)) : 0;
+  const was = jarCoins == null ? n : jarCoins; if (!big) jarCoins = n;
+  // the jar is drawn in a 40x46 box: coins sit in rows from the bottom up
+  const spots = []; const rows = [[11, 17, 23, 29], [14, 20, 26], [11, 17, 23, 29], [14, 20, 26], [11, 17, 23, 29], [14, 20, 26]];
+  rows.forEach((xs, ri) => xs.forEach(x => spots.push([x + (ri % 2 ? 0 : 0), 39 - ri * 4.2])));
+  const coin = (x, y, cls) => `<ellipse class="${cls}" cx="${x}" cy="${y}" rx="3.6" ry="1.6"/>`;
+  const shown = spots.slice(0, Math.min(n, spots.length)).map(([x, y], i) => coin(x, y, "cn" + (!big && i >= was ? " new" : ""))).join("");
+  const gone = !big && poured && was > n ? spots.slice(n, Math.min(was, n + 3)).map(([x, y], i) => `<ellipse class="fly" cx="${x}" cy="${y}" rx="3.6" ry="1.6" style="animation-delay:${i * 120}ms"/>`).join("") : "";
+  return `<svg class="jar-svg" viewBox="0 0 40 46" aria-hidden="true"><rect class="jl" x="12" y="2" width="16" height="4" rx="1.5"/>
+    <path class="jg" d="M10 7 h20 q4 0 4 4 v29 q0 4 -4 4 h-20 q-4 0 -4 -4 v-29 q0 -4 4 -4z"/>${shown}${gone}</svg>`;
+}
+function openJar(refresh) {
+  const c = jarCtx; if (!c) return;
+  let bg = $("jarSheet");
+  if (!bg) {
+    if (refresh) return;
+    bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = "jarSheet"; bg.dir = "rtl";
+    bg.addEventListener("click", e => { if (e.target === bg || e.target.closest(".x")) closeJar(); });
+    document.body.appendChild(bg); document.documentElement.classList.add("modal-open");
+  }
+  const r = c.perDay > 0 ? Math.max(0, Math.min(1, c.left / c.perDay)) : 0, over = c.left < 0 || c.perDay <= 0;
+  const wd = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"][today.getDay()];
+  const extra = c.perDay - c.base;
+  const chip = over ? (c.days > 1 ? `<span class="jar-chip bad">${fmt(Math.abs(c.left))} מעל הצנצנת · מחר נכנסים ${fmt(Math.max(0, c.tomorrow))}</span>` : `<span class="jar-chip bad">${fmt(Math.abs(c.left))} מעל הצנצנת</span>`)
+    : Math.abs(extra) >= 5 ? `<span class="jar-chip ${extra < 0 ? "bad" : ""}">${extra > 0 ? `כולל ${fmt(extra)} שחסכת בימים הקודמים` : `${fmt(-extra)} פחות בגלל ימים יקרים קודם`}</span>` : "";
+  const items = c.items.slice().sort((a, b) => b.amount - a.amount);
+  const log = items.map(t => `<div><span>${catIcon(t.category, true)} <bdi>${esc(t.merchant)}</bdi></span><span class="${t.refund ? "i" : "o"}">${t.refund ? "+" : "−"}${t.amount % 1 ? fmt2(t.amount) : fmt(t.amount)}</span></div>`).join("")
+    + `<div class="${items.length ? "sep" : ""}"><span>בבוקר נכנסו לצנצנת</span><span class="i">+${fmt(Math.max(0, c.perDay))}</span></div>`;
+  bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="הצנצנת של היום">
+    <span class="grab" aria-hidden="true"></span>
+    <div class="hd"><div><b>הצנצנת של היום</b><br><span>יום ${wd}, ${dd(today)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+    <div class="jar-big">${jarSvg(r, 22, false, true)}</div>
+    <div class="jar-num num ${over ? "bad" : ""}">${over ? "₪0" : fmt(c.left)}</div>
+    <div class="jar-k">${over ? "הצנצנת התרוקנה להיום" : items.length ? "נשאר בצנצנת להיום" : "עוד לא יצא כלום היום ✨"}</div>
+    ${chip}
+    <div class="jar-log">${log}</div>
+    <p class="jar-note">מה שנשאר בצנצנת בסוף היום מתחלק על הימים הבאים, ומה שעובר אותה מוריד מהם. בכל בוקר היא מתמלאת לפי מה שנשאר לחודש, אחרי הקבועות והיעד.</p>
+  </div>`;
+}
+function closeJar() { const bg = $("jarSheet"); if (bg) bg.remove(); document.documentElement.classList.remove("modal-open"); }
+$("todayBox").addEventListener("click", () => { if ($("todayBox").getAttribute("role") === "button") openJar(); });
+$("todayBox").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && $("todayBox").getAttribute("role") === "button") { e.preventDefault(); openJar(); } });
+addEventListener("keydown", e => { if (e.key === "Escape" && $("jarSheet")) closeJar(); });
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -9531,6 +9625,7 @@ const TOUR = [
   { t: "#monthTitle", h: "מעבר בין חודשים", b: "החיצים עוברים חודש אחד. לחיצה על שם החודש פותחת את כל החודשים. כל חלון נסגר במשיכה למטה." },
   { t: "#askBox", h: "תשאלו אותי ✦", b: "שואלים בשפה רגילה: סכומים, ממוצעים, השוואה בין חודשים ואחוז מההכנסה. למשל ״כמה הוצאתי על סופר מינואר?״" },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "הקשת מתמלאת לפי מה שהוצאתם. הסימון ״צפי״ מראה איך החודש ייגמר בקצב הנוכחי. גוררים את הפס שמתחתיה כדי לראות כל יום בחודש, כמו מכונת זמן." },
+  { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה." },
   { t: "#slipBtn", opt: true, h: "התלוש של החודש", b: "כל מה שנכנס ויצא לפי קטגוריות, כמו תלוש. אפשר לשתף אותו כתמונה." },
   { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או הכנסה. לחיצה רגילה פותחת חלון, ולחיצה ארוכה מקליטה בקול." },
   { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. ״המשך״ עובר לפרטים." },
@@ -9859,7 +9954,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261104005633";
+const BUILD_ID = "20261104010529";
 let updToast = null;
 async function checkUpdate() {
   try {
