@@ -1649,6 +1649,8 @@ body.arrange .arr-open { display: none !important; }
 .jar-note { color: var(--muted); font-size: .76rem; text-align: center; margin: 0; }
 @keyframes jarFade { from { opacity: 0; } } @keyframes jarUp { from { transform: translateY(40px); opacity: .4; } }
 @media (prefers-reduced-motion: reduce) { .jar-svg .cn.new, .jar-svg .fly, .jar-bg, .jar-sh { animation: none; } }
+#addForm.grow { transform-origin: calc(100% - 40px) calc(100% + 40px); animation: fabGrow .42s cubic-bezier(.2, .9, .25, 1) both; }
+@keyframes fabGrow { from { transform: scale(.12); border-radius: 60px; opacity: .4; } 60% { opacity: 1; } to { transform: none; } }
 /* ===== 4: numbers that roll: every digit turns on its own wheel to its new place ===== */
 .odo { display: inline-flex; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
 .odo .od { display: inline-block; height: 1.15em; overflow: hidden; vertical-align: bottom; line-height: 1.15em; }
@@ -1986,48 +1988,17 @@ html.modal-open .to-top { opacity: 0; pointer-events: none; }
 .dial-hint { margin: 6px 0 0; text-align: center; font-size: .72rem; color: var(--muted); }
 /* a visible keyboard focus everywhere */
 :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible { outline: 2.5px solid var(--brand-text); outline-offset: 2px; }
-/* ===== 1: glass, like iOS 26: a soft light behind, see-through cards over it ===== */
-html { background: var(--bg); }
-body { background: transparent !important; }
-.aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: var(--bg); }
-.aurora i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(60px); opacity: .55; will-change: transform; }
-.aurora i:nth-child(1) { background: #9b8cff; top: -30vmax; inset-inline-start: -20vmax; animation: aur1 38s ease-in-out infinite alternate; }
-.aurora i:nth-child(2) { background: #f3a6d8; top: 10vmax; inset-inline-end: -35vmax; animation: aur2 44s ease-in-out infinite alternate; opacity: .4; }
-.aurora i:nth-child(3) { background: #8fd8ff; bottom: -35vmax; inset-inline-start: -25vmax; animation: aur3 50s ease-in-out infinite alternate; opacity: .38; }
-.aurora i:nth-child(4) { background: #b79bff; bottom: -30vmax; inset-inline-end: -25vmax; animation: aur1 56s ease-in-out infinite alternate-reverse; opacity: .4; }
-@keyframes aur1 { to { transform: translate(12vmax, 10vmax) scale(1.1); } }
-@keyframes aur2 { to { transform: translate(-14vmax, 8vmax) scale(.9); } }
-@keyframes aur3 { to { transform: translate(10vmax, -12vmax) scale(1.08); } }
-:root { --glass: color-mix(in srgb, var(--surface) 58%, transparent); --glass-line: rgba(255, 255, 255, .62); --glass-hi: rgba(255, 255, 255, .75); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --glass: color-mix(in srgb, var(--surface) 62%, transparent); --glass-line: rgba(255, 255, 255, .09); --glass-hi: rgba(255, 255, 255, .06); }
-  :root:not([data-theme="light"]) .aurora i { opacity: .28; } }
-:root[data-theme="dark"] { --glass: color-mix(in srgb, var(--surface) 62%, transparent); --glass-line: rgba(255, 255, 255, .09); --glass-hi: rgba(255, 255, 255, .06); }
-:root[data-theme="dark"] .aurora i { opacity: .28; }
-.card, .today, .set-grp, .cat-rows, .insight, .ytile, .money, .set-avg, .ask-in, .flow > div, .days .day-head, .ana-sum {
-  background: var(--glass) !important; -webkit-backdrop-filter: blur(18px) saturate(1.7); backdrop-filter: blur(18px) saturate(1.7);
-  border: 1px solid var(--glass-line) !important; box-shadow: 0 10px 28px -16px rgba(50, 35, 130, .35), inset 0 1px 0 var(--glass-hi) !important; }
-/* the top of the screen, the sticky month bar and the fade under the bar: see-through too */
-header.top, .app-head, body > header { background: color-mix(in srgb, var(--bg) 55%, transparent) !important; -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); }
-body::before { background: color-mix(in srgb, var(--bg) 55%, transparent) !important; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
-body::after { background: linear-gradient(to top, color-mix(in srgb, var(--bg) 70%, transparent) 30%, transparent) !important; }
-@media (prefers-reduced-motion: reduce) { .aurora i { animation: none; } }
-@media (prefers-reduced-transparency: reduce) {
-  .aurora { display: none; } body { background: var(--bg) !important; }
-  .card, .today, .set-grp, .cat-rows, .insight, .ytile, .money, .set-avg, .ask-in, .flow > div, .days .day-head, .ana-sum { background: var(--surface) !important; -webkit-backdrop-filter: none; backdrop-filter: none; } }
-
 /* ===== 2: the bar floats as a glass capsule; the + is a round button beside it, and opens the add window from where it is ===== */
-.nav { inset-inline-end: calc(max(12px, env(safe-area-inset-left, 0px)) + 66px) !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-  border-radius: 999px !important; padding: 6px !important; background: var(--glass) !important; border: 1px solid var(--glass-line) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(1.8); backdrop-filter: blur(24px) saturate(1.8);
-  box-shadow: 0 12px 32px -10px rgba(40, 28, 110, .35), inset 0 1px 0 var(--glass-hi) !important; max-width: 500px; }
-.nav > div:has(.fab) { position: absolute !important; inset-inline-end: -66px; top: 0 !important; bottom: 0 !important; height: auto !important; margin: 0 !important; transform: none !important; display: flex !important; align-items: center; }
+.nav { inset-inline-start: calc(max(12px, env(safe-area-inset-right, 0px)) + 66px) !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  border-radius: 999px !important; padding: 6px !important; max-width: 500px; }
+.nav > div:has(.fab) { position: absolute !important; inset-inline-start: -66px; inset-inline-end: auto !important; top: 0 !important; bottom: 0 !important; height: auto !important; margin: 0 !important; transform: none !important; display: flex !important; align-items: center; }
 .nav .fab { margin: 0 !important; width: 56px !important; height: 56px !important; border-radius: 50% !important;
   box-shadow: 0 12px 26px -8px rgba(91, 76, 240, .7), inset 0 1px 0 rgba(255, 255, 255, .35) !important; }
 .nav button:not(.fab) { border-radius: 999px !important; padding: 7px 0 6px !important; }
 .nav button[aria-pressed="true"]:not(.fab)::before { inset: 0 4% !important; border-radius: 999px !important; background: color-mix(in srgb, var(--brand) 14%, transparent); }
 .nav.slim { padding: 4px !important; }
 .nav.slim .fab { width: 50px !important; height: 50px !important; margin: 0 !important; }
-.nav.slim > div:has(.fab) { inset-inline-end: -62px; }
+.nav.slim > div:has(.fab) { inset-inline-start: -62px; }
 
 </style>
 <style>
@@ -2866,7 +2837,6 @@ function makeSupaAdapter(uid) {
 <div class="sheet-bg obj-bg" id="objBg" hidden dir="rtl" lang="he" style="z-index:44"><div class="obj-wrap" id="objWrap"></div></div>
 <div class="saved-card" id="savedCard" dir="rtl" lang="he" role="status" hidden></div>
 <div class="undo-bar" id="undoBar" dir="rtl" lang="he" role="status" hidden><span id="undoTxt">התנועה נמחקה</span><button type="button" id="undoBtn">ביטול</button><i></i></div>
-<div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <nav class="nav" dir="rtl" lang="he" aria-label="ניווט">
   <button id="navHome" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8 M5 10v11h14V10 M10 21v-6h4v6"/></svg>בית</button>
   <button id="navTx" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16 M4 12h16 M4 18h10"/></svg>תנועות</button>
@@ -9421,27 +9391,20 @@ $("todayBox").addEventListener("click", () => { if ($("todayBox").getAttribute("
 $("todayBox").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && $("todayBox").getAttribute("role") === "button") { e.preventDefault(); openJar(); } });
 addEventListener("keydown", e => { if (e.key === "Escape" && $("jarSheet")) closeJar(); });
 
-/* the add window grows out of the round + (and, on the way, its corners round off into a sheet) */
+/* the add window grows out of the round + at the bottom right */
 {
   let fromFab = false;
   $("fab").addEventListener("click", () => { fromFab = true; }, true);
   const oa = openAdd;
   openAdd = function () {
+    const sh = $("addForm"); sh.classList.remove("grow");
     const r = oa.apply(this, arguments);
-    if (fromFab && !REDUCED) {
-      fromFab = false;
-      requestAnimationFrame(() => {
-        const sh = $("addForm"), fb = $("fab").getBoundingClientRect(), b = sh.getBoundingClientRect();
-        if (!b.width || !sh.animate) return;
-        const dx = fb.left + fb.width / 2 - (b.left + b.width / 2), dy = fb.top + fb.height / 2 - (b.top + b.height / 2);
-        sh.animate([{ transform: `translate(${dx}px, ${dy}px) scale(${(fb.width / b.width).toFixed(3)}, ${(fb.height / b.height).toFixed(3)})`, borderRadius: "40px", opacity: .5 },
-          { transform: "none", borderRadius: "28px 28px 0 0", opacity: 1 }], { duration: 420, easing: "cubic-bezier(.2, .9, .25, 1)" });
-        $("sheetBg").animate([{ backgroundColor: "rgba(0,0,0,0)" }, {}], { duration: 300 });
-      });
-    }
+    if (fromFab && !REDUCED) { void sh.offsetWidth; sh.classList.add("grow"); }
     fromFab = false;
     return r;
   };
+  $("addForm").addEventListener("animationend", e => { if (e.animationName === "fabGrow") $("addForm").classList.remove("grow"); });
+  const oc = closeAdd; closeAdd = function () { $("addForm").classList.remove("grow"); return oc.apply(this, arguments); };
 }
 
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
@@ -10051,7 +10014,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107011534";
+const BUILD_ID = "20261107012638";
 let updToast = null;
 async function checkUpdate() {
   try {
