@@ -2000,6 +2000,15 @@ html.modal-open .to-top { opacity: 0; pointer-events: none; }
 .nav.slim .fab { width: 50px !important; height: 50px !important; margin: 0 !important; }
 .nav.slim > div:has(.fab) { inset-inline-start: -62px; }
 
+/* the gauge: a whisper of warm light behind it, and a soft shadow under the filled part */
+.ring-wrap.gauge { isolation: isolate; }
+.ring-wrap.gauge::before { content: ""; position: absolute; left: 50%; top: 48%; width: 140%; height: 125%; transform: translate(-50%, -50%); z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 55%, rgba(255, 214, 186, .30), rgba(206, 198, 255, .14) 45%, transparent 70%); }
+#ringFg { filter: drop-shadow(0 4px 10px rgba(91, 76, 240, .28)); }
+.status.mid #ringFg { filter: drop-shadow(0 4px 10px rgba(230, 140, 40, .28)); }
+.status.neg #ringFg { filter: drop-shadow(0 4px 10px rgba(200, 70, 61, .28)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ring-wrap.gauge::before { background: radial-gradient(ellipse at 50% 55%, rgba(255, 190, 150, .10), rgba(150, 135, 255, .12) 45%, transparent 70%); } }
+:root[data-theme="dark"] .ring-wrap.gauge::before { background: radial-gradient(ellipse at 50% 55%, rgba(255, 190, 150, .10), rgba(150, 135, 255, .12) 45%, transparent 70%); }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -10014,7 +10023,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107012638";
+const BUILD_ID = "20261107013817";
 let updToast = null;
 async function checkUpdate() {
   try {
