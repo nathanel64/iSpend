@@ -2094,6 +2094,15 @@ html.privacy .num, html.privacy .odo { user-select: none; -webkit-user-select: n
 .plan-card b { display: block; } .plan-card small { color: var(--muted); font-size: .78rem; }
 .plan-card .e { font-size: 22px; }
 .plan-card[hidden] { display: none; }
+
+.pl-row { grid-template-columns: 28px 30px minmax(0, 1fr) auto 84px !important; }
+.pl-tg { width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--brand); background: var(--brand); color: #fff; font: inherit; font-weight: 800; font-size: .85rem; padding: 0; cursor: pointer; display: grid; place-items: center; }
+.pl-row.off .pl-tg { background: transparent; border-color: var(--line); }
+.pl-row.off > :not(.pl-tg) { opacity: .4; }
+.pl-row.off .was { text-decoration: none; }
+.pl-skip { border: 0; background: none; color: var(--muted); font: inherit; font-size: .88rem; font-weight: 600; padding: 10px; cursor: pointer; width: 100%; }
+.sp-save:disabled { opacity: .5; }
+.plan-card .pc-x { margin-inline-start: auto; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); font-size: .9rem; flex: none; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -3074,7 +3083,7 @@ function makeSupaAdapter(uid) {
   </form>
 </div>
 
-<button type="button" class="plan-card" id="planCard" hidden><span class="e">✦</span><span><b id="planCardT">תוכנית לחודש הבא</b><small>ה-AI יציע תקרה לכל קטגוריה, לפי מה שיצא והיעד</small></span></button>
+<button type="button" class="plan-card" id="planCard" hidden><span class="e">✦</span><span><b id="planCardT">תוכנית לחודש הבא</b><small>ה-AI יציע תקרה לכל קטגוריה, לפי מה שיצא והיעד</small></span><span class="pc-x" role="button" aria-label="לא תודה">✕</span></button>
 <div class="sheet-bg sal-bg" id="askBg" hidden dir="rtl" lang="he" style="z-index:45">
   <div class="sal-sheet ns" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askText">
     <div class="ns-top"><div class="ns-kicker" id="askKick"></div><h3 id="askTitle"></h3><div class="ask-text" id="askText"></div></div>
@@ -9737,7 +9746,9 @@ function planHome() {
   c.hidden = !window.ispendPlan || left > 6 || has || dismissed === k || !tx.length || currentView !== "flow";
   $("planCardT").textContent = "✦ תוכנית ל" + MONTHS[tm];
 }
-$("planCard").addEventListener("click", () => openPlan());
+$("planCard").addEventListener("click", e => {
+  if (e.target.closest(".pc-x")) { const [ty, tm] = planTarget(); try { localStorage.setItem("planSeen", mkey(ty, tm)); } catch (x) {} $("planCard").hidden = true; toast("אפשר לחזור לתוכנית בהגדרות › קטגוריות.", 2600); return; }
+  openPlan(); });
 { const r0 = render; render = function () { const o = r0.apply(this, arguments); try { planHome(); } catch (e) {} return o; }; }
 async function openPlan() {
   const [ty, tm] = planTarget(), k = mkey(ty, tm);
@@ -9762,9 +9773,10 @@ async function openPlan() {
   try { plan = await window.ispendPlan({ target: ty + "-" + String(tm + 1).padStart(2, "0"), plan_cats: pcats, cats: CATS, goal, income, today: iso(today), summary: askData().summary }); } catch (e) {}
   if (!bg.isConnected) return;
   if (!plan || !plan.caps || !Object.keys(plan.caps).length) { bg.querySelector(".jar-sh").innerHTML = `${head}<p class="sp-msg">לא הצלחתי לבנות תוכנית עכשיו. נסו שוב עוד מעט.</p>`; return; }
-  const rows = pcats.filter(c => plan.caps[c] > 0).map(c => ({ c, was: avg(c), v: plan.caps[c] }));
+  const rows = pcats.filter(c => plan.caps[c] > 0).map(c => ({ c, was: avg(c), v: plan.caps[c], on: true }));
+  const used = () => rows.filter(r => r.on && r.v > 0);
   const sumLine = () => {
-    const tot = rows.reduce((s, r) => s + (+r.v || 0), 0);
+    const tot = used().reduce((s, r) => s + (+r.v || 0), 0);
     if (!income) return `<div class="pl-sum">סך התקרות: ${fmt(tot)}</div>`;
     const left = income - fixedAvg - tot, ok = !goal || left >= goal;
     return `<div class="pl-sum ${ok ? "" : "bad"}">עם התוכנית: ${fmt(income)} הכנסה${fixedAvg >= 1 ? ", בערך " + fmt(fixedAvg) + " קבועות" : ""} ו-${fmt(tot)} בתקרות. ${left >= 0 ? "נשארים " + fmt(left) : "חסרים " + fmt(-left)}${goal ? (ok ? ", ועומדים ביעד ✓" : `, ${fmt(goal - left)} פחות מהיעד`) : ""}.</div>`;
@@ -9772,21 +9784,27 @@ async function openPlan() {
   const draw = () => {
     bg.querySelector(".jar-sh").innerHTML = `${head}
       ${plan.note ? `<div class="pl-note">✦ ${esc(plan.note)}</div>` : ""}
-      <div class="pl-rows">${rows.map((r, i) => `<div class="pl-row">${catIcon(r.c, true)}<span class="nm">${esc(r.c)}</span><span class="was" title="ממוצע">${fmt(r.was)}</span><input data-i="${i}" inputmode="numeric" value="${r.v}" aria-label="תקרה ל${esc(r.c)}"></div>`).join("")}</div>
+      <div class="pl-rows">${rows.map((r, i) => `<div class="pl-row${r.on ? "" : " off"}"><button type="button" class="pl-tg" data-t="${i}" role="switch" aria-checked="${r.on}" aria-label="לקחת את התקרה ל${esc(r.c)}">${r.on ? "✓" : ""}</button>${catIcon(r.c, true)}<span class="nm">${esc(r.c)}</span><span class="was" title="ממוצע">${fmt(r.was)}</span><input data-i="${i}" inputmode="numeric" value="${r.v}" aria-label="תקרה ל${esc(r.c)}"${r.on ? "" : " disabled"}></div>`).join("")}</div>
       <div id="plSum">${sumLine()}</div>
-      <button type="button" class="sp-save" id="plApply">להחיל כתקרות ל${MONTHS[tm]}</button>
-      <p class="jar-note">המספר המחוק הוא הממוצע בחודשים האחרונים. אפשר לשנות כל שורה לפני. התקרות חלות רק על ${MONTHS[tm]}, וקטגוריות שלא ברשימה נשארות כמו שהן.</p>`;
+      <button type="button" class="sp-save" id="plApply"></button>
+      <button type="button" class="pl-skip" id="plSkip">לא תודה, בלי תוכנית ל${MONTHS[tm]}</button>
+      <p class="jar-note">המספר המחוק הוא הממוצע בחודשים האחרונים. אפשר לשנות כל שורה, או להוריד את ה-✓ ממה שלא רוצים. התקרות חלות רק על ${MONTHS[tm]}, וקטגוריות שלא ברשימה נשארות כמו שהן.</p>`;
   };
-  bg.addEventListener("input", e => { const el = e.target.closest("input[data-i]"); if (!el) return; rows[+el.dataset.i].v = Math.max(0, parseInt(el.value.replace(/\D/g, ""), 10) || 0); $("plSum").innerHTML = sumLine(); });
+  const applyLbl = () => { const n = used().length, b = $("plApply"); if (!b) return; b.disabled = !n; b.textContent = !n ? "לא נבחרה אף תקרה" : n === rows.length ? "להחיל כתקרות ל" + MONTHS[tm] : `להחיל ${n} תקרות ל${MONTHS[tm]}`; };
+  const skip = () => { try { localStorage.setItem("planSeen", k); } catch (x) {} };
+  bg.addEventListener("input", e => { const el = e.target.closest("input[data-i]"); if (!el) return; rows[+el.dataset.i].v = Math.max(0, parseInt(el.value.replace(/\D/g, ""), 10) || 0); $("plSum").innerHTML = sumLine(); applyLbl(); });
   bg.addEventListener("click", async e => {
+    const tg = e.target.closest(".pl-tg");
+    if (tg) { const r = rows[+tg.dataset.t]; r.on = !r.on; const row = tg.closest(".pl-row"); row.classList.toggle("off", !r.on); tg.setAttribute("aria-checked", r.on); tg.textContent = r.on ? "✓" : ""; row.querySelector("input").disabled = !r.on; $("plSum").innerHTML = sumLine(); applyLbl(); return; }
+    if (e.target.closest("#plSkip")) { skip(); close(); render(); toast("בסדר, בלי תוכנית. אפשר לחזור אליה בהגדרות › קטגוריות.", 3200); return; }
     const b = e.target.closest("#plApply"); if (!b) return;
     b.disabled = true; b.textContent = "שומר…";
     const next = JSON.parse(JSON.stringify(capsBy)); next[k] = next[k] || {};
-    rows.forEach(r => { if (r.v > 0) next[k][r.c] = r.v; });
-    try { await saveCapsBy(next); try { localStorage.setItem("planSeen", k); } catch (x) {} close(); render(); toast(`נשמר: ${rows.filter(r => r.v > 0).length} תקרות ל${MONTHS[tm]} ✦`, 3000); }
-    catch (err) { b.disabled = false; b.textContent = "להחיל כתקרות ל" + MONTHS[tm]; toast("השמירה לא הצליחה. נסו שוב.", 3000); }
+    used().forEach(r => { next[k][r.c] = r.v; });
+    try { await saveCapsBy(next); try { localStorage.setItem("planSeen", k); } catch (x) {} close(); render(); toast(`נשמר: ${used().length} תקרות ל${MONTHS[tm]} ✦`, 3000); }
+    catch (err) { b.disabled = false; applyLbl(); toast("השמירה לא הצליחה. נסו שוב.", 3000); }
   });
-  draw();
+  draw(); applyLbl();
 }
 
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
@@ -10417,7 +10435,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107035031";
+const BUILD_ID = "20261107035534";
 let updToast = null;
 async function checkUpdate() {
   try {
