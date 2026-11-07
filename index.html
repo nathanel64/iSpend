@@ -2103,6 +2103,9 @@ html.privacy .num, html.privacy .odo { user-select: none; -webkit-user-select: n
 .pl-skip { border: 0; background: none; color: var(--muted); font: inherit; font-size: .88rem; font-weight: 600; padding: 10px; cursor: pointer; width: 100%; }
 .sp-save:disabled { opacity: .5; }
 .plan-card .pc-x { margin-inline-start: auto; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); font-size: .9rem; flex: none; }
+
+.pl-saved { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--muted); padding: 0 2px; }
+.pl-saved button { border: 0; background: color-mix(in srgb, var(--brand) 10%, transparent); color: var(--brand); font: inherit; font-weight: 700; font-size: .8rem; border-radius: 999px; padding: 7px 12px; cursor: pointer; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -5786,6 +5789,7 @@ function applySettings(values) {
   { const oj = String((values[9] || [])[21] || "").trim(); try { const a = oj ? JSON.parse(oj) : []; if (Array.isArray(a) && JSON.stringify(a) !== JSON.stringify(walletOrder) && !wlArranging) { walletOrder = a; try { localStorage.setItem("walletOrder", JSON.stringify(a)); } catch (e) {} } } catch (e) {} }
   { const cj = String((values[8] || [])[21] || "").trim(); if (cj) { try { const o = JSON.parse(cj); if (o && typeof o === "object" && JSON.stringify(o) !== JSON.stringify(cardColors)) { cardColors = o; try { localStorage.setItem("cardColors", cj); } catch (e) {} } } catch (e) {} } }
   { const aj = String((values[12] || [])[21] || "").trim(); if (aj) loadAuto(aj); }
+  { const pj = String((values[13] || [])[21] || "").trim(); if (pj && typeof loadPlans === "function") loadPlans(pj); }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -9737,20 +9741,35 @@ function planTarget() {
   const [cy, cm] = curYM(), p = period(cy, cm), left = daysBetween(today, p.end);
   return left <= 6 ? (cm === 11 ? [cy + 1, 0] : [cy, cm + 1]) : [cy, cm];
 }
+/* the AI's proposal is kept (in the settings, so it is on every device): close it and come back, change it, apply later */
+let planStore = {};
+function loadPlans(j) { try { const o = JSON.parse(j); if (o && typeof o === "object" && !planSheetOpen()) planStore = o; } catch (e) {} }
+const planSheetOpen = () => !!document.getElementById("planSheet");
+let planSaveT = 0;
+function savePlans(now) {
+  // only the last few months
+  Object.keys(planStore).sort().slice(0, -3).forEach(x => delete planStore[x]);
+  clearTimeout(planSaveT);
+  const go = () => writeRange("'הגדרות'!V15", [[Object.keys(planStore).length ? JSON.stringify(planStore) : ""]]).catch(() => {});
+  if (now) return go(); planSaveT = setTimeout(go, 1200);
+}
 function planHome() {
   const c = $("planCard"); if (!c) return;
   if (c.parentElement !== $("todayBox").parentElement) $("todayBox").after(c);
   const [cy, cm] = curYM(), left = daysBetween(today, period(cy, cm).end), [ty, tm] = planTarget(), k = mkey(ty, tm);
   let dismissed = ""; try { dismissed = localStorage.getItem("planSeen") || ""; } catch (e) {}
   const has = Object.keys(capsBy[k] || {}).length > 0;
-  c.hidden = !window.ispendPlan || left > 6 || has || dismissed === k || !tx.length || currentView !== "flow";
-  $("planCardT").textContent = "✦ תוכנית ל" + MONTHS[tm];
+  const saved = planStore[k] && !planStore[k].applied;
+  c.hidden = !window.ispendPlan || (left > 6 && !saved) || has || dismissed === k || !tx.length || currentView !== "flow";
+  $("planCardT").textContent = saved ? "ההצעה שלך ל" + MONTHS[tm] + " שמורה" : "תוכנית ל" + MONTHS[tm];
+  c.querySelector("small").textContent = saved ? "אפשר לפתוח, לשנות ולהחיל בכל רגע" : "ה-AI יציע תקרה לכל קטגוריה, לפי מה שיצא והיעד";
+  const pb = $("planBtn"); if (pb) pb.firstChild.textContent = planStore[k] ? "✦ ההצעה ל" + MONTHS[tm] + (planStore[k].applied ? " (הוחלה)" : " (שמורה)") : "✦ תוכנית תקרות מה-AI";
 }
 $("planCard").addEventListener("click", e => {
-  if (e.target.closest(".pc-x")) { const [ty, tm] = planTarget(); try { localStorage.setItem("planSeen", mkey(ty, tm)); } catch (x) {} $("planCard").hidden = true; toast("אפשר לחזור לתוכנית בהגדרות › קטגוריות.", 2600); return; }
+  if (e.target.closest(".pc-x")) { const [ty, tm] = planTarget(); try { localStorage.setItem("planSeen", mkey(ty, tm)); } catch (x) {} $("planCard").hidden = true; toast(planStore[mkey(ty, tm)] ? "ההצעה נשארת שמורה בהגדרות › קטגוריות." : "אפשר לחזור לתוכנית בהגדרות › קטגוריות.", 2800); return; }
   openPlan(); });
 { const r0 = render; render = function () { const o = r0.apply(this, arguments); try { planHome(); } catch (e) {} return o; }; }
-async function openPlan() {
+async function openPlan(fresh) {
   const [ty, tm] = planTarget(), k = mkey(ty, tm);
   // the everyday categories that had spending lately, and what each cost on average
   // the months to learn from: when planning next month, this month (almost over) counts too
@@ -9764,16 +9783,25 @@ async function openPlan() {
   const income = Math.round(salaries[k] || salaries[mkey(...curYM())] || 0), goal = Math.round(((goalFor(ty, tm) || {}).amount) || 0);
   const fixedAvg = months.reduce((s, [y, m]) => s + Math.max(0, monthFigures(y, m).fixed), 0) / months.length;
   const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = "planSheet"; bg.dir = "rtl";
-  const close = () => { bg.remove(); document.documentElement.classList.remove("modal-open"); };
+  let skipped = false;
+  const close = () => { if (!bg.isConnected) return; bg.remove(); document.documentElement.classList.remove("modal-open");
+    if (!skipped && planStore[k] && !planStore[k].applied) { savePlans(true); toast("ההצעה נשמרה. אפשר לחזור אליה מהבית או מהגדרות › קטגוריות.", 3200); } try { planHome(); } catch (e) {} };
   bg.addEventListener("click", e => { if (e.target === bg || e.target.closest(".x")) close(); });
   document.body.appendChild(bg); document.documentElement.classList.add("modal-open");
   const head = `<span class="grab" aria-hidden="true"></span><div class="hd"><div><b>✦ תוכנית ל${MONTHS[tm]}</b><br><span>תקרה לכל קטגוריה, לפי ${months.length === 1 ? "החודש האחרון" : months.length + " החודשים האחרונים"}${goal ? " והיעד (" + fmt(goal) + ")" : ""}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>`;
   bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="תוכנית לחודש">${head}<div class="ask-think">ה-AI בונה את התוכנית</div></div>`;
-  let plan = null;
-  try { plan = await window.ispendPlan({ target: ty + "-" + String(tm + 1).padStart(2, "0"), plan_cats: pcats, cats: CATS, goal, income, today: iso(today), summary: askData().summary }); } catch (e) {}
+  let plan = null, st = !fresh && planStore[k];
+  const fromSaved = !!st;
+  if (st && Array.isArray(st.rows) && st.rows.length) plan = { note: st.note, caps: {} };
+  else try { plan = await window.ispendPlan({ target: ty + "-" + String(tm + 1).padStart(2, "0"), plan_cats: pcats, cats: CATS, goal, income, today: iso(today), summary: askData().summary }); } catch (e) {}
   if (!bg.isConnected) return;
-  if (!plan || !plan.caps || !Object.keys(plan.caps).length) { bg.querySelector(".jar-sh").innerHTML = `${head}<p class="sp-msg">לא הצלחתי לבנות תוכנית עכשיו. נסו שוב עוד מעט.</p>`; return; }
-  const rows = pcats.filter(c => plan.caps[c] > 0).map(c => ({ c, was: avg(c), v: plan.caps[c], on: true }));
+  if (!plan || !plan.caps || (!st && !Object.keys(plan.caps).length)) { bg.querySelector(".jar-sh").innerHTML = `${head}<p class="sp-msg">לא הצלחתי לבנות תוכנית עכשיו. נסו שוב עוד מעט.</p>`; return; }
+  // from the saved proposal (as it was left), or the AI's new one, which is saved at once
+  const rows = st && plan.caps && !Object.keys(plan.caps).length ? st.rows.filter(r => r && r.c).map(r => ({ c: r.c, was: avg(r.c), v: Math.max(0, +r.v || 0), on: r.on !== false }))
+    : pcats.filter(c => plan.caps[c] > 0).map(c => ({ c, was: avg(c), v: plan.caps[c], on: true }));
+  if (!st) { st = planStore[k] = { at: iso(today), note: plan.note || "", rows: [] }; }
+  const keep = () => { st.rows = rows.map(r => ({ c: r.c, v: r.v, on: r.on })); savePlans(); };
+  keep();
   const used = () => rows.filter(r => r.on && r.v > 0);
   const sumLine = () => {
     const tot = used().reduce((s, r) => s + (+r.v || 0), 0);
@@ -9783,25 +9811,27 @@ async function openPlan() {
   };
   const draw = () => {
     bg.querySelector(".jar-sh").innerHTML = `${head}
+      ${fromSaved || st.applied ? `<div class="pl-saved"><span>${st.applied ? "הוחלה" : "ההצעה השמורה"} מ-${dd(new Date(st.at + "T00:00"))}</span><button type="button" id="plNew">✦ הצעה חדשה מה-AI</button></div>` : ""}
       ${plan.note ? `<div class="pl-note">✦ ${esc(plan.note)}</div>` : ""}
       <div class="pl-rows">${rows.map((r, i) => `<div class="pl-row${r.on ? "" : " off"}"><button type="button" class="pl-tg" data-t="${i}" role="switch" aria-checked="${r.on}" aria-label="לקחת את התקרה ל${esc(r.c)}">${r.on ? "✓" : ""}</button>${catIcon(r.c, true)}<span class="nm">${esc(r.c)}</span><span class="was" title="ממוצע">${fmt(r.was)}</span><input data-i="${i}" inputmode="numeric" value="${r.v}" aria-label="תקרה ל${esc(r.c)}"${r.on ? "" : " disabled"}></div>`).join("")}</div>
       <div id="plSum">${sumLine()}</div>
       <button type="button" class="sp-save" id="plApply"></button>
-      <button type="button" class="pl-skip" id="plSkip">לא תודה, בלי תוכנית ל${MONTHS[tm]}</button>
-      <p class="jar-note">המספר המחוק הוא הממוצע בחודשים האחרונים. אפשר לשנות כל שורה, או להוריד את ה-✓ ממה שלא רוצים. התקרות חלות רק על ${MONTHS[tm]}, וקטגוריות שלא ברשימה נשארות כמו שהן.</p>`;
+      ${st.applied ? "" : `<button type="button" class="pl-skip" id="plSkip">לא תודה, בלי תוכנית ל${MONTHS[tm]}</button>`}
+      <p class="jar-note">המספר המחוק הוא הממוצע בחודשים האחרונים. אפשר לשנות כל שורה, או להוריד את ה-✓ ממה שלא רוצים. ההצעה נשמרת, גם אם סוגרים. התקרות חלות רק על ${MONTHS[tm]}, וקטגוריות שלא ברשימה נשארות כמו שהן.</p>`;
   };
-  const applyLbl = () => { const n = used().length, b = $("plApply"); if (!b) return; b.disabled = !n; b.textContent = !n ? "לא נבחרה אף תקרה" : n === rows.length ? "להחיל כתקרות ל" + MONTHS[tm] : `להחיל ${n} תקרות ל${MONTHS[tm]}`; };
-  const skip = () => { try { localStorage.setItem("planSeen", k); } catch (x) {} };
-  bg.addEventListener("input", e => { const el = e.target.closest("input[data-i]"); if (!el) return; rows[+el.dataset.i].v = Math.max(0, parseInt(el.value.replace(/\D/g, ""), 10) || 0); $("plSum").innerHTML = sumLine(); applyLbl(); });
+  const applyLbl = () => { const n = used().length, b = $("plApply"); if (!b) return; b.disabled = !n; b.textContent = !n ? "לא נבחרה אף תקרה" : st.applied ? `לעדכן ${n === 1 ? "תקרה אחת" : n + " תקרות"} ל${MONTHS[tm]}` : n === rows.length ? "להחיל כתקרות ל" + MONTHS[tm] : `להחיל ${n} תקרות ל${MONTHS[tm]}`; };
+  const skip = () => { skipped = true; try { localStorage.setItem("planSeen", k); } catch (x) {} delete planStore[k]; savePlans(true); };
+  bg.addEventListener("input", e => { const el = e.target.closest("input[data-i]"); if (!el) return; rows[+el.dataset.i].v = Math.max(0, parseInt(el.value.replace(/\D/g, ""), 10) || 0); $("plSum").innerHTML = sumLine(); applyLbl(); keep(); });
   bg.addEventListener("click", async e => {
     const tg = e.target.closest(".pl-tg");
-    if (tg) { const r = rows[+tg.dataset.t]; r.on = !r.on; const row = tg.closest(".pl-row"); row.classList.toggle("off", !r.on); tg.setAttribute("aria-checked", r.on); tg.textContent = r.on ? "✓" : ""; row.querySelector("input").disabled = !r.on; $("plSum").innerHTML = sumLine(); applyLbl(); return; }
-    if (e.target.closest("#plSkip")) { skip(); close(); render(); toast("בסדר, בלי תוכנית. אפשר לחזור אליה בהגדרות › קטגוריות.", 3200); return; }
+    if (tg) { const r = rows[+tg.dataset.t]; r.on = !r.on; const row = tg.closest(".pl-row"); row.classList.toggle("off", !r.on); tg.setAttribute("aria-checked", r.on); tg.textContent = r.on ? "✓" : ""; row.querySelector("input").disabled = !r.on; $("plSum").innerHTML = sumLine(); applyLbl(); keep(); return; }
+    if (e.target.closest("#plNew")) { skipped = true; bg.remove(); document.documentElement.classList.remove("modal-open"); openPlan(true); return; }
+    if (e.target.closest("#plSkip")) { skip(); close(); render(); toast("בסדר, בלי תוכנית. אפשר לבקש חדשה בהגדרות › קטגוריות.", 3200); return; }
     const b = e.target.closest("#plApply"); if (!b) return;
     b.disabled = true; b.textContent = "שומר…";
     const next = JSON.parse(JSON.stringify(capsBy)); next[k] = next[k] || {};
     used().forEach(r => { next[k][r.c] = r.v; });
-    try { await saveCapsBy(next); try { localStorage.setItem("planSeen", k); } catch (x) {} close(); render(); toast(`נשמר: ${used().length} תקרות ל${MONTHS[tm]} ✦`, 3000); }
+    try { await saveCapsBy(next); try { localStorage.setItem("planSeen", k); } catch (x) {} st.applied = true; keep(); savePlans(true); close(); render(); toast(`נשמר: ${used().length} תקרות ל${MONTHS[tm]} ✦`, 3000); }
     catch (err) { b.disabled = false; applyLbl(); toast("השמירה לא הצליחה. נסו שוב.", 3000); }
   });
   draw(); applyLbl();
@@ -10110,7 +10140,7 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "המשכורת של כל חודש, יעד החיסכון והחודשים שמופיעים באתר." },
   { t: '#setMenu [data-go="sal"]', view: "admin", h: "יום החיוב החודשי", b: "היום בחודש שבו יורד החיוב באשראי. החודש באתר מתחיל ממנו, כך שכל הוצאה נספרת בחודש של החיוב שלה. משנים ב״משכורות ומועד החיוב״." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה, ולחיצה אחת מחילה." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -10435,7 +10465,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107035534";
+const BUILD_ID = "20261107040200";
 let updToast = null;
 async function checkUpdate() {
   try {
