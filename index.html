@@ -2035,6 +2035,9 @@ html.modal-open .to-top { opacity: 0; pointer-events: none; }
 .card > h2 { min-height: 28px; }
 button:not(:disabled):active, [role="button"]:active, .md-b:active { scale: .97; }
 .nav button:active, .fab:active, .np-keys button:active { scale: none; }
+.jar-day { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.jar-day > b { font-size: .9rem; padding: 0 2px; }
+.today .my-day { display: none; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -4393,24 +4396,7 @@ function animateView(id) {
   clearTimeout(el._vt); el._vt = setTimeout(() => el.classList.remove("view-in"), 700);
 }
 // how much can still go out today, so the rest of the month stays covered
-// "my day": today's entries as bubbles at the bottom of the jar card
-function renderMyDay(isCurrent) {
-  const box = $("todayBox"); box.querySelector(":scope > .my-day")?.remove();
-  if (!isCurrent || box.hidden) return;
-  const list = tx.filter(t => !t.gen && iso(t.date) === iso(today)).sort((a, b) => (b.id || 0) - (a.id || 0));
-  box._myDay = list;
-  box.insertAdjacentHTML("beforeend", `<div class="my-day"><div class="md-row">${(list.length ? list.map((t, i) => `<button type="button" class="md-b${t.income || t.refund ? " in" : ""}" data-i="${i}">${catIcon(t.category, true)}<bdi>${esc(t.merchant)}</bdi><b class="num">${t.income || t.refund ? "+" : ""}${t.amount % 1 ? fmt2(t.amount) : fmt(t.amount)}</b></button>`).join("")
-    : `<span class="md-none">היום עוד לא יצא כלום ✨</span>`) + `<button type="button" class="md-b md-add" data-add aria-label="הוספת תנועה">＋</button>`}</div></div>`);
-}
-// a tap on a bubble opens it (and not the jar)
-$("todayBox").addEventListener("click", e => {
-  const b = e.target.closest(".my-day .md-b"); if (!b) { if (e.target.closest(".my-day")) e.stopPropagation(); return; }
-  e.stopPropagation();
-  if (b.dataset.add != null) { openAdd(); return; }
-  const t = ($("todayBox")._myDay || [])[+b.dataset.i]; if (t) openEdit(t);
-}, true);
 function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
-  try { setTimeout(() => renderMyDay(isCurrent), 0); } catch (e) {}
   const box = $("todayBox"); $("mbToday").innerHTML = "";
   if (!isCurrent || !income) { box.hidden = true; jarCtx = null; return; }
   const val = t => t.refund ? -t.amount : t.amount;
@@ -9418,7 +9404,12 @@ function openJar(refresh) {
   if (!bg) {
     if (refresh) return;
     bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = "jarSheet"; bg.dir = "rtl";
-    bg.addEventListener("click", e => { if (e.target === bg || e.target.closest(".x")) closeJar(); });
+    bg.addEventListener("click", e => {
+      if (e.target === bg || e.target.closest(".x")) { closeJar(); return; }
+      const b = e.target.closest(".md-b"); if (!b) return;
+      if (b.dataset.add != null) { closeJar(); $("fab").click(); return; } // the add window, the same way the big + opens it
+      const t = (bg._items || [])[+b.dataset.i]; if (t) { closeJar(); openEdit(t); }
+    });
     document.body.appendChild(bg); document.documentElement.classList.add("modal-open");
   }
   const r = c.perDay > 0 ? Math.max(0, Math.min(1, c.left / c.perDay)) : 0, over = c.left < 0 || c.perDay <= 0;
@@ -9427,8 +9418,10 @@ function openJar(refresh) {
   const chip = over ? (c.days > 1 ? `<span class="jar-chip bad">${fmt(Math.abs(c.left))} מעל הצנצנת · מחר נכנסים ${fmt(Math.max(0, c.tomorrow))}</span>` : `<span class="jar-chip bad">${fmt(Math.abs(c.left))} מעל הצנצנת</span>`)
     : Math.abs(extra) >= 5 ? `<span class="jar-chip ${extra < 0 ? "bad" : ""}">${extra > 0 ? `כולל ${fmt(extra)} שחסכת בימים הקודמים` : `${fmt(-extra)} פחות בגלל ימים יקרים קודם`}</span>` : "";
   const items = c.items.slice().sort((a, b) => b.amount - a.amount);
-  const log = items.map(t => `<div><span>${catIcon(t.category, true)} <bdi>${esc(t.merchant)}</bdi></span><span class="${t.refund ? "i" : "o"}">${t.refund ? "+" : "−"}${t.amount % 1 ? fmt2(t.amount) : fmt(t.amount)}</span></div>`).join("")
-    + `<div class="${items.length ? "sep" : ""}"><span>בבוקר נכנסו לצנצנת</span><span class="i">+${fmt(Math.max(0, c.perDay))}</span></div>`;
+  bg._items = items;
+  const bubbles = `<div class="jar-day"><b>מה יצא היום</b><div class="md-row">${items.map((t, i) => `<button type="button" class="md-b${t.refund ? " in" : ""}" data-i="${i}">${catIcon(t.category, true)}<bdi>${esc(t.merchant)}</bdi><b class="num">${t.refund ? "+" : ""}${t.amount % 1 ? fmt2(t.amount) : fmt(t.amount)}</b></button>`).join("")
+    || `<span class="md-none">עוד לא יצא כלום היום ✨</span>`}<button type="button" class="md-b md-add" data-add aria-label="הוספת תנועה">＋</button></div></div>`;
+  const log = `<div><span>בבוקר נכנסו לצנצנת</span><span class="i">+${fmt(Math.max(0, c.perDay))}</span></div>`;
   bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="הצנצנת של היום">
     <span class="grab" aria-hidden="true"></span>
     <div class="hd"><div><b>הצנצנת של היום</b><br><span>יום ${wd}, ${dd(today)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
@@ -9436,6 +9429,7 @@ function openJar(refresh) {
     <div class="jar-num num ${over ? "bad" : ""}">${over ? "₪0" : fmt(c.left)}</div>
     <div class="jar-k">${over ? "הצנצנת התרוקנה להיום" : items.length ? "נשאר בצנצנת להיום" : "עוד לא יצא כלום היום ✨"}</div>
     ${chip}
+    ${bubbles}
     <div class="jar-log">${log}</div>
     <p class="jar-note">מה שנשאר בצנצנת בסוף היום מתחלק על הימים הבאים, ומה שעובר אותה מוריד מהם. בכל בוקר היא מתמלאת לפי מה שנשאר לחודש, אחרי הקבועות והיעד.</p>
   </div>`;
@@ -9740,7 +9734,7 @@ const TOUR = [
   { t: "#monthTitle", h: "מעבר בין חודשים", b: "החיצים עוברים חודש אחד. לחיצה על שם החודש פותחת את כל החודשים. כל חלון נסגר במשיכה למטה." },
   { t: "#askBox", h: "תשאלו אותי ✦", b: "שואלים בשפה רגילה: סכומים, ממוצעים, השוואה בין חודשים ואחוז מההכנסה. למשל ״כמה הוצאתי על סופר מינואר?״" },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "הקשת מתמלאת לפי מה שהוצאתם. הסימון ״צפי״ מראה איך החודש ייגמר בקצב הנוכחי. גוררים את הפס שמתחתיה כדי לראות כל יום בחודש, כמו מכונת זמן." },
-  { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה. בתחתית הכרטיס, התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
+  { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה, ובתוכה התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
   { t: "#slipBtn", opt: true, h: "התלוש של החודש", b: "כל מה שנכנס ויצא לפי קטגוריות, כמו תלוש. אפשר לשתף אותו כתמונה." },
   { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או הכנסה. לחיצה רגילה פותחת חלון, ולחיצה ארוכה מקליטה בקול." },
   { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. ״המשך״ עובר לפרטים." },
@@ -10069,7 +10063,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107021113";
+const BUILD_ID = "20261107021431";
 let updToast = null;
 async function checkUpdate() {
   try {
