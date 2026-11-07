@@ -2011,14 +2011,14 @@ html.modal-open .to-top { opacity: 0; pointer-events: none; }
 :root[data-theme="dark"] .ring-wrap.gauge::before { background: radial-gradient(ellipse at 50% 55%, rgba(255, 190, 150, .08), rgba(150, 135, 255, .09) 45%, transparent 68%); }
 
 /* ===== "my day": today's entries as small bubbles under the jar ===== */
-.my-day { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 4px; }
+.today .my-day { grid-column: 1 / -1; min-width: 0; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px; }
 .my-day[hidden] { display: none; }
 .md-h { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
 .md-h b { font-size: .95rem; }
 .md-all { border: 0; background: none; color: var(--brand); font: inherit; font-size: .8rem; font-weight: 700; padding: 8px 4px; cursor: pointer; }
 .md-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; margin: 0 -2px; scroll-snap-type: x proximity; }
 .md-row::-webkit-scrollbar { display: none; }
-.md-b { flex: none; display: inline-flex; align-items: center; gap: 8px; border: 0; background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 14px 6px 8px; font: inherit; font-size: .85rem; cursor: pointer; box-shadow: 0 1px 2px rgba(28, 27, 34, .05); scroll-snap-align: start; min-height: 42px; max-width: 70vw; }
+.md-b { flex: none; display: inline-flex; align-items: center; gap: 8px; border: 0; background: var(--bg); color: var(--ink); border-radius: 999px; padding: 6px 14px 6px 8px; font: inherit; font-size: .85rem; cursor: pointer; scroll-snap-align: start; min-height: 40px; max-width: 70vw; }
 .md-b > :first-child:not(bdi) { flex: none; width: 28px; height: 28px; border-radius: 50%; }
 .md-b > :first-child:not(bdi) svg { width: 15px; height: 15px; }
 .md-b bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -4337,13 +4337,13 @@ function meter(v, max, neutral) {
 const REDUCED = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 // numbers roll from their last value to the new one
 const ODO_IDS = new Set(["statusBig", "todayVal", "fIncome", "fOut", "upSum"]);
-function odoSet(el, text) {
+function odoSet(el, text, fromText) {
   // each digit is a wheel 0-9; the rest (₪, commas, minus) are plain
   const chars = [...text], cur = el.querySelector(":scope > .odo");
   const shape = chars.map(c => /\d/.test(c) ? "d" : c).join("");
   el.setAttribute("aria-label", text);
   if (!cur || cur.dataset.shape !== shape) {
-    const old = cur ? [...cur.querySelectorAll(".od")].map(o => +o.dataset.d) : [];
+    const old = cur ? [...cur.querySelectorAll(".od")].map(o => +o.dataset.d) : fromText ? [...fromText].filter(c => /\d/.test(c)).map(Number) : [];
     let di = 0;
     el.innerHTML = `<span class="odo" aria-hidden="true" data-shape="${esc(shape)}">` + chars.map(c => {
       if (!/\d/.test(c)) return `<span class="os">${esc(c)}</span>`;
@@ -4359,8 +4359,10 @@ function odoSet(el, text) {
 function countTo(el, value, format) {
   if (!el) return;
   if (ODO_IDS.has(el.id) && !REDUCED && !document.hidden) {
+    const prev = el.dataset.v == null ? null : +el.dataset.v;
     cancelAnimationFrame(el._raf); el.dataset.v = value;
-    try { odoSet(el, format(value)); return; } catch (e) { console.error(e); }
+    // a number drawn anew (its card was redrawn) starts from where it stood, so it only turns when it changed
+    try { odoSet(el, format(value), prev == null ? null : format(prev)); return; } catch (e) { console.error(e); }
   }
   const from = el.dataset.v == null ? 0 : +el.dataset.v;
   el.dataset.v = value;
@@ -4391,18 +4393,22 @@ function animateView(id) {
   clearTimeout(el._vt); el._vt = setTimeout(() => el.classList.remove("view-in"), 700);
 }
 // how much can still go out today, so the rest of the month stays covered
+// "my day": today's entries as bubbles at the bottom of the jar card
 function renderMyDay(isCurrent) {
-  let row = $("myDay");
-  if (!row) { $("todayBox").insertAdjacentHTML("afterend", `<div class="my-day" id="myDay" hidden><div class="md-h"><b>היום שלי</b><button type="button" class="md-all" id="mdAll">כל התנועות ›</button></div><div class="md-row" id="mdRow"></div></div>`); row = $("myDay");
-    $("mdRow").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.add != null) { openAdd(); return; } const t = (row._list || [])[+b.dataset.i]; if (t) openEdit(t); });
-    $("mdAll").addEventListener("click", () => showView("tx")); }
-  if (!isCurrent || $("todayBox").hidden) { row.hidden = true; return; }
+  const box = $("todayBox"); box.querySelector(":scope > .my-day")?.remove();
+  if (!isCurrent || box.hidden) return;
   const list = tx.filter(t => !t.gen && iso(t.date) === iso(today)).sort((a, b) => (b.id || 0) - (a.id || 0));
-  row._list = list;
-  $("mdRow").innerHTML = (list.length ? list.map((t, i) => `<button type="button" class="md-b${t.income || t.refund ? " in" : ""}" data-i="${i}">${catIcon(t.category, true)}<bdi>${esc(t.merchant)}</bdi><b class="num">${t.income || t.refund ? "+" : ""}${t.amount % 1 ? fmt2(t.amount) : fmt(t.amount)}</b></button>`).join("")
-    : `<span class="md-none">היום עוד לא יצא כלום ✨</span>`) + `<button type="button" class="md-b md-add" data-add aria-label="הוספת תנועה">＋</button>`;
-  row.hidden = false;
+  box._myDay = list;
+  box.insertAdjacentHTML("beforeend", `<div class="my-day"><div class="md-row">${(list.length ? list.map((t, i) => `<button type="button" class="md-b${t.income || t.refund ? " in" : ""}" data-i="${i}">${catIcon(t.category, true)}<bdi>${esc(t.merchant)}</bdi><b class="num">${t.income || t.refund ? "+" : ""}${t.amount % 1 ? fmt2(t.amount) : fmt(t.amount)}</b></button>`).join("")
+    : `<span class="md-none">היום עוד לא יצא כלום ✨</span>`) + `<button type="button" class="md-b md-add" data-add aria-label="הוספת תנועה">＋</button>`}</div></div>`);
 }
+// a tap on a bubble opens it (and not the jar)
+$("todayBox").addEventListener("click", e => {
+  const b = e.target.closest(".my-day .md-b"); if (!b) { if (e.target.closest(".my-day")) e.stopPropagation(); return; }
+  e.stopPropagation();
+  if (b.dataset.add != null) { openAdd(); return; }
+  const t = ($("todayBox")._myDay || [])[+b.dataset.i]; if (t) openEdit(t);
+}, true);
 function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
   try { setTimeout(() => renderMyDay(isCurrent), 0); } catch (e) {}
   const box = $("todayBox"); $("mbToday").innerHTML = "";
@@ -9734,7 +9740,7 @@ const TOUR = [
   { t: "#monthTitle", h: "מעבר בין חודשים", b: "החיצים עוברים חודש אחד. לחיצה על שם החודש פותחת את כל החודשים. כל חלון נסגר במשיכה למטה." },
   { t: "#askBox", h: "תשאלו אותי ✦", b: "שואלים בשפה רגילה: סכומים, ממוצעים, השוואה בין חודשים ואחוז מההכנסה. למשל ״כמה הוצאתי על סופר מינואר?״" },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "הקשת מתמלאת לפי מה שהוצאתם. הסימון ״צפי״ מראה איך החודש ייגמר בקצב הנוכחי. גוררים את הפס שמתחתיה כדי לראות כל יום בחודש, כמו מכונת זמן." },
-  { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה. מתחתיה, ב״היום שלי״, התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
+  { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה. בתחתית הכרטיס, התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
   { t: "#slipBtn", opt: true, h: "התלוש של החודש", b: "כל מה שנכנס ויצא לפי קטגוריות, כמו תלוש. אפשר לשתף אותו כתמונה." },
   { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או הכנסה. לחיצה רגילה פותחת חלון, ולחיצה ארוכה מקליטה בקול." },
   { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. ״המשך״ עובר לפרטים." },
@@ -10063,7 +10069,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107020514";
+const BUILD_ID = "20261107021113";
 let updToast = null;
 async function checkUpdate() {
   try {
