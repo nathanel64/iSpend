@@ -7045,7 +7045,7 @@ async function saveEdit(t, amount, desc, date, cat, card, kind) {
   view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
 }
 $("fab").onclick = () => openAdd();
-$("closeAdd").onclick = closeAdd;
+$("closeAdd").onclick = () => closeAdd();
 $("sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") closeAdd(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("capBg").hidden) closeCap(); if (e.key === "Escape" && !$("sheetBg").hidden) closeAdd(); if (e.key === "Escape" && !$("salBg").hidden) salLater(); if (e.key === "Escape" && !$("mvBg").hidden) closeMove(); });
 $("kExp").onclick = () => setKind("exp");
@@ -9385,7 +9385,10 @@ function tmShow(i) {
 }
 
 /* the daily jar: coins for what is left of today's share. A spend takes coins out (they fly off), a tap opens the jar */
-var jarCtx = null, jarCoins = null;
+var jarCtx = null, jarCoins = null, jarBack = false;
+// the add or edit window opened from the jar goes back to the jar when it closes (✕, a tap outside, a drag, or saving)
+{ const oc = closeAdd; closeAdd = function () { const r = oc.apply(this, arguments); if (jarBack) { jarBack = false; setTimeout(() => openJar(), 60); } return r; };
+  const oa = openAdd; openAdd = function () { jarBack = false; return oa.apply(this, arguments); }; }
 function jarSvg(r, max, poured, big) {
   const n = r > 0 ? Math.max(1, Math.round(r * max)) : 0;
   const was = jarCoins == null ? n : jarCoins; if (!big) jarCoins = n;
@@ -9407,8 +9410,8 @@ function openJar(refresh) {
     bg.addEventListener("click", e => {
       if (e.target === bg || e.target.closest(".x")) { closeJar(); return; }
       const b = e.target.closest(".md-b"); if (!b) return;
-      if (b.dataset.add != null) { closeJar(); $("fab").click(); return; } // the add window, the same way the big + opens it
-      const t = (bg._items || [])[+b.dataset.i]; if (t) { closeJar(); openEdit(t); }
+      if (b.dataset.add != null) { closeJar(); $("fab").click(); jarBack = true; return; } // the add window, the same way the big + opens it
+      const t = (bg._items || [])[+b.dataset.i]; if (t) { closeJar(); openEdit(t); jarBack = true; }
     });
     document.body.appendChild(bg); document.documentElement.classList.add("modal-open");
   }
@@ -10063,7 +10066,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107021431";
+const BUILD_ID = "20261107021730";
 let updToast = null;
 async function checkUpdate() {
   try {
