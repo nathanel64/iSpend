@@ -2009,6 +2009,32 @@ html.modal-open .to-top { opacity: 0; pointer-events: none; }
 .status.neg #ringFg { filter: drop-shadow(0 3px 9px rgba(200, 70, 61, .22)); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ring-wrap.gauge::before { background: radial-gradient(ellipse at 50% 55%, rgba(255, 190, 150, .08), rgba(150, 135, 255, .09) 45%, transparent 68%); } }
 :root[data-theme="dark"] .ring-wrap.gauge::before { background: radial-gradient(ellipse at 50% 55%, rgba(255, 190, 150, .08), rgba(150, 135, 255, .09) 45%, transparent 68%); }
+
+/* ===== "my day": today's entries as small bubbles under the jar ===== */
+.my-day { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 4px; }
+.my-day[hidden] { display: none; }
+.md-h { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+.md-h b { font-size: .95rem; }
+.md-all { border: 0; background: none; color: var(--brand); font: inherit; font-size: .8rem; font-weight: 700; padding: 8px 4px; cursor: pointer; }
+.md-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; margin: 0 -2px; scroll-snap-type: x proximity; }
+.md-row::-webkit-scrollbar { display: none; }
+.md-b { flex: none; display: inline-flex; align-items: center; gap: 8px; border: 0; background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 14px 6px 8px; font: inherit; font-size: .85rem; cursor: pointer; box-shadow: 0 1px 2px rgba(28, 27, 34, .05); scroll-snap-align: start; min-height: 42px; max-width: 70vw; }
+.md-b > :first-child:not(bdi) { flex: none; width: 28px; height: 28px; border-radius: 50%; }
+.md-b > :first-child:not(bdi) svg { width: 15px; height: 15px; }
+.md-b bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-b b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.md-b.in b { color: var(--good); }
+.md-add { padding: 0; width: 42px; justify-content: center; background: var(--brand-soft, color-mix(in srgb, var(--brand) 12%, transparent)); color: var(--brand); font-size: 1.2rem; font-weight: 700; }
+.md-none { align-self: center; color: var(--muted); font-size: .85rem; padding: 0 6px; white-space: nowrap; }
+
+/* ===== 5: one rhythm: room to tap, a slight press on everything you can press ===== */
+.fold-btn { width: 36px !important; height: 36px !important; }
+.seg button { min-height: 34px; padding: 6px 14px; }
+#refreshBtn, .arr-open, #capEditBtn { min-height: 36px; padding-block: 8px; }
+.card h2 .side, .card h2 > span > .side { font-size: .76rem !important; font-weight: 400 !important; color: var(--muted) !important; }
+.card > h2 { min-height: 28px; }
+button:not(:disabled):active, [role="button"]:active, .md-b:active { scale: .97; }
+.nav button:active, .fab:active, .np-keys button:active { scale: none; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -4365,7 +4391,20 @@ function animateView(id) {
   clearTimeout(el._vt); el._vt = setTimeout(() => el.classList.remove("view-in"), 700);
 }
 // how much can still go out today, so the rest of the month stays covered
+function renderMyDay(isCurrent) {
+  let row = $("myDay");
+  if (!row) { $("todayBox").insertAdjacentHTML("afterend", `<div class="my-day" id="myDay" hidden><div class="md-h"><b>היום שלי</b><button type="button" class="md-all" id="mdAll">כל התנועות ›</button></div><div class="md-row" id="mdRow"></div></div>`); row = $("myDay");
+    $("mdRow").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.add != null) { openAdd(); return; } const t = (row._list || [])[+b.dataset.i]; if (t) openEdit(t); });
+    $("mdAll").addEventListener("click", () => showView("tx")); }
+  if (!isCurrent || $("todayBox").hidden) { row.hidden = true; return; }
+  const list = tx.filter(t => !t.gen && iso(t.date) === iso(today)).sort((a, b) => (b.id || 0) - (a.id || 0));
+  row._list = list;
+  $("mdRow").innerHTML = (list.length ? list.map((t, i) => `<button type="button" class="md-b${t.income || t.refund ? " in" : ""}" data-i="${i}">${catIcon(t.category, true)}<bdi>${esc(t.merchant)}</bdi><b class="num">${t.income || t.refund ? "+" : ""}${t.amount % 1 ? fmt2(t.amount) : fmt(t.amount)}</b></button>`).join("")
+    : `<span class="md-none">היום עוד לא יצא כלום ✨</span>`) + `<button type="button" class="md-b md-add" data-add aria-label="הוספת תנועה">＋</button>`;
+  row.hidden = false;
+}
 function renderToday(f, income, fixedExpected, isCurrent, daysLeft) {
+  try { setTimeout(() => renderMyDay(isCurrent), 0); } catch (e) {}
   const box = $("todayBox"); $("mbToday").innerHTML = "";
   if (!isCurrent || !income) { box.hidden = true; jarCtx = null; return; }
   const val = t => t.refund ? -t.amount : t.amount;
@@ -8712,8 +8751,8 @@ function closeWin(d) {
 }
 // 1: pull a window down by its top to close it
 (function sheetDrag() {
-  const sheetOf = d => d.matches(".sheet, .sal-sheet") ? d : d.querySelector(".rc-sheet");
-  const addGrab = () => openWins().forEach(d => { const sh = sheetOf(d); if (sh && !sh.querySelector(":scope > .sheet-grab")) { const g = document.createElement("div"); g.className = "sheet-grab"; g.setAttribute("aria-hidden", "true"); sh.prepend(g); } });
+  const sheetOf = d => d.matches(".sheet, .sal-sheet, .jar-sh") ? d : d.querySelector(".rc-sheet");
+  const addGrab = () => openWins().forEach(d => { const sh = sheetOf(d); if (sh && !sh.querySelector(":scope > .sheet-grab, :scope > .grab")) { const g = document.createElement("div"); g.className = "sheet-grab"; g.setAttribute("aria-hidden", "true"); sh.prepend(g); } });
   new MutationObserver(() => requestAnimationFrame(addGrab)).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["hidden"], childList: true });
   let st = null;
   document.addEventListener("touchstart", e => {
@@ -9416,6 +9455,7 @@ addEventListener("keydown", e => { if (e.key === "Escape" && $("jarSheet")) clos
   const oc = closeAdd; closeAdd = function () { $("addForm").classList.remove("grow"); return oc.apply(this, arguments); };
 }
 
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -9694,7 +9734,7 @@ const TOUR = [
   { t: "#monthTitle", h: "מעבר בין חודשים", b: "החיצים עוברים חודש אחד. לחיצה על שם החודש פותחת את כל החודשים. כל חלון נסגר במשיכה למטה." },
   { t: "#askBox", h: "תשאלו אותי ✦", b: "שואלים בשפה רגילה: סכומים, ממוצעים, השוואה בין חודשים ואחוז מההכנסה. למשל ״כמה הוצאתי על סופר מינואר?״" },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "הקשת מתמלאת לפי מה שהוצאתם. הסימון ״צפי״ מראה איך החודש ייגמר בקצב הנוכחי. גוררים את הפס שמתחתיה כדי לראות כל יום בחודש, כמו מכונת זמן." },
-  { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה." },
+  { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה. מתחתיה, ב״היום שלי״, התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
   { t: "#slipBtn", opt: true, h: "התלוש של החודש", b: "כל מה שנכנס ויצא לפי קטגוריות, כמו תלוש. אפשר לשתף אותו כתמונה." },
   { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או הכנסה. לחיצה רגילה פותחת חלון, ולחיצה ארוכה מקליטה בקול." },
   { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. ״המשך״ עובר לפרטים." },
@@ -10023,7 +10063,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107015004";
+const BUILD_ID = "20261107020514";
 let updToast = null;
 async function checkUpdate() {
   try {
