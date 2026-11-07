@@ -2106,6 +2106,10 @@ html.privacy .num, html.privacy .odo { user-select: none; -webkit-user-select: n
 
 .pl-saved { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--muted); padding: 0 2px; }
 .pl-saved button { border: 0; background: color-mix(in srgb, var(--brand) 10%, transparent); color: var(--brand); font: inherit; font-weight: 700; font-size: .8rem; border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+
+#autoRow.locked { opacity: 1; }
+#autoRow.locked .ce-sw { opacity: .75; }
+#autoRow.locked input { pointer-events: none; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -9381,9 +9385,19 @@ function loadAuto(j) {
 const saveAuto = () => writeRange("'הגדרות'!V14", [[JSON.stringify({ rec: autoCfg.rec, done: autoCfg.done.slice(-300) })]]);
 // the switch shows for a single expense in a fixed category (a subscription, insurance, rent...)
 function autoShown() { return addKind === "exp" && FIXED.has($("addCat").value) && +$("addInst").value === 1 && (!editTx || editTx.del.key === "apple"); }
+// a purchase in payments: every payment enters by itself on the billing day, so the switch shows on (and fixed)
+const instAuto = () => addKind === "exp" && +$("addInst").value > 1;
 function autoSync(first) {
-  const on = autoShown(); $("autoRow").hidden = !on;
-  if (first) $("addAuto").checked = !!(editTx && recFor(editTx.merchant));
+  const ins = instAuto(), on = autoShown() || ins; $("autoRow").hidden = !on;
+  $("autoRow").classList.toggle("locked", ins); $("addAuto").disabled = ins;
+  if (ins) {
+    const n = +$("addInst").value, d = parseDate($("addDate").value) || today, last = chargeDate(d, n - 1);
+    $("addAuto").checked = true; $("addAuto").dataset.was = "inst";
+    $("autoSub").textContent = `כל תשלום ייכנס לבד ב-${startDay} בחודש, עד ${n}/${n} ב${MONTHS[last.getMonth()]}`;
+    return;
+  }
+  if (first || $("addAuto").dataset.was === "inst") $("addAuto").checked = !!(editTx && recFor(editTx.merchant));
+  $("addAuto").dataset.was = "";
   $("autoSub").textContent = startDay === 1 ? "תיכנס לבד בתחילת כל חודש, ב-1 לחודש" : `תיכנס לבד בתחילת כל חודש, ב-${startDay} לחודש (יום החיוב)`;
 }
 // turned on: kept (or updated) from the month after this one; turned off: no more from next month
@@ -10467,7 +10481,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107234726";
+const BUILD_ID = "20261107235658";
 let updToast = null;
 async function checkUpdate() {
   try {
