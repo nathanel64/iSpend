@@ -8,5 +8,58 @@
   "display": "standalone",
   "background_color": "#f6f3ee",
   "theme_color": "#5b4cf0",
-  "icons": [{ "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }]
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "הוספת הוצאה",
+      "short_name": "הוספה",
+      "url": "./?add",
+      "icons": [
+        {
+          "src": "apple-touch-icon.png",
+          "sizes": "180x180"
+        }
+      ]
+    },
+    {
+      "name": "הצנצנת של היום",
+      "short_name": "הצנצנת",
+      "url": "./?go=jar",
+      "icons": [
+        {
+          "src": "apple-touch-icon.png",
+          "sizes": "180x180"
+        }
+      ]
+    },
+    {
+      "name": "התנועות",
+      "short_name": "תנועות",
+      "url": "./?go=tx",
+      "icons": [
+        {
+          "src": "apple-touch-icon.png",
+          "sizes": "180x180"
+        }
+      ]
+    },
+    {
+      "name": "תשאלו אותי",
+      "short_name": "שאלה",
+      "url": "./?go=ask",
+      "icons": [
+        {
+          "src": "apple-touch-icon.png",
+          "sizes": "180x180"
+        }
+      ]
+    }
+  ]
 }

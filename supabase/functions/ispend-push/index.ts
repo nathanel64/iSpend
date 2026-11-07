@@ -33,12 +33,16 @@ function lastSunday(day: string) { const d = new Date(day + "T12:00:00Z"); d.set
 const shek = (v: number) => "₪" + Math.round(v).toLocaleString("en-US");
 // the phone sends its own numbers when the site is open; if they are not for last week, the message stays general
 function weeklyMsg(s: { week_stats?: unknown }, ws: string) {
-  const st = s.week_stats as Record<string, { ws?: string; total?: number; ptotal?: number; top?: string }> | null;
+  const st = s.week_stats as Record<string, { ws?: string; total?: number; ptotal?: number; top?: string; topAmt?: number; free?: number }> | null;
   const w = st && [st.prev, st.cur].find(x => x && x.ws === ws);
-  if (!w || typeof w.total !== "number") return { title: "הסיכום השבועי מוכן 📊", body: "לחיצה פותחת את הסיכום של השבוע שעבר.", url: "./?week", tag: "ispend-week" };
-  const d = (w.total || 0) - (w.ptotal || 0), cmp = w.ptotal ? (Math.abs(d) < 20 ? "בערך כמו השבוע שלפניו" : d < 0 ? `${shek(-d)} פחות מהשבוע שלפניו 👏` : `${shek(d)} יותר מהשבוע שלפניו`) : "";
-  const top = w.top ? `הכי הרבה הלך על ${String(w.top).slice(0, 30)}.` : "";
-  return { title: `השבוע שעבר: ${shek(w.total || 0)} 📊`, body: [cmp, top].filter(Boolean).join(" · ") + " לחיצה פותחת את הסיכום.", url: "./?week", tag: "ispend-week" };
+  if (!w || typeof w.total !== "number") return { title: "השבוע שלך 📊", body: "הסיכום של השבוע שעבר מוכן. לחיצה פותחת אותו.", url: "./?week", tag: "ispend-week" };
+  const t = w.total || 0, p = w.ptotal || 0, d = t - p;
+  // "₪1,240 (14% פחות משבוע שעבר)"
+  const pct = p > 0 ? Math.round(Math.abs(d) / p * 100) : 0;
+  const cmp = p > 0 ? (pct < 3 ? " (בערך כמו שבוע שעבר)" : d < 0 ? ` (${pct}% פחות משבוע שעבר 👏)` : ` (${pct}% יותר משבוע שעבר)`) : "";
+  const top = w.top ? `הכי הרבה: ${String(w.top).slice(0, 30)}${w.topAmt ? " " + shek(w.topAmt) : ""}.` : "";
+  const free = typeof w.free === "number" && w.free > 0 ? (w.free === 1 ? "יום אחד בלי הוצאות ✨" : `${w.free} ימים בלי הוצאות ✨`) : "";
+  return { title: "השבוע שלך 📊", body: [`הוצאת ${shek(t)}${cmp}.`, top, free].filter(Boolean).join(" "), url: "./?week", tag: "ispend-week" };
 }
 const MSG = { title: "🧾 תזכורת", body: "יש הוצאות/הכנסות חדשות להיום? לחץ להוספה", url: "./?add" };
 

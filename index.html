@@ -8604,7 +8604,7 @@ document.addEventListener("click", e => {
 let pushTouched = "";
 function pushTouch() { const d = iso(today); if (pushTouched === d || !window.ispendPushTouch) return; if (tx.some(t => iso(t.date) === d && !t.gen && (t.source === "manual" || t.source === "applepay"))) { pushTouched = d; window.ispendPushTouch(d); } }
 // only what you added yourself (by hand or Apple Pay) stops the evening reminder; charges the bank or card company sent in do not
-function renderTrial() { try { pushTouch(); } catch (e) {} try { weekStatsTouch(); } catch (e) {} try { maybeWeekLink(); } catch (e) {} try { maybeTxLink(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
+function renderTrial() { try { maybeGoLink(); } catch (e) {} try { pushTouch(); } catch (e) {} try { weekStatsTouch(); } catch (e) {} try { maybeWeekLink(); } catch (e) {} try { maybeTxLink(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
 // one card at the bottom of the home screen, with three tabs
 let funTab = lsGet("funTab", "chal");
 function showFunTab(t) {
@@ -9459,6 +9459,22 @@ addEventListener("keydown", e => { if (e.key === "Escape" && $("jarSheet")) clos
 }
 
 
+/* the app icon's quick actions (long press on Android / desktop): ?go=jar, ?go=tx, ?go=ask */
+let goDone = false;
+const wantsGo = (() => { try { return new URLSearchParams(location.search).get("go") || ""; } catch (e) { return ""; } })();
+function maybeGoLink() {
+  if (goDone || !wantsGo || !(data.manual !== null || data.apple !== null)) return;
+  goDone = true;
+  try { const u = new URL(location.href); u.searchParams.delete("go"); history.replaceState(null, "", u.pathname + u.search + u.hash); } catch (e) {}
+  setTimeout(() => {
+    try {
+      if (wantsGo === "tx") showView("tx");
+      else if (wantsGo === "jar") { showView("flow"); if (jarCtx) openJar(); else toast("הצנצנת מופיעה בחודש הנוכחי, אחרי שמזינים משכורת.", 3200); }
+      else if (wantsGo === "ask") { showView("flow"); const q = $("askQ"); q.scrollIntoView({ block: "center" }); setTimeout(() => q.focus(), 250); }
+    } catch (e) {}
+  }, 500);
+}
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -9588,7 +9604,10 @@ function weekNums(ws) {
   const wk = tx.filter(t => inR(t, a, b)), total = Math.round(wk.reduce((s, t) => s + val(t), 0)), ptotal = Math.round(tx.filter(t => inR(t, a2, b2)).reduce((s, t) => s + val(t), 0));
   const by = new Map(); wk.forEach(t => by.set(t.category, (by.get(t.category) || 0) + val(t)));
   const top = [...by.entries()].filter(e => e[1] > 0).sort((x, y) => y[1] - x[1])[0];
-  return { ws: iso(a), total, ptotal, top: top ? top[0] : "", n: wk.length };
+  // days of that week (up to today) with no purchase at all (payments of older purchases do not count)
+  const days = new Set(wk.filter(t => !t.gen && !t.refund).map(t => iso(t.date)));
+  let free = 0; for (let d = new Date(a); d <= b && d <= today; d.setDate(d.getDate() + 1)) if (!days.has(iso(d))) free++;
+  return { ws: iso(a), total, ptotal, top: top ? top[0] : "", topAmt: top ? Math.round(top[1]) : 0, free, n: wk.length };
 }
 let weekStatsSent = "";
 function weekStatsTouch() {
@@ -10066,7 +10085,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107021730";
+const BUILD_ID = "20261107023827";
 let updToast = null;
 async function checkUpdate() {
   try {
