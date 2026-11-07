@@ -9142,7 +9142,13 @@ async function askAnswer(q) {
     let r = askMemo.get(key);
     if (!r) {
       ans.hidden = false; ans.className = "ask-ans think"; ans.textContent = "חושב";
-      try { r = await window.ispendAsk(q, { cats: CATS, cards: PAY, today: iso(today) }); if (r) askMemo.set(key, r); } catch (e) {}
+      try { r = await window.ispendAsk(q, Object.assign({ cats: CATS, cards: PAY, today: iso(today) }, askData())); if (r) askMemo.set(key, r); } catch (e) {}
+    }
+    // an open question (why, where to save, what changed): the AI answers in words, from the numbers it was given
+    if (r && r.intent === "advice" && r.answer) {
+      ans.hidden = false; ans.className = "ask-ans";
+      ans.innerHTML = `${esc(r.answer).replace(/\n+/g, "<br>")}<span class="ask-sub">✦ תשובה של ה-AI לפי הנתונים שלך</span><div class="ask-acts"><button type="button" class="ask-x" data-ask-clear>סגירה</button></div>`;
+      ans.dataset.search = ""; return;
     }
     Q = (r && askFromAI(r)) || Q;
   }
@@ -9644,6 +9650,30 @@ $("scanFile").addEventListener("change", async () => {
     $("voiceText").textContent = e && /limit/.test(e.message) ? "הגעתם למספר הצילומים להיום. מחר אפשר שוב." : "בדקו את החיבור ונסו שוב.";
   }
 });
+
+/* what the AI gets with a question: the names of your businesses, a summary per month and category,
+   and the purchases of the last two months, so it can match names and answer open questions.
+   Totals are counted here, on the phone; the AI does not add up long lists itself */
+function askData() {
+  const since18 = addDays(today, -540), since60 = addDays(today, -60), cnt = new Map();
+  tx.forEach(t => { if (!t.gen && t.date >= since18) cnt.set(t.merchant, (cnt.get(t.merchant) || 0) + 1); });
+  const merchants = [...cnt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 300).map(([m, n]) => m + " (" + n + ")");
+  const lines = [], [cy, cm] = curYM();
+  for (let k = 0; k < 12; k++) {
+    let y = cy, m = cm - k; while (m < 0) { m += 12; y--; }
+    if (y * 12 + m < FIRST_MONTH) break;
+    const f = monthFigures(y, m), by = new Map();
+    f.spend.forEach(t => by.set(t.category, (by.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
+    const key = y + "-" + String(m + 1).padStart(2, "0"), sal = salaries[key];
+    lines.push(`${key}${k === 0 ? " (החודש, עד היום)" : ""}: הכנסה ${Math.round(sal || f.income || 0)}, הוצאות ${Math.round(f.fixed + f.variable)} (קבועות ${Math.round(f.fixed)}) · ` +
+      [...by.entries()].filter(e => Math.abs(e[1]) >= 1).sort((a, b) => b[1] - a[1]).map(([c, v]) => `${c} ${Math.round(v)}`).join(", "));
+  }
+  const recent = tx.filter(t => !t.gen && t.date >= since60).sort((a, b) => b.date - a.date).slice(0, 400)
+    .map(t => `${iso(t.date)}|${t.income || t.refund ? "+" : ""}${Math.round(t.amount * 100) / 100}|${t.merchant}|${t.category}|${t.account || ""}`);
+  let goal = 0; try { goal = +((goalFor(cy, cm) || {}).amount || 0); } catch (e) {}
+  const summary = `החודש מתחיל ב-${startDay} לחודש. יעד חיסכון החודש: ${goal || "לא הוגדר"}.\nלפי חודש (₪):\n${lines.join("\n")}\nתנועות של 60 הימים האחרונים (תאריך|סכום|עסק|קטגוריה|אמצעי תשלום):\n${recent.join("\n")}`;
+  return { merchants, summary: summary.slice(0, 60000) };
+}
 
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
@@ -10244,9 +10274,9 @@ window.ispendClassify = async function (names, cats) {
 };
 /* the "ask" box on the home screen: the server's AI turns a question into a query; the site counts the answer itself */
 window.ispendAsk = async function (q, ctx) {
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12000);
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
   try {
-    const r = await fetch(SUPA_URL + "/functions/v1/ask-money", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ q, cats: ctx.cats, cards: ctx.cards, today: ctx.today }), signal: ctl.signal });
+    const r = await fetch(SUPA_URL + "/functions/v1/ask-money", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ q, cats: ctx.cats, cards: ctx.cards, today: ctx.today, merchants: ctx.merchants, summary: ctx.summary }), signal: ctl.signal });
     const j = await r.json().catch(() => ({})); if (!r.ok || !j.query) throw new Error(j.error || "ask " + r.status); return j.query;
   } finally { clearTimeout(t); }
 };
@@ -10265,7 +10295,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107032552";
+const BUILD_ID = "20261107033451";
 let updToast = null;
 async function checkUpdate() {
   try {
