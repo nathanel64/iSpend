@@ -2069,6 +2069,31 @@ html.privacy .num, html.privacy .odo { user-select: none; -webkit-user-select: n
 .scan { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--bg); color: var(--ink); display: grid; place-items: center; cursor: pointer; padding: 0; }
 .scan svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .scan[hidden] { display: none; }
+
+/* the ask box as a conversation */
+.ask-thread { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; opacity: .72; }
+.ask-ans .aq { align-self: flex-start; max-width: 85%; background: var(--brand); color: #fff; border-radius: 16px 16px 4px 16px; padding: 6px 11px; font-size: .84rem; margin-bottom: 6px; width: fit-content; }
+.ask-ans .aa { align-self: flex-end; max-width: 92%; background: var(--bg); border-radius: 16px 16px 16px 4px; padding: 7px 11px; font-size: .84rem; width: fit-content; margin-inline-start: auto; }
+.ask-ans .aq.now { margin-top: 2px; }
+.ask-think { color: var(--muted); font-size: .86rem; }
+.ask-think::after { content: "…"; animation: thinkDots 1.2s steps(3) infinite; display: inline-block; width: 1em; overflow: hidden; vertical-align: bottom; }
+@keyframes thinkDots { from { width: 0; } to { width: 1em; } }
+/* the plan for a month */
+.plan-btn { border: 1.5px dashed color-mix(in srgb, var(--brand) 45%, transparent); background: color-mix(in srgb, var(--brand) 6%, transparent); color: var(--brand); border-radius: 16px; padding: 12px; font: inherit; font-weight: 800; cursor: pointer; width: 100%; margin: 4px 0 10px; }
+.plan-btn small { display: block; font-weight: 400; color: var(--muted); font-size: .76rem; margin-top: 2px; }
+.pl-rows { display: flex; flex-direction: column; gap: 6px; }
+.pl-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto 92px; gap: 8px; align-items: center; background: var(--bg); border-radius: 14px; padding: 7px 10px; }
+.pl-row > :first-child:not(input) { width: 30px; height: 30px; border-radius: 9px; }
+.pl-row .nm { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-row .was { color: var(--muted); font-size: .76rem; text-decoration: line-through; white-space: nowrap; }
+.pl-row input { width: 100%; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 800; padding: 6px 8px; text-align: left; direction: ltr; font-variant-numeric: tabular-nums; }
+.pl-note { background: color-mix(in srgb, var(--brand) 8%, transparent); border-radius: 14px; padding: 10px 12px; font-size: .86rem; }
+.pl-sum { border-radius: 14px; padding: 10px 12px; font-size: .86rem; background: var(--good-soft); color: var(--good); font-weight: 700; }
+.pl-sum.bad { background: var(--bad-soft); color: var(--bad); }
+.plan-card { width: 100%; text-align: start; border: 0; border-radius: 18px; padding: 12px 14px; background: linear-gradient(135deg, color-mix(in srgb, #5b4cf0 14%, var(--surface)), color-mix(in srgb, #9a52d6 10%, var(--surface))); color: var(--ink); font: inherit; cursor: pointer; display: flex; gap: 10px; align-items: center; margin: 2px 0 6px; }
+.plan-card b { display: block; } .plan-card small { color: var(--muted); font-size: .78rem; }
+.plan-card .e { font-size: 22px; }
+.plan-card[hidden] { display: none; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -3049,6 +3074,7 @@ function makeSupaAdapter(uid) {
   </form>
 </div>
 
+<button type="button" class="plan-card" id="planCard" hidden><span class="e">✦</span><span><b id="planCardT">תוכנית לחודש הבא</b><small>ה-AI יציע תקרה לכל קטגוריה, לפי מה שיצא והיעד</small></span></button>
 <div class="sheet-bg sal-bg" id="askBg" hidden dir="rtl" lang="he" style="z-index:45">
   <div class="sal-sheet ns" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askText">
     <div class="ns-top"><div class="ns-kicker" id="askKick"></div><h3 id="askTitle"></h3><div class="ask-text" id="askText"></div></div>
@@ -8071,6 +8097,8 @@ boot();
     $("catList").hidden = true; $("addCatRow").hidden = true; $("saveCats").closest(".save-row").style.display = "none";
     const rows = el(`<div class="cat-rows" id="catRows"></div>`), add = el(`<button type="button" class="cat-add" id="catAdd">+ קטגוריה חדשה</button>`), msg = el(`<p class="note" id="catMsg2" style="margin:0;text-align:center"></p>`);
     $("catList").after(rows, add, msg);
+    rows.before(el(`<button type="button" class="plan-btn" id="planBtn" hidden>✦ תוכנית תקרות מה-AI<small>תקרה לכל קטגוריה לפי מה שיצא, המשכורת והיעד</small></button>`));
+    $("planBtn").hidden = !window.ispendPlan; $("planBtn").onclick = () => openPlan();
     document.body.appendChild(el(`<div class="sheet-bg" id="ceBg" hidden dir="rtl" lang="he" style="z-index:31"><form class="sheet ce-sheet" id="ceForm" role="dialog" aria-modal="true" aria-labelledby="ceName" novalidate>
       <h3><span id="ceKick">קטגוריה</span><span class="h3-acts"><button type="button" class="x" id="ceClose" aria-label="סגירה">✕</button></span></h3>
       <div class="ce-top"><span class="big" id="ceBig"></span><div class="field" style="flex:1"><label for="ceName">שם</label><input id="ceName" type="text" autocomplete="off" placeholder="למשל: חיות מחמד"></div></div>
@@ -9133,35 +9161,54 @@ function askSuggest() {
   box.innerHTML = L.map(q => `<button type="button">${esc(q)}</button>`).join("");
 }
 const askMemo = new Map();
+/* the ask box is a conversation: a follow-up ("ולעומת ספטמבר?", "איך מורידים את זה?") goes to the AI with what was said before.
+   A new question that the phone understands on its own is still answered here, at once */
+let askConv = [], askConvAt = 0;
+const ASK_CONV_MS = 15 * 60 * 1000;
+function askIsFollow(q) {
+  if (!askConv.length || Date.now() - askConvAt > ASK_CONV_MS) return false;
+  return /^(ו|אז |למה|איך|מה עם|ומה|ולעומת|ואם|ומתי|וכמה|ואיפה|ובאיזה)/.test(q) || /(^|\s)(זה|זאת|אותו|אותה|שם|באותו|באותה|הזה|הזאת)(\s|\?|$)/.test(q) || q.split(/\s+/).length <= 3;
+}
+function askThread() {
+  const prev = askConv.slice(0, -1).slice(-3);
+  return prev.length ? `<div class="ask-thread">${prev.map(t => `<div class="aq">${esc(t.q)}</div><div class="aa">${esc(t.a)}</div>`).join("")}</div>` : "";
+}
+function askDone(ans, q, html, sub, acts) {
+  ans.hidden = false; ans.className = "ask-ans";
+  const tmp = document.createElement("div"); tmp.innerHTML = html; const plain = tmp.textContent.replace(/\s+/g, " ").trim();
+  askConv.push({ q, a: plain.slice(0, 400) }); if (askConv.length > 6) askConv.shift(); askConvAt = Date.now();
+  ans.innerHTML = askThread() + `<div class="aq now">${esc(q)}</div>` + html + (sub ? `<span class="ask-sub">${sub}</span>` : "") +
+    `<div class="ask-acts">${acts || ""}<button type="button" class="ghost" data-ask-clear>שיחה חדשה</button></div>`;
+  $("askQ").value = ""; $("askQ").placeholder = "שאלת המשך… ״ולעומת " + MONTHS[prevYM(...curYM())[1]] + "?״";
+}
 async function askAnswer(q) {
   const ans = $("askAns"); q = String(q || "").trim(); if (!q) { ans.hidden = true; return; }
+  if (askConv.length && Date.now() - askConvAt > ASK_CONV_MS) askConv = [];
+  const follow = askIsFollow(q);
   let Q = askLocal(q);
-  // understood here: answer at once. Otherwise ask the AI (a question asked before is answered from memory)
-  if (!(Q && Q.sure) && window.ispendAsk) {
+  // understood here (and not a follow-up): answer at once. Otherwise ask the AI (a question asked before is answered from memory)
+  if ((follow || !(Q && Q.sure)) && window.ispendAsk) {
     const key = q.replace(/\s+/g, " ");
-    let r = askMemo.get(key);
+    let r = follow ? null : askMemo.get(key);
     if (!r) {
-      ans.hidden = false; ans.className = "ask-ans think"; ans.textContent = "חושב";
-      try { r = await window.ispendAsk(q, Object.assign({ cats: CATS, cards: PAY, today: iso(today) }, askData())); if (r) askMemo.set(key, r); } catch (e) {}
+      const think = document.createElement("div"); think.className = "ask-think"; think.textContent = "חושב";
+      ans.hidden = false; ans.className = "ask-ans"; ans.innerHTML = askConv.length ? askThread() + (askConv.length ? `<div class="aq">${esc(askConv[askConv.length - 1].q)}</div><div class="aa">${esc(askConv[askConv.length - 1].a)}</div>` : "") + `<div class="aq now">${esc(q)}</div>` : ""; ans.appendChild(think);
+      try { r = await window.ispendAsk(q, Object.assign({ cats: CATS, cards: PAY, today: iso(today), history: follow ? askConv.slice(-4) : [] }, askData())); if (r && !follow) askMemo.set(key, r); } catch (e) {}
     }
     // an open question (why, where to save, what changed): the AI answers in words, from the numbers it was given
-    if (r && r.intent === "advice" && r.answer) {
-      ans.hidden = false; ans.className = "ask-ans";
-      ans.innerHTML = `${esc(r.answer).replace(/\n+/g, "<br>")}<span class="ask-sub">✦ תשובה של ה-AI לפי הנתונים שלך</span><div class="ask-acts"><button type="button" class="ask-x" data-ask-clear>סגירה</button></div>`;
-      ans.dataset.search = ""; return;
-    }
+    if (r && r.intent === "advice" && r.answer) { askDone(ans, q, esc(r.answer).replace(/\n+/g, "<br>"), "✦ תשובה של ה-AI לפי הנתונים שלך"); ans.dataset.search = ""; return; }
     Q = (r && askFromAI(r)) || Q;
   }
   const out = Q && askRun(Q);
   ans.hidden = false; ans.className = "ask-ans";
-  if (!out) { ans.innerHTML = `לא הבנתי את השאלה. נסו למשל: ״כמה הוצאתי על סופר מינואר?״, ״מתי הייתי לאחרונה בארומה?״ או ״באיזה חודש הוצאתי הכי הרבה השנה?״`; return; }
-  ans.innerHTML = `${out.text}${out.sub ? `<span class="ask-sub">${out.sub}</span>` : ""}<div class="ask-acts">${out.search ? `<button type="button" data-ask-show>הצגת התנועות</button>` : ""}<button type="button" class="ghost" data-ask-clear>סגירה</button></div>`;
+  if (!out) { ans.innerHTML = askThread() + `לא הבנתי את השאלה. נסו למשל: ״כמה הוצאתי על סופר מינואר?״, ״מתי הייתי לאחרונה בארומה?״ או ״באיזה חודש הוצאתי הכי הרבה השנה?״`; return; }
+  askDone(ans, q, out.text, out.sub, out.search ? `<button type="button" data-ask-show>הצגת התנועות</button>` : "");
   ans.dataset.search = out.search || "";
 }
 $("askBox").addEventListener("submit", e => { e.preventDefault(); $("askQ").blur(); askAnswer($("askQ").value); });
 $("askSug").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $("askQ").value = b.textContent; askAnswer(b.textContent); });
 $("askAns").addEventListener("click", e => {
-  if (e.target.closest("[data-ask-clear]")) { $("askAns").hidden = true; $("askQ").value = ""; return; }
+  if (e.target.closest("[data-ask-clear]")) { $("askAns").hidden = true; $("askQ").value = ""; askConv = []; $("askQ").placeholder = "תשאלו אותי: כמה הוצאתי על קפה החודש?"; return; }
   if (e.target.closest("[data-ask-show]")) { const q = $("askAns").dataset.search; const inp = $("txSearch"); inp.value = q; inp.dispatchEvent(new Event("input", { bubbles: true })); showView("tx"); scrollTo(0, 0); }
 });
 { const r0 = render; render = function () { const o = r0.apply(this, arguments); try { askSuggest(); } catch (e) {} return o; }; }
@@ -9675,6 +9722,73 @@ function askData() {
   return { merchants, summary: summary.slice(0, 60000) };
 }
 
+/* 2: a plan for a month: the AI proposes a cap per everyday category (from the last months, the income and the goal);
+   each line can be changed, and one tap sets them as that month's caps */
+function planTarget() {
+  const [cy, cm] = curYM(), p = period(cy, cm), left = daysBetween(today, p.end);
+  return left <= 6 ? (cm === 11 ? [cy + 1, 0] : [cy, cm + 1]) : [cy, cm];
+}
+function planHome() {
+  const c = $("planCard"); if (!c) return;
+  if (c.parentElement !== $("todayBox").parentElement) $("todayBox").after(c);
+  const [cy, cm] = curYM(), left = daysBetween(today, period(cy, cm).end), [ty, tm] = planTarget(), k = mkey(ty, tm);
+  let dismissed = ""; try { dismissed = localStorage.getItem("planSeen") || ""; } catch (e) {}
+  const has = Object.keys(capsBy[k] || {}).length > 0;
+  c.hidden = !window.ispendPlan || left > 6 || has || dismissed === k || !tx.length || currentView !== "flow";
+  $("planCardT").textContent = "✦ תוכנית ל" + MONTHS[tm];
+}
+$("planCard").addEventListener("click", () => openPlan());
+{ const r0 = render; render = function () { const o = r0.apply(this, arguments); try { planHome(); } catch (e) {} return o; }; }
+async function openPlan() {
+  const [ty, tm] = planTarget(), k = mkey(ty, tm);
+  // the everyday categories that had spending lately, and what each cost on average
+  // the months to learn from: when planning next month, this month (almost over) counts too
+  const [cy, cm] = curYM(), nextOne = ty * 12 + tm > cy * 12 + cm, months = nextOne ? [[cy, cm]] : [];
+  { let [y, m] = [cy, cm]; while (months.length < 3) { [y, m] = prevYM(y, m); if (y * 12 + m < FIRST_MONTH) break; months.push([y, m]); } }
+  if (!months.length) months.push([cy, cm]);
+  const tots = months.map(([y, m]) => catTotals(y, m));
+  const avg = c => tots.reduce((s, t) => s + Math.max(0, t.get(c) || 0), 0) / months.length;
+  const pcats = CATS.filter(c => !FIXED.has(c)).map(c => [c, avg(c)]).filter(([, v]) => v >= 20).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+  if (!pcats.length) { toast("עוד אין מספיק הוצאות כדי לבנות תוכנית. נסו אחרי חודש של שימוש.", 3600); return; }
+  const income = Math.round(salaries[k] || salaries[mkey(...curYM())] || 0), goal = Math.round(((goalFor(ty, tm) || {}).amount) || 0);
+  const fixedAvg = months.reduce((s, [y, m]) => s + Math.max(0, monthFigures(y, m).fixed), 0) / months.length;
+  const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = "planSheet"; bg.dir = "rtl";
+  const close = () => { bg.remove(); document.documentElement.classList.remove("modal-open"); };
+  bg.addEventListener("click", e => { if (e.target === bg || e.target.closest(".x")) close(); });
+  document.body.appendChild(bg); document.documentElement.classList.add("modal-open");
+  const head = `<span class="grab" aria-hidden="true"></span><div class="hd"><div><b>✦ תוכנית ל${MONTHS[tm]}</b><br><span>תקרה לכל קטגוריה, לפי ${months.length === 1 ? "החודש האחרון" : months.length + " החודשים האחרונים"}${goal ? " והיעד (" + fmt(goal) + ")" : ""}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>`;
+  bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="תוכנית לחודש">${head}<div class="ask-think">ה-AI בונה את התוכנית</div></div>`;
+  let plan = null;
+  try { plan = await window.ispendPlan({ target: ty + "-" + String(tm + 1).padStart(2, "0"), plan_cats: pcats, cats: CATS, goal, income, today: iso(today), summary: askData().summary }); } catch (e) {}
+  if (!bg.isConnected) return;
+  if (!plan || !plan.caps || !Object.keys(plan.caps).length) { bg.querySelector(".jar-sh").innerHTML = `${head}<p class="sp-msg">לא הצלחתי לבנות תוכנית עכשיו. נסו שוב עוד מעט.</p>`; return; }
+  const rows = pcats.filter(c => plan.caps[c] > 0).map(c => ({ c, was: avg(c), v: plan.caps[c] }));
+  const sumLine = () => {
+    const tot = rows.reduce((s, r) => s + (+r.v || 0), 0);
+    if (!income) return `<div class="pl-sum">סך התקרות: ${fmt(tot)}</div>`;
+    const left = income - fixedAvg - tot, ok = !goal || left >= goal;
+    return `<div class="pl-sum ${ok ? "" : "bad"}">עם התוכנית: ${fmt(income)} הכנסה${fixedAvg >= 1 ? ", בערך " + fmt(fixedAvg) + " קבועות" : ""} ו-${fmt(tot)} בתקרות. ${left >= 0 ? "נשארים " + fmt(left) : "חסרים " + fmt(-left)}${goal ? (ok ? ", ועומדים ביעד ✓" : `, ${fmt(goal - left)} פחות מהיעד`) : ""}.</div>`;
+  };
+  const draw = () => {
+    bg.querySelector(".jar-sh").innerHTML = `${head}
+      ${plan.note ? `<div class="pl-note">✦ ${esc(plan.note)}</div>` : ""}
+      <div class="pl-rows">${rows.map((r, i) => `<div class="pl-row">${catIcon(r.c, true)}<span class="nm">${esc(r.c)}</span><span class="was" title="ממוצע">${fmt(r.was)}</span><input data-i="${i}" inputmode="numeric" value="${r.v}" aria-label="תקרה ל${esc(r.c)}"></div>`).join("")}</div>
+      <div id="plSum">${sumLine()}</div>
+      <button type="button" class="sp-save" id="plApply">להחיל כתקרות ל${MONTHS[tm]}</button>
+      <p class="jar-note">המספר המחוק הוא הממוצע בחודשים האחרונים. אפשר לשנות כל שורה לפני. התקרות חלות רק על ${MONTHS[tm]}, וקטגוריות שלא ברשימה נשארות כמו שהן.</p>`;
+  };
+  bg.addEventListener("input", e => { const el = e.target.closest("input[data-i]"); if (!el) return; rows[+el.dataset.i].v = Math.max(0, parseInt(el.value.replace(/\D/g, ""), 10) || 0); $("plSum").innerHTML = sumLine(); });
+  bg.addEventListener("click", async e => {
+    const b = e.target.closest("#plApply"); if (!b) return;
+    b.disabled = true; b.textContent = "שומר…";
+    const next = JSON.parse(JSON.stringify(capsBy)); next[k] = next[k] || {};
+    rows.forEach(r => { if (r.v > 0) next[k][r.c] = r.v; });
+    try { await saveCapsBy(next); try { localStorage.setItem("planSeen", k); } catch (x) {} close(); render(); toast(`נשמר: ${rows.filter(r => r.v > 0).length} תקרות ל${MONTHS[tm]} ✦`, 3000); }
+    catch (err) { b.disabled = false; b.textContent = "להחיל כתקרות ל" + MONTHS[tm]; toast("השמירה לא הצליחה. נסו שוב.", 3000); }
+  });
+  draw();
+}
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -9954,7 +10068,7 @@ function tourLift(el) {
 const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + esc(USER_NAME) : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר של דקה, ואפשר לדלג בכל רגע." },
   { t: "#monthTitle", h: "מעבר בין חודשים", b: "החיצים עוברים חודש אחד. לחיצה על שם החודש פותחת את כל החודשים. כל חלון נסגר במשיכה למטה." },
-  { t: "#askBox", h: "תשאלו אותי ✦", b: "שואלים בשפה רגילה: סכומים, ממוצעים, השוואה בין חודשים ואחוז מההכנסה. למשל ״כמה הוצאתי על סופר מינואר?״" },
+  { t: "#askBox", h: "תשאלו אותי ✦", b: "שואלים בשפה רגילה: סכומים, ממוצעים, השוואה בין חודשים ואחוז מההכנסה. למשל ״כמה הוצאתי על סופר מינואר?״. ואחרי התשובה אפשר להמשיך: ״ולעומת החודש שעבר?״" },
   { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "הקשת מתמלאת לפי מה שהוצאתם. הסימון ״צפי״ מראה איך החודש ייגמר בקצב הנוכחי. גוררים את הפס שמתחתיה כדי לראות כל יום בחודש, כמו מכונת זמן." },
   { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה, ובתוכה התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
   { t: "#slipBtn", opt: true, h: "התלוש של החודש", b: "כל מה שנכנס ויצא לפי קטגוריות, כמו תלוש. אפשר לשתף אותו כתמונה." },
@@ -9978,7 +10092,7 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "המשכורת של כל חודש, יעד החיסכון והחודשים שמופיעים באתר." },
   { t: '#setMenu [data-go="sal"]', view: "admin", h: "יום החיוב החודשי", b: "היום בחודש שבו יורד החיוב באשראי. החודש באתר מתחיל ממנו, כך שכל הוצאה נספרת בחודש של החיוב שלה. משנים ב״משכורות ומועד החיוב״." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה, ולחיצה אחת מחילה." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -10276,8 +10390,16 @@ window.ispendClassify = async function (names, cats) {
 window.ispendAsk = async function (q, ctx) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
   try {
-    const r = await fetch(SUPA_URL + "/functions/v1/ask-money", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ q, cats: ctx.cats, cards: ctx.cards, today: ctx.today, merchants: ctx.merchants, summary: ctx.summary }), signal: ctl.signal });
+    const r = await fetch(SUPA_URL + "/functions/v1/ask-money", { method: "POST", headers: await authHeaders(), body: JSON.stringify({ q, cats: ctx.cats, cards: ctx.cards, today: ctx.today, merchants: ctx.merchants, summary: ctx.summary, history: ctx.history || [] }), signal: ctl.signal });
     const j = await r.json().catch(() => ({})); if (!r.ok || !j.query) throw new Error(j.error || "ask " + r.status); return j.query;
+  } finally { clearTimeout(t); }
+};
+/* a plan for a month: a cap per category, from the last months, the income and the goal */
+window.ispendPlan = async function (ctx) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 30000);
+  try {
+    const r = await fetch(SUPA_URL + "/functions/v1/ask-money", { method: "POST", headers: await authHeaders(), body: JSON.stringify(Object.assign({ mode: "plan" }, ctx)), signal: ctl.signal });
+    const j = await r.json().catch(() => ({})); if (!r.ok || !j.plan) throw new Error(j.error || "plan " + r.status); return j.plan;
   } finally { clearTimeout(t); }
 };
 /* a receipt photo: the server's AI reads it once (the photo is not kept) */
@@ -10295,7 +10417,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107033451";
+const BUILD_ID = "20261107035031";
 let updToast = null;
 async function checkUpdate() {
   try {

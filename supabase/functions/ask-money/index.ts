@@ -43,19 +43,41 @@ Deno.serve(async req => {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: u } = await sb.auth.getUser(token);
   if (!u?.user) return json({ error: "not signed in" }, 401);
-  let body: { q?: string; cats?: string[]; cards?: string[]; today?: string; merchants?: string[]; summary?: string } = {};
+  let body: { q?: string; cats?: string[]; cards?: string[]; today?: string; merchants?: string[]; summary?: string; history?: { q?: string; a?: string }[]; mode?: string; target?: string; goal?: number; income?: number; plan_cats?: string[] } = {};
   try { body = await req.json(); } catch (e) { return json({ error: "bad request" }, 400); }
-  const q = clean(body.q, 200); if (q.length < 2) return json({ error: "empty" }, 400);
+  const isPlan = body.mode === "plan";
+  const q = isPlan ? "plan" : clean(body.q, 200); if (q.length < 2) return json({ error: "empty" }, 400);
   const cats = (Array.isArray(body.cats) ? body.cats : []).slice(0, 60).map(c => clean(c)).filter(Boolean);
   const cards = (Array.isArray(body.cards) ? body.cards : []).slice(0, 30).map(c => clean(c)).filter(Boolean);
   const today = /^\d{4}-\d{2}-\d{2}$/.test(String(body.today)) ? String(body.today) : new Date().toISOString().slice(0, 10);
   const merchants = (Array.isArray(body.merchants) ? body.merchants : []).slice(0, 300).map(m => clean(m, 50)).filter(Boolean);
   const summary = String(body.summary || "").replace(/[<>`\\]/g, " ").slice(0, 60000);
+  const history = (Array.isArray(body.history) ? body.history : []).slice(-4).map(h => ({ q: clean(h?.q, 200), a: clean(h?.a, 400) })).filter(h => h.q);
   // a daily cap per person
   const day = new Date().toISOString().slice(0, 10);
   const { data: use } = await sb.from("ask_usage").select("n").eq("user_id", u.user.id).eq("day", day).maybeSingle();
   if ((use?.n || 0) >= DAILY_CAP) return json({ error: "daily limit" }, 429);
   await sb.from("ask_usage").upsert({ user_id: u.user.id, day, n: (use?.n || 0) + 1 });
+  if (isPlan) {
+    const target = /^\d{4}-\d{2}$/.test(String(body.target)) ? String(body.target) : "";
+    const pcats = (Array.isArray(body.plan_cats) ? body.plan_cats : []).slice(0, 40).map(c => clean(c)).filter(c => cats.includes(c));
+    const goal = Math.max(0, Math.round(+body.goal || 0)), income = Math.max(0, Math.round(+body.income || 0));
+    if (!target || !pcats.length) return json({ error: "bad request" }, 400);
+    const pp = `אתה יועץ תקציב אישי. הצע תקרה חודשית לכל קטגוריה של הוצאות משתנות לחודש ${target}.
+הכנסה צפויה: ${income || "לא ידוע"}. יעד חיסכון: ${goal || "לא הוגדר"}.
+קטגוריות לתכנון: ${pcats.map(c => `"${c}"`).join(", ")}.
+עקרונות: מבוסס על מה שבאמת יצא בחודשים האחרונים (לא חודש חריג אחד); ריאלי, לא פחות מבערך 60% מהממוצע; קצץ קודם בקטגוריות שעלו או שאפשר לוותר בהן (בילויים, אוכל בחוץ, קניות), ופחות בבסיסיות (סופר, דלק, בריאות); אם יש יעד, נסה שהכנסה פחות הקבועות פחות סכום התקרות תשאיר לפחות את היעד; עגל ל-50.
+החזר JSON בלבד: {"caps":{"שם קטגוריה":סכום},"note":"משפט אחד או שניים בעברית: מה הרעיון של התוכנית ואיפה העיקר"}
+הנתונים:
+${summary}`;
+    try {
+      const text = await ask(pp);
+      const m = text.match(/\{[\s\S]*\}/); if (!m) return json({ error: "no answer" }, 502);
+      const o = JSON.parse(m[0]), caps: Record<string, number> = {};
+      Object.entries(o.caps || {}).forEach(([c, v]) => { const k = clean(c); const n = Math.round((+v || 0) / 50) * 50; if (pcats.includes(k) && n > 0 && n < 1e6) caps[k] = n; });
+      return json({ plan: { caps, note: String(o.note || "").replace(/[<>`]/g, "").trim().slice(0, 400) } });
+    } catch (e) { console.error("plan failed", e); return json({ error: "ai failed" }, 502); }
+  }
   const prompt = `אתה מנוע חיפוש לכסף: מתרגם שאלה בעברית על הוצאות והכנסות לשאילתה. היום ${today}. השבוע מתחיל ביום ראשון.
 קטגוריות קיימות: ${cats.map(c => `"${c}"`).join(", ")}.
 אמצעי תשלום קיימים: ${cards.map(c => `"${c}"`).join(", ")}.
@@ -69,7 +91,7 @@ advice = שאלה פתוחה שאי אפשר לענות עליה בספירה א
 התאם מילים לקטגוריה הקרובה ביותר ברשימה, גם כשהניסוח שונה (למשל "קניות לבית" -> הקטגוריה שהכי מתאימה לקניות לבית; "אוכל בחוץ" -> מסעדות/אוכל ושתיה). אם מילה היא שם של עסק, שים אותה ב-words ולא בקטגוריה.
 תקופות: "מפברואר 2026" = from 2026-02-01, to היום. "מאז מרץ" = מתחילת מרץ האחרון עד היום. "בין ינואר למאי" = 1 בינואר עד סוף מאי. "בפברואר" = כל פברואר. "ב-2025" = כל השנה. "השנה" = מ-1 בינואר השנה עד היום. "החודש" = מהיום הראשון של החודש הנוכחי עד היום. חודש בלי שנה = המופע האחרון שלו שלא בעתיד.
 אם אין תקופה בשאלה, השאר from ו-to ריקים. period_label תמיד בצורה שמתאימה להתחלת משפט, למשל "מפברואר 2026 עד היום", "בספטמבר", "השנה".
-${summary ? "הנתונים של המשתמש:\n" + summary + "\n" : ""}השאלה: ${q}`;
+${summary ? "הנתונים של המשתמש:\n" + summary + "\n" : ""}${history.length ? "השיחה עד עכשיו (השאלה החדשה יכולה להמשיך אותה: \"ולעומת ספטמבר?\", \"ומה עם דלק?\", \"איך מורידים את זה?\" — השלם ממנה את מה שחסר: קטגוריה, עסק, תקופה):\n" + history.map(h => "שאלה: " + h.q + "\nתשובה: " + h.a).join("\n") + "\n" : ""}השאלה: ${q}`;
   try {
     const text = await ask(prompt);
     const m = text.match(/\{[\s\S]*\}/); if (!m) return json({ error: "no answer" }, 502);
