@@ -21,16 +21,17 @@ async function ask(prompt: string): Promise<string> {
     const j = await r.json(); return (j.content || []).map((c: { text?: string }) => c.text || "").join("");
   }
   if (!gk) throw new Error("no AI key");
-  const models = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
+  // the newest Flash (free); a short think first, so dates and comparisons come out right
+  const models = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest"].filter(Boolean) as string[];
   for (const model of models) {
     // no "thinking" step: a short JSON answer comes back several times faster
     const req = (h: Record<string, string>, think = false) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "content-type": "application/json", ...h },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0, maxOutputTokens: 300, ...(think ? {} : { thinkingConfig: { thinkingBudget: 0 } }) } }) });
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0, maxOutputTokens: 1200, ...(think ? {} : { thinkingConfig: { thinkingBudget: 384 } }) } }) });
     let r = await req({ "x-goog-api-key": gk });
     if (r.status === 400) r = await req({ "x-goog-api-key": gk }, true); // a model without that switch
     if (r.status === 401 || r.status === 403) { const r2 = await req({ Authorization: "Bearer " + gk }); if (r2.ok) r = r2; }
-    if (r.ok) { const j = await r.json(); return j.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || ""; }
-    if (r.status !== 404) throw new Error("ai " + r.status);
+    if (r.ok) { const j = await r.json(); return j.candidates?.[0]?.content?.parts?.map((p: { text?: string; thought?: boolean }) => p.thought ? "" : p.text || "").join("") || ""; }
+    if (![404, 429, 500, 503].includes(r.status)) throw new Error("ai " + r.status);
   }
   throw new Error("ai model");
 }

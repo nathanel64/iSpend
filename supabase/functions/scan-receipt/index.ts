@@ -16,24 +16,28 @@ async function read(image: string, prompt: string): Promise<string> {
   const ak = Deno.env.get("ANTHROPIC_API_KEY"), gk = Deno.env.get("GEMINI_API_KEY");
   if (ak) {
     const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "x-api-key": ak, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: Deno.env.get("AI_MODEL") || "claude-haiku-5-5", max_tokens: 300, messages: [{ role: "user", content: [
+      body: JSON.stringify({ model: Deno.env.get("AI_SCAN_MODEL") || Deno.env.get("AI_MODEL") || "claude-sonnet-5-5", max_tokens: 400, messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image } }, { type: "text", text: prompt }] }] }) });
     if (!r.ok) throw new Error("ai " + r.status);
     const j = await r.json(); return (j.content || []).map((c: { text?: string }) => c.text || "").join("");
   }
   if (!gk) throw new Error("no AI key");
-  const models = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
+  // the best free models first (a Pro model has a small daily allowance); thinking on, since a wrong total is a real mistake.
+  // A model that is missing, busy or out of its free allowance passes the photo to the next one.
+  const models = [Deno.env.get("GEMINI_SCAN_MODEL"), "gemini-pro-latest", "gemini-2.5-pro", "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
+  let last = 0;
   for (const model of models) {
-    const req = (h: Record<string, string>, think = false) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "content-type": "application/json", ...h },
+    const req = (h: Record<string, string>, plain = false) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "content-type": "application/json", ...h },
       body: JSON.stringify({ contents: [{ parts: [{ inlineData: { mimeType: "image/jpeg", data: image } }, { text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0, maxOutputTokens: 300, ...(think ? {} : { thinkingConfig: { thinkingBudget: 0 } }) } }) });
+        generationConfig: { responseMimeType: "application/json", temperature: 0, maxOutputTokens: 2048, ...(plain ? {} : { thinkingConfig: { thinkingBudget: 1024 } }) } }) });
     let r = await req({ "x-goog-api-key": gk });
-    if (r.status === 400) r = await req({ "x-goog-api-key": gk }, true);
+    if (r.status === 400) r = await req({ "x-goog-api-key": gk }, true); // a model without that setting
     if (r.status === 401 || r.status === 403) { const r2 = await req({ Authorization: "Bearer " + gk }); if (r2.ok) r = r2; }
-    if (r.ok) { const j = await r.json(); return j.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || ""; }
-    if (r.status !== 404) throw new Error("ai " + r.status);
+    if (r.ok) { const j = await r.json(); return j.candidates?.[0]?.content?.parts?.map((p: { text?: string; thought?: boolean }) => p.thought ? "" : p.text || "").join("") || ""; }
+    last = r.status;
+    if (![404, 429, 500, 503].includes(r.status)) throw new Error("ai " + r.status);
   }
-  throw new Error("ai model");
+  throw new Error("ai model " + last);
 }
 
 Deno.serve(async req => {
