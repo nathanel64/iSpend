@@ -2038,6 +2038,11 @@ button:not(:disabled):active, [role="button"]:active, .md-b:active { scale: .97;
 .jar-day { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .jar-day > b { font-size: .9rem; padding: 0 2px; }
 .today .my-day { display: none; }
+
+/* privacy mode: amounts blurred everywhere, except where they are typed */
+html.privacy :is(.num, .odo, .sub b, .proj b, .td-side b, .mb-today b, .bv, .m0, .m2, .wl-amt, .md-b b, .jar-num, .jar-log .i, .jar-chip, .g-plus, .tm-lbl b, .insight span, .fc-marks span, .burn-legend span, .up bdi, .cmp-v b, .dial-cum b, .tk-stub b, .last-pay + *, .tx .a, .sugg small, .pc-a, .ytile .v, .hl .v, .yhero .big, .rc-body .num, .wrapped .num) { filter: blur(7px); }
+html.privacy :is(#addForm, .sal-sheet, .ce-sheet, .np-keys, #capBg) :is(.num, .odo) { filter: none; }
+html.privacy .num, html.privacy .odo { user-select: none; -webkit-user-select: none; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -7840,6 +7845,7 @@ boot();
     out: "M15 4h4v16h-4 M10 8l-4 4 4 4 M6 12h10",
     unlink: "M10 14l-1 1a3 3 0 01-4-4l2-2 M14 10l1-1a3 3 0 014 4l-2 2 M4 4l16 16",
     trash: "M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13",
+    eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z M12 15a3 3 0 100-6 3 3 0 000 6z",
     xls: "M5 3h10l4 4v14H5z M8 11l5 6 M13 11l-5 6 M15 3v4h4"
   };
   const ico = (k, h) => `<span class="set-ic" style="--h:${h}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${SI[k]}"/></svg></span>`;
@@ -7920,6 +7926,7 @@ boot();
     <div class="set-gh">החשבון</div>
     <div class="set-grp" data-g="me">
       <div class="set-row" style="cursor:default">${ico("moon", 250)}<span class="set-rt"><b>מראה</b></span><span id="setLook"></span></div>
+      <button type="button" class="set-row" data-act="privacy">${ico("eye", 280)}<span class="set-rt"><b>מצב פרטיות</b><small>מטשטש את כל הסכומים, כשמראים את הטלפון או מצלמים מסך</small></span><span class="set-pill" id="privPill"></span></button>
       <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת יומית</b><small>בשעה שתבחר, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="weekly">${ico("grid", 200)}<span class="set-rt"><b>סיכום שבועי</b><small>ביום ראשון בבוקר: כמה יצא בשבוע שעבר ועל מה</small></span><span class="set-pill" id="weeklyPill"${window.ISPEND_PUSH ? "" : " hidden"}></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="xlsx">${ico("xls", 140)}<span class="set-rt"><b>הורדה לאקסל</b><small>כל התנועות, סיכום חודשי ולפי קטגוריה</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
@@ -7965,6 +7972,7 @@ boot();
   menu.addEventListener("click", async e => {
     const r = e.target.closest(".set-row"); if (!r) return;
     if (r.dataset.go) return setGo(r.dataset.go);
+    if (r.dataset.act === "privacy") { setPrivacy(!privacyOn()); return; }
     if (r.dataset.act === "xlsx") { exportXlsx(r); return; }
     if (r.dataset.act === "import") { openImport(); return; }
     if (r.dataset.act === "aicheck") { aiCheckNow(); return; }
@@ -9475,6 +9483,18 @@ function maybeGoLink() {
   }, 500);
 }
 
+/* privacy mode: every amount on the site is blurred (this phone only), switched in the settings */
+const privacyOn = () => { try { return localStorage.getItem("privacy") === "1"; } catch (e) { return false; } };
+function privPill() { const p = $("privPill"); if (!p) return; const on = privacyOn(), t = on ? "פועל" : "כבוי"; if (p.textContent !== t) p.textContent = t; const c = "set-pill " + (on ? "on" : "off"); if (p.className !== c) p.className = c; }
+function setPrivacy(on) {
+  try { localStorage.setItem("privacy", on ? "1" : "0"); } catch (e) {}
+  document.documentElement.classList.toggle("privacy", on); privPill();
+  toast(on ? "מצב פרטיות פועל: כל הסכומים מוסתרים 🙈" : "מצב פרטיות כבוי: הסכומים גלויים", 2600);
+}
+document.documentElement.classList.toggle("privacy", privacyOn());
+// the settings page is drawn again from time to time: the pill follows
+new MutationObserver(() => { if ($("privPill") && !$("privPill").textContent) privPill(); }).observe(document.body, { childList: true, subtree: true });
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -10085,7 +10105,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107023827";
+const BUILD_ID = "20261107030528";
 let updToast = null;
 async function checkUpdate() {
   try {
