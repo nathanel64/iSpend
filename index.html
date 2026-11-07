@@ -5089,6 +5089,8 @@ function renderUpcoming(isCurrent) {
     <div class="top">${catIcon(i.cat, true)}<span class="tag ${i.inst ? "" : "fx"}"><bdi>${esc(i.tag)}</bdi></span></div>
     <div class="n" title="${esc(i.name)}">${esc(i.name)}</div><div class="a num">${fmt(i.amount)}</div></div>`).join("");
 }
+/* the open month is the billing period that runs now (with a start day of 10, November opens only on the 10th) */
+const curIdx = () => { const [y, m] = curYM(); return y * 12 + m; };
 function curYM() { let y = now.getFullYear(), m = now.getMonth(); if (now.getDate() < startDay) { m--; if (m < 0) { m = 11; y--; } } return [y, m]; }
 
 /* a new expense: a coin flies from the + button into the gauge, which gives a small bump when it lands */
@@ -5890,9 +5892,9 @@ function renderAdminLists() {
 }
 function renderSal() {
   const rows = [];
-  const months = today.getFullYear() * 12 + today.getMonth() - FIRST_MONTH + 1;
+  const months = curIdx() - FIRST_MONTH + 1;
   for (let i = 0; i < Math.max(months, 1); i++) {
-    let y = today.getFullYear(), m = today.getMonth() - i;
+    let [y, m] = curYM(); m -= i;
     while (m < 0) { m += 12; y--; }
     if (hiddenMonths.has(y * 12 + m)) continue;
     const k = mkey(y, m);
@@ -6182,7 +6184,7 @@ function yearMonths(y) {
   const out = [];
   for (let m = 0; m < 12; m++) {
     const idx = y * 12 + m;
-    if (idx < FIRST_MONTH || idx > today.getFullYear() * 12 + today.getMonth() || hiddenMonths.has(idx)) continue;
+    if (idx < FIRST_MONTH || idx > curIdx() || hiddenMonths.has(idx)) continue;
     const f = monthFigures(y, m);
     const sal = salaryFor(y, m, false);
     out.push({ y, m, f, income: sal.amount + f.income, expense: f.fixed + f.variable, fixed: f.fixed, variable: f.variable });
@@ -6306,7 +6308,7 @@ function renderDonut(months) {
 
 /* ---------- month vs month ---------- */
 let cmpA = null, cmpB = null;
-function monthIdxList() { const out = []; for (let k = today.getFullYear() * 12 + today.getMonth(); k >= FIRST_MONTH; k--) if (!hiddenMonths.has(k)) out.push(k); return out; }
+function monthIdxList() { const out = []; for (let k = curIdx(); k >= FIRST_MONTH; k--) if (!hiddenMonths.has(k)) out.push(k); return out; }
 function catTotals(y, m) {
   const map = new Map();
   monthFigures(y, m).spend.forEach(t => map.set(t.category, (map.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
@@ -6387,7 +6389,7 @@ function renderHeatmap() {
 const whatIfCut = {};
 function renderWhatIf() {
   // average monthly spend per variable category over the last three full months
-  const ms = []; let y = today.getFullYear(), m = today.getMonth();
+  const ms = []; let [y, m] = curYM();
   for (let i = 0; i < 3; i++) { [y, m] = prevYM(y, m); if (y * 12 + m >= FIRST_MONTH) ms.push(monthFigures(y, m)); }
   const sum = new Map();
   ms.forEach(f => f.spend.forEach(t => { if (FIXED.has(t.category)) return; sum.set(t.category, (sum.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)); }));
@@ -10465,7 +10467,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107040200";
+const BUILD_ID = "20261107234726";
 let updToast = null;
 async function checkUpdate() {
   try {
