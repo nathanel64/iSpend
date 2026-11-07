@@ -31,7 +31,8 @@ const PUSH_HOST = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.moz
 // the Sunday that opened the week which just ended (Israel weeks run Sunday to Saturday)
 function lastSunday(day: string) { const d = new Date(day + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - d.getUTCDay() - 7); return d.toISOString().slice(0, 10); }
 const shek = (v: number) => "₪" + Math.round(v).toLocaleString("en-US");
-// the phone sends its own numbers when the site is open; if they are not for last week, the message stays general
+// the phone sends its own numbers when the site is open (total, the week before, top category and its amount, days with no spending);
+// if they are not for last week, the message stays general
 function weeklyMsg(s: { week_stats?: unknown }, ws: string) {
   const st = s.week_stats as Record<string, { ws?: string; total?: number; ptotal?: number; top?: string; topAmt?: number; free?: number }> | null;
   const w = st && [st.prev, st.cur].find(x => x && x.ws === ws);
