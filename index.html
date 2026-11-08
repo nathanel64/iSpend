@@ -10014,15 +10014,25 @@ function maybeTxLink() {
   if (txLinkDone || !wantsTx || !(data.manual !== null || data.apple !== null) || !tx.length) return;
   txLinkDone = true;
   try { const u = new URL(location.href); u.searchParams.delete("tx"); history.replaceState(null, "", u.pathname + u.search + u.hash); } catch (e) {}
-  setTimeout(() => {
-    const id = t => (t.del && t.del.raw && t.del.raw[7]) || "";
-    const t = (wantsTx !== "*" && tx.find(t => id(t) === wantsTx))
-      || tx.filter(t => /^ap-/.test(id(t))).sort((a, b) => id(b).localeCompare(id(a), undefined, { numeric: true }))[0];
-    showView("tx");
-    if (!t) return;
-    if (isPendingTx(t)) { if (txKey(t)) openReceipt(txKey(t)); return; }
-    openEdit(t);
-  }, 700);
+  const id = t => (t.del && t.del.raw && t.del.raw[7]) || "";
+  const stamp = x => { const m = /^ap-(\d{10,16})$/.exec(x); return m ? +m[1].padEnd(13, "0").slice(0, 13) : 0; };
+  // the payment the notice was about, and nothing else: the page may still show older data, or the payment may
+  // reach the sheet a few seconds after the notice. So it waits, reads again, and only then gives up (without opening another one)
+  const find = () => wantsTx !== "*" ? tx.find(t => id(t) === wantsTx)
+    : tx.filter(t => /^ap-/.test(id(t)) && Date.now() - stamp(id(t)) < 20 * 60 * 1000).sort((a, b) => stamp(id(b)) - stamp(id(a)))[0];
+  const open = t => { showView("tx"); if (isPendingTx(t)) { if (txKey(t)) openReceipt(txKey(t)); return; } openEdit(t); };
+  let tries = 0, told = false;
+  const look = async () => {
+    const t = dataFresh() && find();
+    if (t) { open(t); return; }
+    tries++;
+    if (tries === 2 && !told) { told = true; toast("מחפש את התנועה מההתראה…", 2600); }
+    if (tries > 10) { showView("tx"); toast("התנועה מההתראה עוד לא הגיעה. היא תופיע ברשימה בעוד רגע.", 4200); return; }
+    // fresh data: read again every few tries
+    if (dataFresh() && tries % 3 === 0) { try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {} try { await refresh(); } catch (e) {} }
+    setTimeout(look, 1500);
+  };
+  setTimeout(look, 700);
 }
 window.openWeekNow = () => { const w = recapWeek(); if (!w) { toast("בשבוע שעבר היו פחות משלוש רכישות, אז אין סיכום הפעם.", 3200); return; } openRecap(w.r); };
 /* ===== accessibility: dialogs take focus, keep it, and give it back; buttons made of divs answer the keyboard ===== */
@@ -10481,7 +10491,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261107235658";
+const BUILD_ID = "20261108092111";
 let updToast = null;
 async function checkUpdate() {
   try {
