@@ -2159,6 +2159,51 @@ html[data-txt="xl"] { font-size: 124%; }
   .nav .fab::after { display: none; }
   .nav.slim { padding: 16px 10px !important; }
 }
+
+/* ===== challenges and badges, upgraded: a level, the week as dots, colorful medals with progress ===== */
+.fun { gap: 12px !important; }
+#funLvl { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, var(--g1, #5b4cf0), var(--g2, #9a52d6)); color: #fff; border-radius: 18px; padding: 10px 14px; cursor: pointer; position: relative; overflow: hidden; }
+#funLvl::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 85% 0%, rgba(255,255,255,.28), transparent 55%); pointer-events: none; }
+.lv-ring { position: relative; width: 52px; height: 52px; flex: none; }
+.lv-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.lv-ring circle { fill: none; stroke-width: 5; } .lv-ring .bg { stroke: rgba(255,255,255,.25); } .lv-ring .fg { stroke: #ffd36b; stroke-linecap: round; transition: stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1); }
+.lv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 1.25rem; font-weight: 800; }
+.lv-t { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.lv-k { font-size: .72rem; opacity: .85; font-weight: 600; } .lv-t b { font-size: 1.05rem; } .lv-s { font-size: .74rem; opacity: .85; }
+.lv-fire { background: rgba(255,255,255,.2); border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: .85rem; flex: none; }
+.ch-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 8px; }
+.ch-days .cd { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.ch-days .cd i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: .85rem; background: var(--bg); color: var(--muted); border: 2px dashed color-mix(in srgb, var(--ink) 14%, transparent); }
+.ch-days .cd small { font-size: .68rem; color: var(--muted); font-weight: 600; }
+.ch-days .cd.good i { background: var(--good); color: #fff; border: 0; animation: cdPop .5s cubic-bezier(.3,1.6,.5,1) both; }
+.ch-days .cd.bad i { background: var(--bad); color: #fff; border: 0; }
+.ch-days .cd.spent i { background: color-mix(in srgb, var(--warn) 22%, var(--surface)); color: var(--warn); border: 0; }
+.ch-days .cd.now i { outline: 2.5px solid var(--brand); outline-offset: 2px; }
+.ch-days .cd.now small { color: var(--brand); }
+.ch-days.pre .cd i { opacity: .45; animation: none; }
+.ch-days .cd:nth-child(2) i { animation-delay: .05s; } .ch-days .cd:nth-child(3) i { animation-delay: .1s; } .ch-days .cd:nth-child(4) i { animation-delay: .15s; } .ch-days .cd:nth-child(5) i { animation-delay: .2s; } .ch-days .cd:nth-child(6) i { animation-delay: .25s; } .ch-days .cd:nth-child(7) i { animation-delay: .3s; }
+@keyframes cdPop { from { transform: scale(.4); opacity: 0; } }
+.ch-t { font-size: 1.15rem !important; }
+.bdg-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 6px; padding-top: 4px; }
+.bdg2 { border: 0; background: none; font: inherit; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 0; min-width: 0; }
+.bdg2 .bm { --c: hsl(var(--h) 75% 55%); width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; position: relative;
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), color-mix(in srgb, var(--ink) 9%, transparent) 0); }
+.bdg2 .be { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 1.45rem; background: var(--surface); }
+.bdg2 .be > span { filter: grayscale(1); opacity: .45; }
+.bdg2.on .bm { background: radial-gradient(circle at 35% 25%, hsl(var(--h) 90% 82%), hsl(var(--h) 72% 52%) 65%, hsl(var(--h) 70% 38%)); box-shadow: 0 8px 18px -8px hsl(var(--h) 70% 40% / .8); overflow: hidden; }
+.bdg2.on .be { background: transparent; font-size: 1.6rem; }
+.bdg2.on .be > span { filter: drop-shadow(0 2px 2px rgba(0,0,0,.25)); opacity: 1; }
+.bdg2.on .bm::after { content: ""; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.6) 50%, transparent 58%); transform: translateX(-100%); animation: bdgShine 4.5s ease-in-out infinite; }
+.bdg2:nth-child(3n) .bm::after { animation-delay: 1.5s; } .bdg2:nth-child(3n+1) .bm::after { animation-delay: 3s; }
+@keyframes bdgShine { 0%, 70% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.bdg2.next .bm { animation: bdgNext 2.2s ease-in-out infinite; }
+@keyframes bdgNext { 50% { transform: scale(1.07); } }
+.bdg2 .bt { font-size: .72rem; text-align: center; line-height: 1.2; font-weight: 600; color: var(--muted); } .bdg2.on .bt { color: var(--ink); }
+.bdg2 .bp { font-size: .64rem; color: var(--muted); } .bdg2.next .bp { color: var(--brand); font-weight: 700; }
+.fun-conf { position: fixed; inset: 0; z-index: 200; pointer-events: none; overflow: hidden; }
+.fun-conf i { position: absolute; top: -12px; left: var(--x); width: 8px; height: 13px; border-radius: 2px; animation: funFall 2.2s cubic-bezier(.25,.6,.4,1) var(--d) forwards; opacity: 0; }
+@keyframes funFall { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: .9; transform: translate(var(--dx), 105vh) rotate(var(--r)); } }
+@media (prefers-reduced-motion: reduce) { .bdg2.on .bm::after, .bdg2.next .bm, .ch-days .cd.good i { animation: none; } }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -8659,6 +8704,16 @@ function chalScore(c, ws) {
   const days = new Set(list.map(t => t.date.getDate())), passed = Math.min(7, Math.floor((Math.min(today, we - 1) - ws) / 864e5) + 1), free = passed - [...days].length;
   return { ok: free >= c.lim, val: free, txt: `${Math.max(0, free)} מתוך ${c.lim} ימים`, pct: Math.min(100, Math.max(0, free) / c.lim * 100) };
 }
+function chalDays(c, ws) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(ws); d.setDate(d.getDate() + i);
+    const L = tx.filter(t => isVarSpend(t) && iso(t.date) === iso(d)), isT = iso(d) === iso(today);
+    if (d > today) return { k: "fut", i, isT };
+    if (c.kind === "none") return { k: L.some(t => t.merchant === c.key) ? "bad" : "good", i, isT };
+    if (c.kind === "cap") { const v = L.filter(t => t.category === c.key).reduce((s, t) => s + t.amount, 0); return { k: v ? "spent" : "good", i, isT, v }; }
+    return { k: L.length ? "spent" : "good", i, isT };
+  });
+}
 function renderChal() {
   const card = $("chalCard"); if (!card) return;
   if (viewIdx() !== curYM()[0] * 12 + curYM()[1]) { card.innerHTML = `<div class="fun-empty">🎯 האתגר מחכה בחודש הנוכחי</div>`; return; }
@@ -8668,6 +8723,7 @@ function renderChal() {
   const st = !s.on ? "" : c.kind === "none" ? (sc.ok ? "good" : "bad") : c.kind === "cap" ? (sc.ok ? (sc.pct > 80 ? "warn" : "good") : "bad") : (sc.ok ? "good" : "");
   card.innerHTML = `<div class="ch-top"><span class="ch-k">🎯 האתגר של השבוע</span><span class="ch-d">${left ? "עוד " + left + (left === 1 ? " יום" : " ימים") : "היום האחרון"}</span></div>
     <div class="ch-t">${esc(c.title)}</div><div class="ch-s">${esc(c.sub)}</div>
+    <div class="ch-days ${s.on ? "" : "pre"}">${chalDays(c, ws).map(d => `<span class="cd ${d.k} ${d.isT ? "now" : ""}" title="${d.v ? fmt(d.v) : ""}"><i>${d.k === "good" ? "✓" : d.k === "bad" ? "✕" : d.k === "spent" ? "•" : ""}</i><small>${"אבגדהוש"[d.i]}</small></span>`).join("")}</div>
     ${s.on ? `<div class="ch-bar ${st}"><i style="width:${(c.kind === "none" ? (sc.ok ? (7 - left) / 7 * 100 : 100) : sc.pct).toFixed(0)}%"></i></div>
       <div class="ch-st ${st}">${c.kind === "none" ? (sc.ok ? "✓ " + (7 - left) + " ימים בלי, ממשיכים!" : "✕ " + sc.txt + ". בשבוע הבא מנסים שוב") : sc.ok ? "✓ " + sc.txt : "✕ " + sc.txt}</div>`
       : `<div class="ch-btns"><button type="button" class="btn" data-ch="on">אני בפנים 💪</button>${opts.length > 1 ? `<button type="button" class="btn ghost" data-ch="next">אתגר אחר</button>` : ""}</div>`}
@@ -8685,38 +8741,93 @@ document.addEventListener("click", e => {
 function badgeList() {
   const L = [], spendDays = new Set(tx.filter(isVarSpend).map(t => iso(t.date)));
   // the longest run of days with no everyday spending, from the first transaction
-  let best = 0, run = 0; const first = tx.length ? new Date(Math.min(...tx.map(t => +t.date))) : today;
-  for (let d = new Date(first); d <= today; d.setDate(d.getDate() + 1)) { if (spendDays.has(iso(d))) run = 0; else { run++; best = Math.max(best, run); } }
+  let best = 0, run = 0, freeDays = 0; const first = tx.length ? new Date(Math.min(...tx.map(t => +t.date))) : today;
+  for (let d = new Date(first); d <= today; d.setDate(d.getDate() + 1)) { if (spendDays.has(iso(d))) run = 0; else { run++; freeDays++; best = Math.max(best, run); } }
   // finished months: in the plus, and kept under every cap
   const [cy, cm] = curYM(), months = [];
   for (let k = FIRST_MONTH; k < cy * 12 + cm; k++) { if (hiddenMonths.has(k)) continue; const y = Math.floor(k / 12), m = k % 12, f = monthFigures(y, m), sal = salaryFor(y, m, false); if (!f.inP.length) continue; const inc = sal.amount + f.income, out = f.fixed + f.variable; months.push({ y, m, plus: inc > 0 && out <= inc, save: inc > 0 && inc - out >= inc * .2, caps: CATS.every(c => { const cap = capFor(c, y, m); if (!cap) return true; return f.spend.filter(t => t.category === c).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0) <= cap; }) && CATS.some(c => capFor(c, y, m)) }); }
   let streak = 0, bestPlus = 0; months.forEach(x => { streak = x.plus ? streak + 1 : 0; bestPlus = Math.max(bestPlus, streak); });
   const fm = p => { const x = months.find(p); return x ? MONTHS[x.m] + " " + x.y : ""; };
-  const ch = lsGet("chalHist", []).filter(h => h.ok).length;
-  L.push({ e: "🌱", t: "צעד ראשון", d: "הוספת את התנועה הראשונה", ok: tx.length > 0 });
-  L.push({ e: "💯", t: "100 תנועות", d: "100 תנועות רשומות באתר", ok: tx.length >= 100 });
-  L.push({ e: "🔥", t: "רצף 3", d: "3 ימים ברצף בלי הוצאות משתנות", ok: best >= 3 });
-  L.push({ e: "⚡", t: "רצף 7", d: "שבוע שלם בלי הוצאות משתנות", ok: best >= 7 });
-  L.push({ e: "🧘", t: "רצף 10", d: "10 ימים ברצף בלי הוצאות משתנות", ok: best >= 10 });
-  L.push({ e: "➕", t: "חודש בפלוס", d: "חודש שהסתיים בלי לחרוג מההכנסה", ok: months.some(x => x.plus), when: fm(x => x.plus) });
-  L.push({ e: "🏆", t: "3 בפלוס", d: "שלושה חודשים ברצף בפלוס", ok: bestPlus >= 3 });
-  L.push({ e: "🐷", t: "חוסך 20%", d: "חודש שבו נשארו לפחות 20% מההכנסה", ok: months.some(x => x.save), when: fm(x => x.save) });
-  L.push({ e: "🧱", t: "בתוך התקרות", d: "חודש שבו אף קטגוריה לא עברה את התקרה", ok: months.some(x => x.caps), when: fm(x => x.caps) });
-  L.push({ e: "🎯", t: "אתגר ראשון", d: "עמדת באתגר שבועי", ok: ch >= 1 });
-  L.push({ e: "🏅", t: "5 אתגרים", d: "עמדת ב-5 אתגרים שבועיים", ok: ch >= 5 });
+  const hist = lsGet("chalHist", []), ch = hist.filter(h => h.ok).length;
+  let chRun = 0, chBest = 0; hist.forEach(h => { chRun = h.ok ? chRun + 1 : 0; chBest = Math.max(chBest, chRun); });
+  const nPlus = months.filter(x => x.plus).length, nSave = months.filter(x => x.save).length, nCaps = months.filter(x => x.caps).length;
+  // each badge: its color (h), how far you are (cur of goal)
+  const B = (e, t, d, h, cur, goal, extra) => L.push(Object.assign({ e, t, d, h, cur: Math.min(cur, goal), goal, ok: cur >= goal }, extra || {}));
+  B("🌱", "צעד ראשון", "הוספת את התנועה הראשונה", 140, tx.length, 1);
+  B("💯", "100 תנועות", "100 תנועות רשומות באתר", 200, tx.length, 100);
+  B("📚", "500 תנועות", "500 תנועות רשומות באתר", 220, tx.length, 500);
+  B("🔥", "רצף 3", "3 ימים ברצף בלי הוצאות משתנות", 22, best, 3);
+  B("⚡", "רצף 7", "שבוע שלם בלי הוצאות משתנות", 45, best, 7);
+  B("🧘", "רצף 10", "10 ימים ברצף בלי הוצאות משתנות", 270, best, 10);
+  B("🌊", "רצף 14", "שבועיים ברצף בלי הוצאות משתנות", 195, best, 14);
+  B("👑", "רצף 30", "חודש שלם בלי הוצאות משתנות. אגדה.", 48, best, 30);
+  B("➕", "חודש בפלוס", "חודש שהסתיים בלי לחרוג מההכנסה", 150, nPlus, 1, { when: fm(x => x.plus) });
+  B("🏆", "3 בפלוס", "שלושה חודשים ברצף בפלוס", 40, bestPlus, 3);
+  B("💎", "6 בפלוס", "חצי שנה ברצף בפלוס", 185, bestPlus, 6);
+  B("🐷", "חוסך 20%", "חודש שבו נשארו לפחות 20% מההכנסה", 330, nSave, 1, { when: fm(x => x.save) });
+  B("🧱", "בתוך התקרות", "חודש שבו אף קטגוריה לא עברה את התקרה", 15, nCaps, 1, { when: fm(x => x.caps) });
+  B("🎯", "אתגר ראשון", "עמדת באתגר שבועי", 0, ch, 1);
+  B("🏅", "5 אתגרים", "עמדת ב-5 אתגרים שבועיים", 35, ch, 5);
+  B("🚀", "10 אתגרים", "עמדת ב-10 אתגרים שבועיים", 255, ch, 10);
+  B("🔗", "3 אתגרים ברצף", "עמדת באתגר שלושה שבועות ברצף", 290, chBest, 3);
   L.forEach(b => { if (b.t.startsWith("רצף")) b.note = "השיא שלך: " + best + " ימים"; });
+  L.stats = { best, freeDays, ch, chRun };
   return L;
 }
 function renderBadges() {
   const card = $("badgeCard"); if (!card) return;
   const L = badgeList(), n = L.filter(b => b.ok).length;
   const tb = document.querySelector('[data-fun="bdg"] .ft-n'); if (tb) tb.textContent = n + "/" + L.length;
-  card.innerHTML = `<div class="bdg-row">${L.map((b, i) => `<button type="button" class="bdg ${b.ok ? "on" : ""}" data-bdg="${i}" aria-label="${esc(b.t)}${b.ok ? "" : " (עוד לא)"}"><span class="bdg-e">${b.ok ? b.e : "🔒"}</span><span class="bdg-t">${esc(b.t)}</span></button>`).join("")}</div>`;
+  // the one closest to being earned gets a mark
+  const next = L.filter(b => !b.ok).sort((a, b) => b.cur / b.goal - a.cur / a.goal)[0];
+  card.innerHTML = `<div class="bdg-grid">${L.map((b, i) => { const pc = Math.round(b.cur / b.goal * 100);
+    return `<button type="button" class="bdg2 ${b.ok ? "on" : ""} ${b === next ? "next" : ""}" data-bdg="${i}" style="--h:${b.h};--p:${b.ok ? 100 : pc}" aria-label="${esc(b.t)}${b.ok ? "" : ` (${b.cur} מתוך ${b.goal})`}">
+      <span class="bm"><span class="be"><span>${b.e}</span></span></span><span class="bt">${esc(b.t)}</span>${b.ok ? "" : `<span class="bp num">${b === next ? "הכי קרוב · " : ""}${b.goal > 1 ? b.cur + "/" + b.goal : "עוד לא"}</span>`}</button>`; }).join("")}</div>`;
+  funCelebrate(L);
 }
+/* a badge you just earned, or a new level: confetti and a word, once (the first look only remembers what is there) */
+function funConfetti() {
+  if (REDUCED) return;
+  const c = document.createElement("div"); c.className = "fun-conf"; c.setAttribute("aria-hidden", "true");
+  const cols = ["#f6c95a", "#5b4cf0", "#e5487a", "#17a673", "#2a6cf0", "#f08a24"];
+  c.innerHTML = Array.from({ length: 46 }, (_, i) => `<i style="--x:${(Math.random() * 100).toFixed(1)}vw;--d:${(Math.random() * .6).toFixed(2)}s;--r:${Math.round(Math.random() * 720 - 360)}deg;--dx:${Math.round(Math.random() * 120 - 60)}px;background:${cols[i % cols.length]}"></i>`).join("");
+  document.body.appendChild(c); setTimeout(() => c.remove(), 2600);
+}
+let funCelebrated = false;
+function funCelebrate(L) {
+  if (!tx.length || !dataFresh()) return;
+  const got = L.filter(b => b.ok).map(b => b.t), seen = lsGet("bdgSeen", null), lv = funLevel(L).n, lvSeen = lsGet("lvlSeen", null);
+  try { localStorage.setItem("bdgSeen", JSON.stringify(got)); localStorage.setItem("lvlSeen", JSON.stringify(lv)); } catch (e) {}
+  if (seen === null || funCelebrated) return;
+  const fresh = L.filter(b => b.ok && !seen.includes(b.t));
+  if (fresh.length) { funCelebrated = true; funConfetti(); toast(`${fresh[0].e} תג חדש: ${fresh[0].t}!${fresh.length > 1 ? ` (ועוד ${fresh.length - 1})` : ""}`, 3600); }
+  else if (lvSeen !== null && lv > lvSeen) { funCelebrated = true; funConfetti(); toast(`⭐ עלית לרמה ${lv}: ${LEVELS[lv - 1][1]}!`, 3600); }
+}
+/* the level: points for badges, challenges and days with no everyday spending */
+const LEVELS = [[0, "מתחילים"], [150, "חוסך צעיר"], [400, "שומר על הארנק"], [800, "מתכנן"], [1300, "חכם עם כסף"], [2000, "אמן החיסכון"], [3000, "מאסטר"], [4500, "אגדה"]];
+function funLevel(L) {
+  L = L || badgeList(); const st = L.stats || {};
+  const pts = L.filter(b => b.ok).length * 100 + (st.ch || 0) * 60 + (st.freeDays || 0) * 5;
+  let n = 1; LEVELS.forEach(([p], i) => { if (pts >= p) n = i + 1; });
+  const from = LEVELS[n - 1][0], to = LEVELS[n] ? LEVELS[n][0] : null;
+  return { n, name: LEVELS[n - 1][1], pts, from, to, pc: to ? (pts - from) / (to - from) * 100 : 100, st };
+}
+function renderLevel() {
+  const el = $("funLvl"); if (!el) return;
+  const v = funLevel(), r = 21, C = 2 * Math.PI * r;
+  el.innerHTML = `<div class="lv-ring"><svg viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="25" r="${r}" class="bg"/><circle cx="25" cy="25" r="${r}" class="fg" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - v.pc / 100)).toFixed(1)}"/></svg><b class="num">${v.n}</b></div>
+    <div class="lv-t"><span class="lv-k">רמה ${v.n}</span><b>${v.name}</b><span class="lv-s num">${v.to ? `${v.pts} נק׳ · עוד ${v.to - v.pts} לרמה הבאה` : `${v.pts} נק׳ · הרמה הכי גבוהה 👑`}</span></div>
+    ${v.st.chRun >= 2 ? `<span class="lv-fire" title="אתגרים ברצף">🔥 ${v.st.chRun}</span>` : ""}`;
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("#funLvl")) return;
+  const v = funLevel();
+  askDialog({ kick: "רמה " + v.n, title: v.name, text: `צוברים נקודות:<br>🏅 100 על כל תג<br>🎯 60 על כל אתגר שעמדת בו<br>🌿 5 על כל יום בלי הוצאות משתנות<br><br>יש לך ${v.pts} נקודות${v.to ? `, ועוד ${v.to - v.pts} לרמה ${v.n + 1} (${LEVELS[v.n][1]})` : ""}.`, buttons: [{ label: "סגירה", value: null, cls: "plain" }] });
+});
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-bdg]"); if (!b) return;
   const x = badgeList()[+b.dataset.bdg];
-  askDialog({ kick: x.ok ? "תג שהשגת " + x.e : "עוד לא", title: x.t, text: x.d + (x.when ? "<br>לראשונה ב" + x.when : "") + (x.note ? "<br>" + x.note : ""), buttons: [{ label: "סגירה", value: null, cls: "plain" }] });
+  askDialog({ kick: x.ok ? "תג שהשגת " + x.e : "עוד לא " + x.e, title: x.t, text: x.d + (x.ok ? "" : `<br>התקדמות: ${x.cur} מתוך ${x.goal}`) + (x.when ? "<br>לראשונה ב" + x.when : "") + (x.note ? "<br>" + x.note : ""), buttons: [{ label: "סגירה", value: null, cls: "plain" }] });
 });
 
 /* 3: what the money left over could buy */
@@ -8749,7 +8860,7 @@ document.addEventListener("click", e => {
 let pushTouched = "";
 function pushTouch() { const d = iso(today); if (pushTouched === d || !window.ispendPushTouch) return; if (tx.some(t => iso(t.date) === d && !t.gen && (t.source === "manual" || t.source === "applepay"))) { pushTouched = d; window.ispendPushTouch(d); } }
 // only what you added yourself (by hand or Apple Pay) stops the evening reminder; charges the bank or card company sent in do not
-function renderTrial() { try { maybeGoLink(); } catch (e) {} try { pushTouch(); } catch (e) {} try { weekStatsTouch(); } catch (e) {} try { maybeWeekLink(); } catch (e) {} try { maybeTxLink(); } catch (e) {} if (!TRIAL_ON) return; try { renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
+function renderTrial() { try { maybeGoLink(); } catch (e) {} try { pushTouch(); } catch (e) {} try { weekStatsTouch(); } catch (e) {} try { maybeWeekLink(); } catch (e) {} try { maybeTxLink(); } catch (e) {} if (!TRIAL_ON) return; try { renderLevel(); renderChal(); renderBadges(); renderBuy(); } catch (e) { console.error(e); } }
 // one card at the bottom of the home screen, with three tabs
 let funTab = lsGet("funTab", "chal");
 function showFunTab(t) {
@@ -8761,6 +8872,7 @@ function placeFun() { const c = $("funCard"), end = $("flowView").querySelector(
 if (TRIAL_ON) {
   $("flowView").querySelector(":scope > .arr-open").insertAdjacentHTML("beforebegin", `<section class="card fun" id="funCard">
     <h2>אתגרים ותגים</h2>
+    <div id="funLvl" role="button" tabindex="0" aria-label="הרמה שלך"></div>
     <div class="fun-tabs" role="tablist"><button type="button" role="tab" data-fun="chal">🎯 אתגר</button><button type="button" role="tab" data-fun="buy">🐷 מה לקנות</button><button type="button" role="tab" data-fun="bdg">🏅 תגים <span class="ft-n num"></span></button></div>
     <div class="chal" id="chalCard"></div><div class="buy-card" id="buyCard" hidden></div><div class="bdg-card" id="badgeCard" hidden></div></section>`);
   $("funCard").addEventListener("click", e => { const b = e.target.closest("[data-fun]"); if (b) showFunTab(b.dataset.fun); });
@@ -10237,7 +10349,7 @@ const TOUR = [
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כרטיס לכל אמצעי תשלום. לחיצה שולפת אותו עם הסכום המדויק, ולחיצה מחוץ לו מחזירה. ״סידור״ קובע את הסדר." },
-  { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "אתגר שבועי קטן, מה אפשר לקנות במה שחסכתם, והתגים שאספתם בדרך." },
+  { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "הרמה שלכם עולה עם כל תג, אתגר ויום בלי הוצאות. אתגר שבועי עם כל ימי השבוע, מה אפשר לקנות במה שחסכתם, ו-17 תגים לאסוף." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "המסך מתאים את עצמו אליכם: מזיזים, מסתירים ומעבירים כרטיסים בין הבית ל״חודשי״." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: השעון שמראה כמה הוצאתם בכל יום, והחיובים הקבועים שעוד צפויים." },
   { t: "#navTx", h: "תנועות", b: "כל התנועות לפי ימים. אפשר לחפש, לסנן, ולבחור כמה ביחד כדי לערוך או למחוק." },
@@ -10574,7 +10686,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261109235022";
+const BUILD_ID = "20261109235907";
 let updToast = null;
 async function checkUpdate() {
   try {
