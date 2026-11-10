@@ -2204,6 +2204,8 @@ html[data-txt="xl"] { font-size: 124%; }
 .fun-conf i { position: absolute; top: -12px; left: var(--x); width: 8px; height: 13px; border-radius: 2px; animation: funFall 2.2s cubic-bezier(.25,.6,.4,1) var(--d) forwards; opacity: 0; }
 @keyframes funFall { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: .9; transform: translate(var(--dx), 105vh) rotate(var(--r)); } }
 @media (prefers-reduced-motion: reduce) { .bdg2.on .bm::after, .bdg2.next .bm, .ch-days .cd.good i { animation: none; } }
+
+.income-form .inc-x { background: var(--surface) !important; color: var(--muted) !important; width: 38px; height: 38px; padding: 0 !important; border-radius: 50% !important; display: grid; place-items: center; font-size: .95rem; box-shadow: inset 0 0 0 1px var(--line); }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -4362,8 +4364,12 @@ function renderIncome(sal) {
   const a = $("incomeArea");
   const name = MONTHS[view.m];
   if (editingIncome) {
-    a.innerHTML = `<form class="income-form" id="incomeForm"><label for="incomeInput">משכורת ${name}</label><input id="incomeInput" type="number" inputmode="decimal" min="0" step="0.01" value="${sal.est || sal.missing ? "" : sal.amount}" placeholder="${sal.est ? sal.amount : ""}"><button type="submit">שמירה</button><span id="incomeMsg"></span></form>`;
+    a.innerHTML = `<form class="income-form" id="incomeForm"><label for="incomeInput">משכורת ${name}</label><input id="incomeInput" type="number" inputmode="decimal" min="0" step="0.01" value="${sal.est || sal.missing ? "" : sal.amount}" placeholder="${sal.est ? sal.amount : ""}"><button type="submit">שמירה</button><button type="button" class="inc-x" id="incomeX" aria-label="סגירה בלי לשמור">✕</button><span id="incomeMsg"></span></form>`;
     $("incomeForm").onsubmit = saveIncome;
+    // close without saving: the ✕, or Escape
+    const cancel = () => { editingIncome = false; renderIncome(sal); };
+    $("incomeX").onclick = cancel;
+    $("incomeInput").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); cancel(); } });
     $("incomeInput").focus();
   } else {
     const pen = `<svg class="pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`;
@@ -10687,7 +10693,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261110092229";
+const BUILD_ID = "20261110200547";
 let updToast = null;
 async function checkUpdate() {
   try {
