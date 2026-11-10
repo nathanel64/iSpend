@@ -3546,10 +3546,12 @@ const aiKey = s => String(s || "").toLowerCase().replace(/[0-9*#_.,'"()\/\\|:;!?
 const aiClean = v => String(v || "").replace(/[<>"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
 let aiMerch = {}; try { aiMerch = JSON.parse(localStorage.getItem("aiMerch") || "{}") || {}; } catch (e) {}
 const normMerchant = raw => " " + String(raw || "").toLowerCase().replace(/[׳'`"]/g, "").replace(/\s+/g, " ").trim() + " ";
-function recognizeMerchant(raw) {
+function recognizeMerchant(raw, noRule) {
   const key = String(raw || "").trim();
   if (!key) return null;
-  if (merchantRules[key]) return merchantRules[key];
+  // what the viewer chose for this business is its category only. A description written on one payment
+  // ("תרופות לאמא") stays on that payment, and the next one gets the business's own name
+  if (!noRule && merchantRules[key] && merchantRules[key].cat) { const own = recognizeMerchant(key, true); return { name: (own && own.name) || tidyMerchant(key), cat: merchantRules[key].cat }; }
   const n = normMerchant(key);
   // long names match anywhere; short ones only at the start of a word ("fox" must not match "firefox")
   for (const [word, name, cat] of MERCHANTS) if (word.trim().length >= 5 ? n.includes(word) : n.includes(" " + word)) return { name, cat };
@@ -7169,6 +7171,13 @@ function showUndo(text, act) {
   bar.hidden = false; bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run");
   undoTimer = setTimeout(() => { if (undoAct === act) { undoAct = null; bar.hidden = true; } }, 5000);
 }
+/* only the category is remembered for a business (and shared as a vote, with the business's own name, never the viewer's words) */
+async function learnCat(raw, cat) {
+  const own = recognizeMerchant(raw, true), name = (own && own.name) || tidyMerchant(raw);
+  const next = { ...merchantRules, [raw]: { name: "", cat } };
+  try { await writeRange("'הגדרות'!L2:N201", pad(Object.entries(next).map(([k, r]) => [k, "", r.cat]), 200, 3)); merchantRules = next; } catch (e) {}
+  if (window.ispendLearn) window.ispendLearn(raw, name, cat);
+}
 function fastEdit(t, amount, desc, date, cat, card, kind, inst) {
   const arr = arrOf(t.del.key), idx = t.del.index, before = (arr[idx] || []).slice(), w = editRow(t, amount, desc, date, cat, card, kind, inst);
   const shown = w.values.map(v => v === "" ? "" : String(v));
@@ -7180,11 +7189,7 @@ function fastEdit(t, amount, desc, date, cat, card, kind, inst) {
     if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) throw { code: "changed" };
     await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: w.range, values: [w.values] });
     try { arr[idx] = await readRowOf(t); } catch (e) {}
-    if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && (desc !== t.merchant || cat !== t.category)) {
-      const next = { ...merchantRules, [t.rawMerchant]: { name: desc, cat } };
-      try { await writeRange("'הגדרות'!L2:N201", pad(Object.entries(next).map(([k, r]) => [k, r.name, r.cat]), 200, 3)); merchantRules = next; } catch (e) {}
-      if (window.ispendLearn) window.ispendLearn(t.rawMerchant, desc, cat);
-    }
+    if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && cat !== t.category) await learnCat(t.rawMerchant, cat);
     afterData(); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
   })();
   job.catch(err => {
@@ -7218,11 +7223,7 @@ async function saveEdit(t, amount, desc, date, cat, card, kind) {
   await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range, values });
   arrOf(t.del.key)[t.del.index] = await readRowOf(t);
   // remember the viewer's choice for this business, so the next payment there is named and sorted the same way
-  if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && (desc !== t.merchant || cat !== t.category)) {
-    const next = { ...merchantRules, [t.rawMerchant]: { name: desc, cat } };
-    try { await writeRange("'הגדרות'!L2:N201", pad(Object.entries(next).map(([k, r]) => [k, r.name, r.cat]), 200, 3)); merchantRules = next; } catch (e) {}
-    if (window.ispendLearn) window.ispendLearn(t.rawMerchant, desc, cat);
-  }
+  if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && cat !== t.category) await learnCat(t.rawMerchant, cat);
   view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
 }
 $("fab").onclick = () => openAdd();
@@ -10686,7 +10687,7 @@ window.ispendLearn = async function (raw, name, cat) {
 
 <script>
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261109235907";
+const BUILD_ID = "20261110092229";
 let updToast = null;
 async function checkUpdate() {
   try {
