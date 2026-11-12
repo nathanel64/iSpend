@@ -10258,7 +10258,7 @@ function openOweList() {
       ${open.length ? `<div class="sp-tot"><span>סה״כ מגיע לך</span><b class="good">${fmt2(tot)}</b></div>` : `<p class="ow-empty">כדי להוסיף: פותחים קנייה ששילמת גם על אחרים, ולוחצים <b>👥 מי חייב לי</b>.</p>`}
       <div class="ow-people">${open.map(p => `<div class="ow-p">
         <div class="ow-ph"><span class="av" style="background:${col(p.n)}">${esc(p.n.slice(0, 1))}</span><span class="nm"><b>${esc(p.n)}</b><small>${p.open.map(o => `${esc(o.it.what)} ${fmt2(o.x.a)}`).join(" · ")}</small></span><b class="num">${fmt2(p.sum)}</b></div>
-        <div class="ow-acts"><a class="ow-wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(`היי ${p.n} 🙂 תזכורת קטנה: ${p.open.map(o => `${o.it.what} (${dd(new Date(o.it.d + "T00:00"))}) ₪${o.x.a}`).join(", ")}. סה״כ ₪${p.sum}. תודה!`)}">תזכורת בוואטסאפ</a><button type="button" data-got="${esc(p.n)}">קיבלתי ✓</button></div>
+        <div class="ow-acts"><a class="ow-wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(oweMsg(p))}">תזכורת בוואטסאפ</a><button type="button" data-got="${esc(p.n)}">קיבלתי ✓</button></div>
       </div>`).join("")}</div>
       ${done.length || people.some(p => p.done.length) ? `<button type="button" class="pl-skip" id="owDone">${showDone ? "הסתרת מה שהוחזר" : "מה שכבר הוחזר"}</button>` : ""}
       ${lost.length && dataFresh() ? `<div class="ow-lost"><b>חובות של קניות שכבר לא ברשימה</b><small>הקנייה נמחקה או השתנתה, אז הם לא נספרים</small>${lost.map(it => `<div><span>${esc(it.what)} · ${dd(new Date(it.d + "T00:00"))} · ${it.ppl.map(x => esc(x.n)).join(", ")}</span><button type="button" data-lost="${esc(it.k)}">מחיקה</button></div>`).join("")}</div>` : ""}
@@ -10278,6 +10278,14 @@ function openOweList() {
     catch (err) { oweList = JSON.parse(before); oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("השמירה לא הצליחה: " + writeError(err), 3500); }
   });
   draw();
+}
+/* the reminder: "היי דני\nמזכיר לך להעביר לי ₪100 על על האש" (several purchases: "על א, ב ו-ג") */
+function oweMsg(p) {
+  const money = v => "₪" + (Math.round(v * 100) % 100 ? (Math.round(v * 100) / 100).toFixed(2) : String(Math.round(v)));
+  const ws = [...new Set(p.open.map(o => String(o.it.what || "").trim()).filter(Boolean))];
+  const what = ws.length > 1 ? ws.slice(0, -1).join(", ") + " ו" + ws[ws.length - 1] : (ws[0] || "");
+  // "על האש" already starts with "על"
+  return `היי ${p.n}\nמזכיר לך להעביר לי ${money(p.sum)}${what ? (/^על\s/.test(what) ? " " : " על ") + what : ""}`;
 }
 /* on the home screen: a small card while someone still owes you */
 function oweHome() {
@@ -10952,7 +10960,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112230609";
+const BUILD_ID = "20261112230910";
 let updToast = null;
 async function checkUpdate() {
   try {
