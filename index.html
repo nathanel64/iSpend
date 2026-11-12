@@ -2295,6 +2295,32 @@ html.modal-open .toast, .sheet-bg:not([hidden]) ~ .toast { bottom: calc(env(safe
 .g-tiles em { display: block; font-style: normal; color: var(--muted); font-size: .68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .g-under.tiled > #statusSub, .g-under.tiled > #projChip, .g-under.tiled #ringPill { display: none !important; }
 .tm-on .g-under.tiled > #statusSub { display: block !important; } .tm-on .g-tiles { display: none !important; }
+
+/* ===== the add window: extras as chips ===== */
+.x-more { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
+.x-more[hidden] { display: none; }
+.x-more .pk-l { width: 100%; }
+.x-chip, #addForm .split-btn.x-chip { width: auto !important; margin: 0 !important; border: 1.5px solid var(--line) !important; background: var(--surface) !important; color: var(--ink) !important; font: inherit; font-weight: 600 !important; font-size: .86rem !important; border-radius: 999px !important; padding: 9px 14px !important; cursor: pointer; min-height: 40px; }
+.x-chip[aria-pressed="true"] { border-color: var(--brand) !important; background: color-mix(in srgb, var(--brand) 10%, var(--surface)) !important; color: var(--brand) !important; }
+.x-chip[hidden] { display: none !important; }
+#addForm:not(.x-date) #dateField, #addForm:not(.x-inst) #instField { display: none; }
+#addForm.x-none .x-row { display: none; }
+#addForm .x-row { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+.pk-days .pk-oth { border-style: dashed !important; }
+.pk-days .pk-oth[aria-pressed="true"] { border-style: solid !important; }
+/* ===== the year chart: columns at real size ===== */
+.ych { display: flex; gap: 6px; align-items: stretch; height: 210px; padding: 4px 2px 0; }
+.ych.many { overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+.ych.many::-webkit-scrollbar { display: none; }
+.ych-c { flex: 1 0 0; min-width: 44px; border: 0; background: none; font: inherit; color: inherit; padding: 6px 0 4px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; scroll-snap-align: start; }
+.ych.many .ych-c { flex: 0 0 52px; }
+.ych-c:hover, .ych-c:focus-visible { background: var(--bg); }
+.ych-n { font-size: .78rem; font-weight: 800; white-space: nowrap; direction: ltr; }
+.ych-n.p { color: var(--good); } .ych-n.n { color: var(--bad); }
+.ych-b { flex: 1; width: 100%; display: flex; justify-content: center; align-items: flex-end; gap: 3px; border-bottom: 1.5px solid var(--line); }
+.ych-b i { width: 12px; border-radius: 5px 5px 2px 2px; display: block; transition: height .6s cubic-bezier(.2, .8, .2, 1); }
+.ych-b .in { background: var(--s1); } .ych-b .out { background: var(--s2); }
+.ych-m { font-size: .82rem; font-weight: 700; color: var(--ink); }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -3197,13 +3223,14 @@ function makeSupaAdapter(uid) {
       <div class="field"><label for="addCat">קטגוריה</label><select id="addCat"></select></div>
       <div class="field"><label for="addCard" id="addCardLbl">אמצעי תשלום</label><select id="addCard"></select></div>
     </div>
-    <div class="two dt">
-      <div class="field"><label for="addDate">תאריך</label><input id="addDate" type="date"><button type="button" class="date-reset" id="dateReset" hidden>כמו בהוספה הקודמת · <u>להיום</u></button></div>
+    <div class="x-more dt" id="xMore" role="group" aria-label="עוד אפשרויות"><span class="pk-l">עוד</span><button type="button" class="x-chip" id="xInst" aria-pressed="false">💳 תשלומים</button></div>
+    <div class="two dt x-row">
+      <div class="field" id="dateField"><label for="addDate">תאריך</label><input id="addDate" type="date"><button type="button" class="date-reset" id="dateReset" hidden>כמו בהוספה הקודמת · <u>להיום</u></button></div>
       <div class="field" id="instField"><label for="addInst">תשלומים</label><select id="addInst"></select></div>
     </div>
     <p class="note dt" id="instHint" style="margin:0" hidden></p>
-    <button type="button" class="split-btn dt" id="splitBtn" hidden>✂️ <span id="splitBtnT">פיצול לכמה קטגוריות</span></button>
-    <button type="button" class="split-btn dt owe-btn" id="oweBtn" hidden>👥 <span id="oweBtnT">שילמתי גם על אחרים · מי חייב לי</span></button>
+    <button type="button" class="split-btn x-chip dt" id="splitBtn" hidden>✂️ <span id="splitBtnT">פיצול לכמה קטגוריות</span></button>
+    <button type="button" class="split-btn x-chip dt owe-btn" id="oweBtn" hidden>👥 <span id="oweBtnT">שילמתי גם על אחרים · מי חייב לי</span></button>
     <label class="ce-tg auto-tg dt" id="autoRow" hidden><span><b>הוספה אוטומטית</b><small id="autoSub"></small></span><input type="checkbox" id="addAuto"><span class="ce-sw" aria-hidden="true"></span></label>
     <p class="note dt" id="addHint" style="margin:0" hidden>העברה מחבר על הוצאה משותפת? בחרו את הקטגוריה של ההוצאה והיא תקוזז ממנה. משכורת או הכנסה אחרת: בחרו "הכנסה".</p>
     <p class="form-msg" id="addMsg"></p>
@@ -6469,35 +6496,17 @@ function niceStep(max) {
 function renderMonthsChart(months) {
   const box = $("monthsChart");
   if (!months.length) { box.innerHTML = `<div class="empty">אין נתונים לשנה הזו.</div>`; return; }
-  const W = 600, H = 250, L = 46, R = 8, T = 12, B = 44;
   const max = Math.max(...months.map(x => Math.max(x.income, x.expense)), 1);
-  const step = niceStep(max), top = Math.ceil(max / step) * step;
-  const y = v => T + (H - T - B) * (1 - v / top);
-  const n = months.length, slot = (W - L - R) / n, bw = Math.min(22, slot * 0.32);
-  let g = "";
-  for (let v = 0; v <= top + 0.01; v += step) {
-    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`;
-    g += `<text x="${L - 6}" y="${y(v) + 4}" font-size="11" fill="var(--muted)" text-anchor="end" direction="ltr">${v >= 1000 ? (v / 1000) + "K" : v}</text>`;
-  }
-  months.forEach((x, i) => {
-    // RTL: first month on the right
-    const cx = W - R - (i + 0.5) * slot;
-    const bar = (v, xx, c) => {
-      if (v <= 0) return "";
-      const h = y(0) - y(v), r = Math.min(4, h);
-      return `<path d="M${xx},${y(0)} V${y(v) + r} Q${xx},${y(v)} ${xx + r},${y(v)} H${xx + bw - r} Q${xx + bw},${y(v)} ${xx + bw},${y(v) + r} V${y(0)} Z" fill="${c}"/>`;
-    };
-    g += bar(x.income, cx + 1, "var(--s1)") + bar(x.expense, cx - bw - 1, "var(--s2)");
-    const net = x.income - x.expense;
-    g += `<text x="${cx}" y="${H - 26}" font-size="11.5" fill="var(--ink)" text-anchor="middle">${MONTHS[x.m].slice(0, 3)}</text>`;
-    g += `<text x="${cx}" y="${H - 9}" font-size="10.5" fill="${net >= 0 ? "var(--muted)" : "var(--bad)"}" text-anchor="middle" direction="ltr">${net >= 0 ? "+" : "−"}${Math.abs(Math.round(net / 100) / 10)}K</text>`;
-    g += `<rect x="${cx - slot / 2}" y="${T}" width="${slot}" height="${H - T - B + 30}" fill="transparent" style="cursor:pointer" data-mo="${x.y * 12 + x.m}" data-tip="<b>${MONTHS[x.m]} ${x.y}</b><br>הכנסות ${fmt(x.income)}<br>הוצאות ${fmt(x.expense)}<br>${net >= 0 ? "נשאר" : "חסר"} ${fmt(Math.abs(net))}"/>`;
-  });
-  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="הכנסות מול הוצאות לפי חודש">${g}</svg><p class="chart-hint">לחיצה על חודש מציגה את הסיכום שלו</p>`;
-  bindTips(box);
+  const k = v => { const a = Math.abs(v); return a >= 1000 ? (Math.round(a / 100) / 10).toString().replace(/\.0$/, "") + "K" : String(Math.round(a)); };
+  const h = v => v > 0 ? Math.max(3, v / max * 100).toFixed(1) + "%" : "0";
+  box.innerHTML = `<div class="ych${months.length > 6 ? " many" : ""}">${months.map(x => { const net = x.income - x.expense;
+    return `<button type="button" class="ych-c" data-mo="${x.y * 12 + x.m}" aria-label="${MONTHS[x.m]}: נכנס ${fmt(x.income)}, יצא ${fmt(x.expense)}, ${net >= 0 ? "נשאר" : "חסר"} ${fmt(Math.abs(net))}">
+      <b class="ych-n num ${net >= 0 ? "p" : "n"}">${net >= 0 ? "+" : "−"}${k(net)}</b>
+      <span class="ych-b"><i class="in" style="height:${h(x.income)}"></i><i class="out" style="height:${h(x.expense)}"></i></span>
+      <span class="ych-m">${MONTHS[x.m].slice(0, 3)}׳</span></button>`; }).join("")}</div><p class="chart-hint">למעלה: כמה נשאר בכל חודש · לחיצה על חודש פותחת אותו</p>`;
+  const row = box.querySelector(".ych"); if (row) row.scrollLeft = 0;
   chartAlt(box, "הכנסות מול הוצאות לפי חודש");
-  // 9: a month of the chart opens that month
-  box.onclick = e => { const r = e.target.closest("[data-mo]"); if (!r) return; const k = +r.dataset.mo; try { tipOff(box); } catch (x) {} openGaugeInfo(Math.floor(k / 12), k % 12, true); };
+  box.onclick = e => { const r = e.target.closest("[data-mo]"); if (!r) return; const kk = +r.dataset.mo; openGaugeInfo(Math.floor(kk / 12), kk % 12, true); };
 }
 
 function renderDonut(months) {
@@ -8146,6 +8155,7 @@ boot();
     bolt: "M13 3L5 14h6l-1 7 8-11h-6z",
     sheet: "M5 3h10l4 4v14H5z M8 12h8 M8 16h8 M12 9v10",
     moon: "M20 14A8 8 0 0110 4a8 8 0 1010 10z",
+    palette: "M12 3a9 9 0 100 18c1.1 0 1.7-.8 1.7-1.6 0-.5-.2-.8-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 005-5c0-4-4-7.4-9-7.4z M7.5 11.5h.01 M10 7.5h.01 M14.5 7.5h.01 M17 11h.01",
     out: "M15 4h4v16h-4 M10 8l-4 4 4 4 M6 12h10",
     unlink: "M10 14l-1 1a3 3 0 01-4-4l2-2 M14 10l1-1a3 3 0 014 4l-2 2 M4 4l16 16",
     trash: "M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13",
@@ -8211,6 +8221,7 @@ boot();
     <div class="set-grp" data-g="money">
       <button type="button" class="set-row" data-go="sal">${ico("money", 150)}<span class="set-rt"><b>משכורות ומועד החיוב</b><small data-s="sal"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-go="months">${ico("grid", 200)}<span class="set-rt"><b>חודשים</b><small data-s="months"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="owe">${ico("users", 150)}<span class="set-rt"><b>מי חייב לי</b><small>מי שילם לך פחות ממה שהוא חייב, ותזכורת בוואטסאפ</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
     </div>
     <div class="set-gh">סידור</div>
     <div class="set-grp" data-g="org">
@@ -8230,8 +8241,7 @@ boot();
     <div class="set-gh">החשבון</div>
     <div class="set-grp" data-g="me">
       <div class="set-row" style="cursor:default">${ico("moon", 250)}<span class="set-rt"><b>מראה</b></span><span id="setLook"></span></div>
-      <button type="button" class="set-row" data-act="look">${ico("moon", 215)}<span class="set-rt"><b>צבע וגודל טקסט</b><small>הצבע הראשי של האתר, וטקסט רגיל, גדול או ענק</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
-      <button type="button" class="set-row" data-act="owe">${ico("users", 150)}<span class="set-rt"><b>מי חייב לי</b><small>מי שילם לך פחות ממה שהוא חייב, ותזכורת בוואטסאפ</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="look">${ico("palette", 215)}<span class="set-rt"><b>צבע וגודל טקסט</b><small>הצבע הראשי של האתר, וטקסט רגיל, גדול או ענק</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="arrange">${ico("grid", 255)}<span class="set-rt"><b>התאמת מסך הבית</b><small>סדר הכרטיסים, מה מוצג ומה מוסתר</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="privacy">${ico("eye", 280)}<span class="set-rt"><b>מצב פרטיות</b><small>מטשטש את כל הסכומים, כשמראים את הטלפון או מצלמים מסך</small></span><span class="set-pill" id="privPill"></span></button>
       <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת יומית</b><small>בשעה שתבחר, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev" aria-hidden="true">‹</span></button>
@@ -9090,7 +9100,12 @@ function addPickers(force) {
   // dates: today, yesterday, the day before; any other date stays in the date field below
   const days = [0, 1, 2].map(n => [n, iso(addDays(today, -n))]), names = ["היום", "אתמול", "שלשום"];
   $("pkDays").innerHTML = days.map(([n, d]) => `<button type="button" data-pday="${d}" aria-pressed="${date.value === d}">${names[n]}</button>`).join("")
-    + (date.value && !days.some(([, d]) => d === date.value) ? `<button type="button" aria-pressed="true" data-pday="${date.value}">${dd(parseDate(date.value))}</button>` : "");
+    + (date.value && !days.some(([, d]) => d === date.value) ? `<button type="button" aria-pressed="true" data-pday="${date.value}">${dd(parseDate(date.value))}</button>` : "")
+    + `<button type="button" class="pk-oth" data-pother aria-pressed="${form.classList.contains("x-date")}">📅 תאריך אחר</button>`;
+  // what shows of the extras: the date field (asked for, or a date the reset link is about), the payments (asked for, or already more than one)
+  if (!$("dateReset").hidden) form.classList.add("x-date");
+  if (+$("addInst").value > 1) form.classList.add("x-inst");
+  xSync();
   // what is about to be saved, in one line
   const n = +$("addInst").value || 1, desc = $("addDesc").value.trim();
   $("amtMiniV").textContent = (addKind === "inc" ? "+" : "") + fmt2(amt);
@@ -9104,7 +9119,10 @@ $("pkCats").addEventListener("click", e => {
   $("addCat").value = b.dataset.pc; catTouched = true; $("addCat").dispatchEvent(new Event("change", { bubbles: true })); addPickers(true);
 });
 $("pkCards").addEventListener("click", e => { const b = e.target.closest("[data-pcard]"); if (!b) return; $("addCard").value = b.dataset.pcard; $("addCard").dispatchEvent(new Event("change", { bubbles: true })); addPickers(true); });
-$("pkDays").addEventListener("click", e => { const b = e.target.closest("[data-pday]"); if (!b) return; $("addDate").value = b.dataset.pday; $("addDate").dispatchEvent(new Event("change", { bubbles: true })); $("addDate").dispatchEvent(new Event("input", { bubbles: true })); addPickers(true); });
+$("pkDays").addEventListener("click", e => {
+  if (e.target.closest("[data-pother]")) { const f = $("addForm"), on = !f.classList.contains("x-date"); f.classList.toggle("x-date", on); addPickers(true);
+    if (on) setTimeout(() => { const d = $("addDate"); try { d.showPicker ? d.showPicker() : d.focus(); } catch (x) { d.focus(); } }, 60); return; }
+  const b = e.target.closest("[data-pday]"); if (!b) return; $("addDate").value = b.dataset.pday; $("addDate").dispatchEvent(new Event("change", { bubbles: true })); $("addDate").dispatchEvent(new Event("input", { bubbles: true })); addPickers(true); });
 // the fields change from many places (typing, voice, recent, the category guess): follow them while the window is open
 ["input", "change"].forEach(ev => $("addForm").addEventListener(ev, () => requestAnimationFrame(() => addPickers())));
 setInterval(() => { if (!$("sheetBg").hidden) addPickers(); }, 300);
@@ -9919,8 +9937,8 @@ function splitShown() {
 }
 function splitSync() {
   const on = splitShown(); $("splitBtn").hidden = !on; if (!on) return;
-  if (!editTx) { $("splitBtnT").textContent = "פיצול לכמה קטגוריות"; return; }
-  const p = editTx.splitOf || editTx; $("splitBtnT").textContent = p.parts ? `מפוצל ל-${p.parts.length} קטגוריות · עריכת הפיצול` : "פיצול לכמה קטגוריות";
+  if (!editTx) { $("splitBtnT").textContent = "פיצול"; return; }
+  const p = editTx.splitOf || editTx; $("splitBtnT").textContent = p.parts ? `מפוצל ל-${p.parts.length} · עריכה` : "פיצול";
 }
 ["input", "change"].forEach(ev => $("addForm").addEventListener(ev, () => requestAnimationFrame(splitSync)));
 { const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); splitSync(); return r; };
@@ -10227,8 +10245,8 @@ function oweShown() {
 }
 function oweSync() {
   const on = oweShown(); $("oweBtn").hidden = !on; if (!on) return;
-  if (!editTx) { $("oweBtnT").textContent = "שילמתי גם על אחרים · מי חייב לי"; return; }
-  const it = editTx.owe; $("oweBtnT").textContent = it ? (oweLeft(it) > 0 ? `חייבים לך ${fmt2(oweLeft(it))} · עריכה` : "הכול הוחזר ✓ · עריכה") : "שילמתי גם על אחרים · מי חייב לי";
+  if (!editTx) { $("oweBtnT").textContent = "מי חייב לי"; return; }
+  const it = editTx.owe; $("oweBtnT").textContent = it ? (oweLeft(it) > 0 ? `חייבים לך ${fmt2(oweLeft(it))} · עריכה` : "הכול הוחזר ✓ · עריכה") : "מי חייב לי";
 }
 { const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); try { oweSync(); } catch (e) {} return r; };
   const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("oweBtn").hidden = true; requestAnimationFrame(() => { try { oweSync(); splitSync(); } catch (e) {} }); return r; }; }
@@ -10487,6 +10505,22 @@ function renderBank() {
   $("bkUpd").onclick = up; if ($("bkUpd2")) $("bkUpd2").onclick = up;
 }
 { const r0 = render; render = function () { const o = r0.apply(this, arguments); try { renderBank(); } catch (e) { console.error(e); } return o; }; }
+
+/* the extras of the add window: a row of small chips; the date field and the payments open from them */
+function xSync() {
+  const f = $("addForm"), exp = addKind === "exp", canInst = exp && (!editTx || editTx.del.key === "apple");
+  $("xInst").hidden = !canInst; $("xInst").setAttribute("aria-pressed", f.classList.contains("x-inst"));
+  const row = $("xMore"), xs = [$("xInst"), $("splitBtn"), $("oweBtn")];
+  xs.forEach(b => { if (b.parentElement !== row) row.appendChild(b); });
+  row.hidden = xs.every(b => b.hidden);
+  f.classList.toggle("x-none", !f.classList.contains("x-date") && !f.classList.contains("x-inst"));
+}
+$("xInst").addEventListener("click", () => { const f = $("addForm"), on = !f.classList.contains("x-inst"); f.classList.toggle("x-inst", on); if (!on) { $("addInst").value = "1"; $("addInst").dispatchEvent(new Event("change", { bubbles: true })); } xSync();
+  if (on) setTimeout(() => { const s = $("addInst"); s.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, 40); });
+{ const oa = openAdd; openAdd = function () { $("addForm").classList.remove("x-date", "x-inst"); const r = oa.apply(this, arguments); try { xSync(); } catch (e) {} return r; }; }
+{ const sk = setKind; setKind = function () { const r = sk.apply(this, arguments); try { xSync(); } catch (e) {} return r; }; }
+{ const ss = splitSync; splitSync = function () { const r = ss.apply(this, arguments); try { xSync(); } catch (e) {} return r; };
+  const os = oweSync; oweSync = function () { const r = os.apply(this, arguments); try { xSync(); } catch (e) {} return r; }; }
 
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
@@ -10786,8 +10820,8 @@ const TOUR = [
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "הוצאות שחוזרות על עצמן? לחיצה אחת ממלאת את כל הפרטים מהפעם הקודמת." },
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
-  { t: "#addForm .two:has(#addDate)", demo: tourAddDemo2, h: "תאריך אחר ותשלומים", b: "לקנייה מיום אחר או בתשלומים. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם." },
-  { t: "#splitBtn", demo: tourAddDemo2, opt: true, h: "פיצול ומי חייב לי ✂️👥", b: "קנייה אחת עם כמה דברים? ״פיצול לכמה קטגוריות״ מחלק אותה, למשל ₪100 סופר ו-₪50 פארם. שילמתם גם על חברים? ״מי חייב לי״ מחלק בין כולם וזוכר מי עוד לא החזיר. אפשר כבר בהוספה, או אחר כך בעריכה." },
+  { t: "#pkDays", demo: tourAddDemo2, h: "מתי, ועוד", b: "היום, אתמול או שלשום בלחיצה, ו״📅 תאריך אחר״ פותח לוח שנה. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם." },
+  { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול קנייה לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר כבר בהוספה, או אחר כך בעריכה." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והסכום, העסק והכרטיס מתמלאים לבד." },
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
@@ -11152,7 +11186,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113000755";
+const BUILD_ID = "20261113001751";
 let updToast = null;
 async function checkUpdate() {
   try {
