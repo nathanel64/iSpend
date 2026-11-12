@@ -10177,11 +10177,10 @@ function openOweFor(t) {
       <div class="sp-tot"><span>סה״כ שילמת</span><b>${fmt2(total)}</b></div>
       <div class="ow-even"><span>לחלק שווה, כולל אותי:</span>${[2, 3, 4, 5].map(n => `<button type="button" data-even="${n}" ${ppl.length + 1 === n && ppl.every(x => x.a) ? 'class="on"' : ""}>${n}</button>`).join("")}<span class="ow-cnt"><input id="owCnt" inputmode="numeric" maxlength="2" placeholder="אחר" aria-label="כמה אנשים, כולל אותי" value="${ppl.length + 1 > 5 && ppl.every(x => x.a) ? ppl.length + 1 : ""}"><button type="button" id="owCntGo">חלוקה</button></span></div>
       <div class="sp-rows">${ppl.map((x, i) => `<div class="ow-row ${x.paid ? "paid" : ""}">
-        <input class="ow-n" data-n="${i}" value="${esc(x.n)}" placeholder="שם" list="oweNamesL" aria-label="שם" autocomplete="off">
+        <input class="ow-n" data-n="${i}" value="${esc(x.n)}" placeholder="שם" aria-label="שם" autocomplete="off" autocorrect="off">
         <label class="money-in"><span aria-hidden="true">₪</span><input class="ow-a" data-a="${i}" inputmode="decimal" value="${x.a}" placeholder="0" aria-label="כמה"></label>
         <button type="button" class="ow-pd" data-pd="${i}" aria-pressed="${!!x.paid}" title="${x.paid ? "הוחזר ב-" + dd(new Date(x.paid + "T00:00")) : "סימון שהחזיר"}" aria-label="${x.paid ? "החזיר" : "סימון שהחזיר"}">✓</button>
         <button type="button" class="rm" data-rm="${i}" aria-label="הסרה">✕</button></div>`).join("")}</div>
-      <datalist id="oweNamesL">${oweNames().map(n => `<option value="${esc(n)}">`).join("")}</datalist>
       ${ppl.length < 29 ? `<button type="button" class="sp-add" data-add>＋ עוד מישהו</button>` : ""}
       <div class="ow-mine"><span>החלק שלך</span><b class="num ${myPart < 0 ? "bad" : ""}">${fmt2(myPart)}</b></div>
       <label class="ow-sw"><input type="checkbox" id="oweMine" ${mine ? "checked" : ""}><span>בחודש לספור רק את החלק שלי</span></label>
@@ -10204,7 +10203,7 @@ function openOweFor(t) {
     if (!(n >= 2 && n <= 30)) { $("owMsg").textContent = "אפשר לחלק בין 2 ל-30 אנשים"; return; }
     const each = round(total / n); while (ppl.length < n - 1) ppl.push({ n: "", a: "", paid: "" });
     if (ppl.length > n - 1) { const named = ppl.filter(x => x.n || x.paid), blank = ppl.filter(x => !x.n && !x.paid); ppl = named.concat(blank).slice(0, Math.max(n - 1, named.length)); }
-    ppl.forEach(x => x.a = String(each)); const f = ppl.findIndex(x => !x.n); draw(f >= 0 ? f : null);
+    ppl.forEach(x => x.a = String(each)); draw();
   };
   bg.addEventListener("keydown", e => { if (e.target.id === "owCnt" && e.key === "Enter") { e.preventDefault(); evenSplit(parseInt(e.target.value, 10)); } });
   bg.addEventListener("change", e => { if (e.target.id === "oweMine") mine = e.target.checked; if (e.target.id === "owCnt" && e.target.value) evenSplit(parseInt(e.target.value, 10)); });
@@ -10230,7 +10229,7 @@ function openOweFor(t) {
     try { await saveOwe(); close(); afterData(); toast(del ? "החוב נמחק" : `נשמר: חייבים לך ${fmt2(clean.filter(x => !x.paid).reduce((s, x) => s + x.a, 0))} 👥`, 2600); }
     catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); btn.disabled = false; btn.textContent = del ? "מחיקת החוב" : "שמירה"; $("owMsg").textContent = "השמירה לא הצליחה: " + writeError(err); }
   });
-  draw(old ? null : 0);
+  draw();
 }
 /* everyone who owes you, by person: what for, a reminder on WhatsApp, and "got it" */
 function openOweList() {
@@ -10937,7 +10936,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112225541";
+const BUILD_ID = "20261112225856";
 let updToast = null;
 async function checkUpdate() {
   try {
