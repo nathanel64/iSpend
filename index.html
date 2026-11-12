@@ -2246,6 +2246,11 @@ html[data-txt="xl"] { font-size: 124%; }
 .ow-cnt input { width: 46px; height: 34px; border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 800; text-align: center; outline: 0; }
 .ow-cnt input::placeholder { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .ow-cnt button { width: auto !important; padding: 0 10px; background: var(--brand) !important; color: #fff !important; font-size: .8rem; height: 28px !important; border-radius: 8px !important; }
+
+.ow-lost { background: color-mix(in srgb, var(--warn) 10%, var(--bg)); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: .84rem; }
+.ow-lost small { color: var(--muted); font-size: .76rem; margin-top: -4px; }
+.ow-lost div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ow-lost button { border: 0; border-radius: 10px; padding: 6px 10px; background: color-mix(in srgb, var(--bad) 14%, var(--surface)); color: var(--bad); font: inherit; font-weight: 700; font-size: .8rem; cursor: pointer; flex: none; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -3867,8 +3872,9 @@ function build() {
     out.forEach(t => { const m = /^sp-(.+)-(\d+)$/.exec(t.rid || ""); if (!m) return; const p = byRid.get(m[1]); if (!p) return; t.splitOf = p; (p.parts = p.parts || [p]).push(t); });
     out.forEach(t => { if (t.parts) t.splitTotal = Math.round(t.parts.reduce((s, x) => s + x.amount, 0) * 100) / 100; }); }
   // "who owes me": the purchase counts only your part (the rest is money that comes back)
+  oweLinked = new Set();
   out.forEach(t => { if (t.income || t.refund || t.gen || t.splitOf || t.parts) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
-    t.owe = it; if (it.mine === false) return; const others = it.ppl.reduce((s, x) => s + (+x.a || 0), 0);
+    t.owe = it; oweLinked.add(it.k); if (it.mine === false) return; const others = it.ppl.reduce((s, x) => s + (+x.a || 0), 0);
     if (others > 0) { t.fullAmount = t.amount; t.amount = Math.max(0, Math.round((t.amount - others) * 100) / 100); } });
   txAll = out;
   tx = hiddenMonths.size ? out.filter(t => !hiddenMonths.has(mIdxOf(t.date))) : out;
@@ -6966,6 +6972,8 @@ async function deleteTx(k, btn) {
       await mcp.callTool(SERVER, "update_spreadsheet", { spreadsheetId: t.del.file, requests: [{ deleteDimension: { range: { sheetId: t.del.sheetId, dimension: "ROWS", startIndex: t.del.row - 1, endIndex: t.del.row } } }] });
       arr.splice(t.del.index, 1);
     }
+    // its "who owes me" goes with it
+    if (t.owe && typeof saveOwe === "function") { oweList = oweList.filter(it => it !== t.owe); saveOwe().catch(() => {}); }
     openTx = null; confirmTx = null; afterData();
     try { await mcp.invalidate(SERVER, "get_values"); } catch (err) {}
     return true;
@@ -10115,7 +10123,9 @@ function openLook() {
 
 /* ===== who owes me: you paid for others too. Each one's part is kept until it comes back, and the month counts only yours.
    Kept in the settings (V16), so every device sees the same list ===== */
-let oweList = [], oweByK = new Map();
+let oweList = [], oweByK = new Map(), oweLinked = new Set();
+// only debts of a purchase that is still there count; one whose purchase is gone waits in the list to be deleted
+const oweLive = () => oweList.filter(it => oweLinked.has(it.k));
 const oweKeyOf = t => t.rid ? "r:" + t.rid : [t.del ? t.del.key : "x", iso(t.date), t.amount, String(t.rawMerchant || t.merchant || "").trim()].join("|");
 const oweLeft = it => it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
 function loadOwe(j) {
@@ -10237,7 +10247,8 @@ function openOweList() {
   let showDone = false;
   const draw = () => {
     const by = new Map();
-    oweList.forEach(it => it.ppl.forEach((x, i) => { const k = x.n.trim(); if (!by.has(k)) by.set(k, { n: k, open: [], done: [] }); by.get(k)[x.paid ? "done" : "open"].push({ it, x, i }); }));
+    const live = oweLive(), lost = oweList.filter(it => !oweLinked.has(it.k));
+    live.forEach(it => it.ppl.forEach((x, i) => { const k = x.n.trim(); if (!by.has(k)) by.set(k, { n: k, open: [], done: [] }); by.get(k)[x.paid ? "done" : "open"].push({ it, x, i }); }));
     const people = [...by.values()].map(p => ({ ...p, sum: p.open.reduce((s, o) => s + o.x.a, 0) })).sort((a, b) => b.sum - a.sum);
     const open = people.filter(p => p.sum > 0), done = people.filter(p => !p.sum), tot = open.reduce((s, p) => s + p.sum, 0);
     const col = n => `hsl(${[...n].reduce((h, c) => h * 31 + c.charCodeAt(0) >>> 0, 7) % 360} 62% 52%)`;
@@ -10250,16 +10261,20 @@ function openOweList() {
         <div class="ow-acts"><a class="ow-wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(`היי ${p.n} 🙂 תזכורת קטנה: ${p.open.map(o => `${o.it.what} (${dd(new Date(o.it.d + "T00:00"))}) ₪${o.x.a}`).join(", ")}. סה״כ ₪${p.sum}. תודה!`)}">תזכורת בוואטסאפ</a><button type="button" data-got="${esc(p.n)}">קיבלתי ✓</button></div>
       </div>`).join("")}</div>
       ${done.length || people.some(p => p.done.length) ? `<button type="button" class="pl-skip" id="owDone">${showDone ? "הסתרת מה שהוחזר" : "מה שכבר הוחזר"}</button>` : ""}
-      ${showDone ? `<div class="ow-hist">${oweList.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(x.a)} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
+      ${lost.length && dataFresh() ? `<div class="ow-lost"><b>חובות של קניות שכבר לא ברשימה</b><small>הקנייה נמחקה או השתנתה, אז הם לא נספרים</small>${lost.map(it => `<div><span>${esc(it.what)} · ${dd(new Date(it.d + "T00:00"))} · ${it.ppl.map(x => esc(x.n)).join(", ")}</span><button type="button" data-lost="${esc(it.k)}">מחיקה</button></div>`).join("")}</div>` : ""}
+      ${showDone ? `<div class="ow-hist">${live.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(x.a)} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
     </div>`;
   };
   bg.addEventListener("click", async e => {
     if (e.target.closest("#owDone")) { showDone = !showDone; draw(); return; }
+    const lo = e.target.closest("[data-lost]");
+    if (lo) { const before = oweList.slice(); oweList = oweList.filter(it => it.k !== lo.dataset.lost); lo.disabled = true;
+      try { await saveOwe(); afterData(); draw(); toast("נמחק", 1600); } catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("המחיקה לא הצליחה: " + writeError(err), 3500); } return; }
     const g = e.target.closest("[data-got]"); if (!g) return;
     const n = g.dataset.got, before = JSON.stringify(oweList);
     oweList.forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) x.paid = iso(today); }));
     g.disabled = true; g.textContent = "שומר…";
-    try { await saveOwe(); afterData(); draw(); toast(`${n} החזיר הכול ✓`, 2200); if (!oweList.some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
+    try { await saveOwe(); afterData(); draw(); toast(`${n} החזיר הכול ✓`, 2200); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
     catch (err) { oweList = JSON.parse(before); oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("השמירה לא הצליחה: " + writeError(err), 3500); }
   });
   draw();
@@ -10268,7 +10283,7 @@ function openOweList() {
 function oweHome() {
   let c = $("oweCard");
   if (!c) { $("todayBox").insertAdjacentHTML("afterend", `<button type="button" class="plan-card owe-card" id="oweCard" hidden><span class="e">👥</span><span><b id="oweCardT"></b><small id="oweCardS"></small></span></button>`); c = $("oweCard"); c.onclick = () => openOweList(); }
-  const tot = oweList.reduce((s, it) => s + oweLeft(it), 0), n = new Set(oweList.flatMap(it => it.ppl.filter(x => !x.paid).map(x => x.n))).size;
+  const L = oweLive(), tot = L.reduce((s, it) => s + oweLeft(it), 0), n = new Set(L.flatMap(it => it.ppl.filter(x => !x.paid).map(x => x.n))).size;
   c.hidden = !(tot > 0) || currentView !== "flow";
   if (tot > 0) { $("oweCardT").textContent = `חייבים לך ${fmt2(tot)}`; $("oweCardS").textContent = `${n} ${n === 1 ? "אדם" : "אנשים"} · לחיצה לרשימה ולתזכורת`; }
 }
@@ -10936,7 +10951,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112230019";
+const BUILD_ID = "20261112230237";
 let updToast = null;
 async function checkUpdate() {
   try {
