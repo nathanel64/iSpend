@@ -2280,6 +2280,21 @@ html[data-txt="xl"] { font-size: 124%; }
 .bk-ok { margin-top: 8px; background: color-mix(in srgb, var(--good) 10%, var(--surface)); color: var(--good); border-radius: 14px; padding: 9px 12px; font-size: .86rem; font-weight: 700; }
 .bk-stale { margin-top: 8px; background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-radius: 14px; padding: 9px 12px; font-size: .84rem; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .bk-stale button { border: 0; background: var(--brand); color: #fff; font: inherit; font-weight: 700; border-radius: 10px; padding: 6px 12px; flex: none; cursor: pointer; }
+
+/* ===== the little messages: a small pill above the bar, so the month at the top stays in view ===== */
+.toast { top: auto !important; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px) !important; inset-inline: 0 !important; width: fit-content !important; max-width: calc(100% - 48px) !important; margin: 0 auto !important;
+  border-radius: 999px !important; padding: 10px 18px !important; font-size: .92rem !important; box-shadow: 0 10px 28px -10px rgba(0, 0, 0, .45) !important; text-align: center; }
+html.modal-open .toast, .sheet-bg:not([hidden]) ~ .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 24px) !important; }
+/* ===== under the gauge: three tiles ===== */
+.g-tiles { display: grid; gap: 8px; margin: 4px 0 2px; width: 100%; }
+.g-tiles:empty { display: none; }
+.g-tiles > div { background: var(--surface); border-radius: 16px; padding: 10px 6px; text-align: center; box-shadow: 0 1px 2px rgba(28, 27, 34, .05); min-width: 0; }
+.g-tiles small { display: block; color: var(--muted); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-tiles b { display: block; font-size: 1.08rem; font-weight: 800; margin-top: 2px; white-space: nowrap; }
+.g-tiles b.good { color: var(--good); } .g-tiles b.bad { color: var(--bad); }
+.g-tiles em { display: block; font-style: normal; color: var(--muted); font-size: .68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-under.tiled > #statusSub, .g-under.tiled > #projChip, .g-under.tiled #ringPill { display: none !important; }
+.tm-on .g-under.tiled > #statusSub { display: block !important; } .tm-on .g-tiles { display: none !important; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -3768,6 +3783,8 @@ const ltr = s => "\u2066" + s + "\u2069";
 const fmt = n => n < 0 ? ltr("−₪" + Math.abs(Math.round(n)).toLocaleString("he-IL")) : "₪" + Math.round(n).toLocaleString("he-IL");
 // exact amount with agorot, signed: used inside lists and drill-downs
 const fmtX = n => { const v = "₪" + Math.abs(n).toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return n < -0.004 ? ltr("−" + v) : v; };
+const fmtA = n => Math.round(Math.abs(n) * 100) % 100 ? fmt2(n) : fmt(Math.abs(n));
+const fmtAX = n => Math.round(Math.abs(n) * 100) % 100 ? fmtX(n) : (n < -0.004 ? ltr("−" + fmt(Math.abs(n))) : fmt(Math.abs(n)));
 const fmt2 = n => "₪" + Math.abs(n).toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -4027,6 +4044,18 @@ function render() {
       show = true;
     }
     chip.hidden = !show; if (!show) { pm.style.opacity = "0"; $("ringProj").style.strokeDashoffset = "100"; st.classList.remove("proj-bad"); }
+    // the same numbers as three tiles: spent, the end of the month at this pace, the days left
+    const gu = document.querySelector(".g-under");
+    let gt = $("gTiles"); if (!gt) { gu.insertAdjacentHTML("afterbegin", `<div class="g-tiles" id="gTiles"></div>`); gt = $("gTiles"); }
+    const tiled = isCurrent && stage !== "none";
+    gu.classList.toggle("tiled", tiled);
+    if (tiled) {
+      const proj = show ? monthForecast(f, spent, elapsed, days, fixedExpected) : null, pb = proj != null && proj > incomeExpected;
+      gt.innerHTML = `<div><small>הוצאת</small><b class="num">${fmt(spent)}</b><em>מתוך <span class="num">${fmt(incomeExpected)}</span></em></div>`
+        + (proj != null ? `<div><small>צפי לסוף החודש</small><b class="num ${pb ? "bad" : "good"}">${pb ? "−" : ""}${fmt(Math.abs(incomeExpected - proj))}</b><em>${pb ? "מינוס בקצב הזה" : "יישארו בקצב הזה"}</em></div>` : "")
+        + `<div><small>${daysLeft === 0 ? "היום" : "נשארו"}</small><b>${daysLeft === 0 ? "אחרון" : (daysLeft + 1) + " ימים"}</b><em>${daysLeft === 0 ? "בחודש" : "כולל היום"}</em></div>`;
+      gt.style.gridTemplateColumns = `repeat(${gt.children.length}, minmax(0, 1fr))`;
+    } else gt.innerHTML = "";
   }
   // 8: compared with the same point of last month (spent by the same day of the period)
   {
@@ -5567,7 +5596,7 @@ function txRowHtml(t, withDate) {
   const row = `<div class="tx ${t.del ? "can-del" : ""}" ${k ? `role="button" tabindex="0" aria-expanded="${open}"` : ""}>
     ${catIcon(t.category)}
     <div class="m">${t.inst ? `<bdi dir="ltr" class="inst">(${t.inst.k}/${t.inst.n})</bdi> ` : ""}<bdi>${esc(t.merchant)}</bdi></div>
-    <div class="a num ${pos ? "in" : ""}">${pos ? ltr("+" + fmt2(t.amount)) : fmt2(t.amount)}</div>
+    <div class="a num ${pos ? "in" : ""}">${pos ? ltr("+" + fmtA(t.amount)) : fmtA(t.amount)}</div>
     <div class="meta">${isPendingTx(t) ? `<span class="pend" title="נשמר בטלפון, יישלח כשיהיה חיבור"><svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 01-.5-9.97A6 6 0 0118 9a4.5 4.5 0 01-.5 9z"/></svg>ממתין · </span>` : ""}<span class="${t.category === "לא מסווג" ? "uncat" : ""}">${esc(t.category)}</span>${withDate === true ? " · " + dd(t.date) : ""} · ${esc(t.account)}${t.gen ? " · מתוך " + fmt(t.total) : ""}</div>
     ${t.inst && t.inst.k === t.inst.n && t.inst.n > 1 && !pos ? lastPayTag() : ""}
     ${t.owe ? `<span class="split-tag owe-tag">👥 ${t.fullAmount ? "החלק שלך מתוך " + fmt2(t.fullAmount) + " · " : ""}${oweLeft(t.owe) > 0 ? "חייבים לך " + fmt2(oweLeft(t.owe)) : "הכול הוחזר ✓"}</span>` : ""}
@@ -5634,7 +5663,7 @@ function renderList(inP) {
   $("clearFilter").hidden = !filterCat && !filterAcc && fltRange.min == null && fltRange.max == null && !fltRange.from && !fltRange.to;
   // the exact total of what the list shows: money in for "הכנסות", otherwise spending minus refunds
   const lt = txKind === "inc" ? list.reduce((s, t) => s + t.amount, 0) : list.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
-  $("listTotal").innerHTML = list.length ? (txKind === "inc" ? ltr("+" + fmtX(lt)) : fmtX(lt)) : "";
+  $("listTotal").innerHTML = list.length ? (txKind === "inc" ? ltr("+" + fmtAX(lt)) : fmtAX(lt)) : "";
   if (all) {
     $("days").innerHTML = `<div class="empty"><strong>עוד אין תנועות</strong>אחרי שתחברו את הבנק והאשראי (או את Apple Pay), התנועות יופיעו כאן.</div>`;
     return;
@@ -5652,7 +5681,7 @@ function renderList(inP) {
     const trend = avgDay > 0 && vs > 0 ? (vs > avgDay * 1.5 ? `<em class="dtr up" title="פי ${(vs / avgDay).toFixed(1)} מיום רגיל (${fmt(avgDay)})">▲ ${vs > avgDay * 3 ? "יום יקר" : "מעל הרגיל"}</em>` : vs < avgDay * .5 ? `<em class="dtr dn" title="יום רגיל: ${fmt(avgDay)}">▼ יום חסכוני</em>` : "") : "";
     const ago = daysBetween(d, today), full = `יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}${q ? " " + d.getFullYear() : ""}`;
     const label = ago === 0 ? `<b>היום</b> <small>· ${full}</small>` : ago === 1 ? `<b>אתמול</b> <small>· ${full}</small>` : full;
-    return `<div class="day-grp" data-day="${iso(d)}"><div class="day-head"><span class="dl">${label}</span><span class="dsum">${trend}<span class="num">${fmtX(sum)}</span></span></div>` +
+    return `<div class="day-grp" data-day="${iso(d)}"><div class="day-head"><span class="dl">${label}</span><span class="dsum">${trend}<span class="num">${fmtAX(sum)}</span></span></div>` +
       g.map(t => txRowHtml(t, false)).join("") + `</div>`;
   }).join("") + (shown.length < list.length ? `<button class="more" id="showMore">הצג את כל ${list.length} התנועות</button>` : "");
   splitMerge = false;
@@ -6675,7 +6704,7 @@ function renderCatSheet() {
   list.forEach(t => { const k = t.date.getFullYear() * 12 + t.date.getMonth(); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); });
   $("catSheetList").innerHTML = [...groups.values()].map(g => {
     const d = g[0].date, sum = g.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
-    return `<div><div class="day-head"><span>${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="num">${fmtX(sum)}</span></div>${g.map(t => txRowHtml(t, true)).join("")}</div>`;
+    return `<div><div class="day-head"><span>${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="num">${fmtAX(sum)}</span></div>${g.map(t => txRowHtml(t, true)).join("")}</div>`;
   }).join("");
 }
 $("catLegend").addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (b) openCatSheet(b.dataset.cat); });
@@ -10749,7 +10778,7 @@ const TOUR = [
   { t: null, e: "👋", h: () => "ברוכים הבאים" + (USER_NAME ? ", " + esc(USER_NAME) : "") + "!", b: "iSpend עוזר לראות לאן הולך הכסף ולחסוך. סיור קצר של דקה, ואפשר לדלג בכל רגע." },
   { t: "#monthTitle", h: "מעבר בין חודשים", b: "החיצים עוברים חודש אחד. לחיצה על שם החודש פותחת את כל החודשים. כל חלון נסגר במשיכה למטה." },
   { t: "#askBox", h: "תשאלו אותי ✦", b: "שואלים בשפה רגילה: סכומים, ממוצעים, השוואה בין חודשים ואחוז מההכנסה. למשל ״כמה הוצאתי על סופר מינואר?״. ואחרי התשובה אפשר להמשיך: ״ולעומת החודש שעבר?״" },
-  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "הקשת מתמלאת לפי מה שהוצאתם. הסימון ״צפי״ מראה איך החודש ייגמר בקצב הנוכחי. גוררים את הפס שמתחתיה כדי לראות כל יום בחודש, כמו מכונת זמן." },
+  { t: "#status .ring-wrap", h: "כמה נשאר החודש", b: "הקשת מתמלאת לפי מה שהוצאתם. הסימון ״צפי״ מראה איך החודש ייגמר בקצב הנוכחי. גוררים את הפס שמתחתיה כדי לראות כל יום בחודש, כמו מכונת זמן. ומתחת: כמה הוצאתם, הצפי לסוף החודש וכמה ימים נשארו." },
   { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה, ובתוכה התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
   { t: "#slipBtn", opt: true, h: "התלוש של החודש", b: "כל מה שנכנס ויצא לפי קטגוריות, כמו תלוש. אפשר לשתף אותו כתמונה." },
   { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או הכנסה. לחיצה רגילה פותחת חלון, ולחיצה ארוכה מקליטה בקול." },
@@ -11123,7 +11152,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112234502";
+const BUILD_ID = "20261113000755";
 let updToast = null;
 async function checkUpdate() {
   try {
