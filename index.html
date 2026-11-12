@@ -2223,8 +2223,14 @@ html[data-txt="xl"] { font-size: 124%; }
 /* ===== who owes me ===== */
 .owe-btn { margin-top: 8px; }
 .owe-tag { color: var(--good) !important; background: color-mix(in srgb, var(--good) 10%, var(--bg)) !important; }
-.ow-even { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .82rem; color: var(--muted); }
-.ow-even button { border: 0; background: var(--bg); color: var(--ink); font: inherit; font-weight: 800; width: 38px; height: 34px; border-radius: 10px; cursor: pointer; }
+.ow-even { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: 16px; padding: 10px 12px; }
+.ow-eq { flex: 1; min-width: 0; } .ow-eq b { display: block; font-size: .92rem; } .ow-eq small, .ow-each small { color: var(--muted); font-size: .74rem; display: block; line-height: 1.3; }
+.ow-step { display: flex; align-items: center; background: var(--surface); border-radius: 12px; box-shadow: inset 0 0 0 1.5px var(--line); flex: none; }
+.ow-step button { width: 40px !important; height: 42px !important; border: 0; background: none !important; color: var(--brand) !important; font: inherit; font-size: 1.35rem !important; font-weight: 700; cursor: pointer; border-radius: 12px; }
+.ow-step button:disabled { color: var(--line) !important; cursor: default; }
+.ow-step input { width: 40px; height: 42px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 1.15rem; font-weight: 800; text-align: center; outline: 0; padding: 0; }
+.ow-step input:focus { background: var(--brand-soft); border-radius: 8px; }
+.ow-each { min-width: 64px; text-align: center; flex: none; } .ow-each b { display: block; font-size: 1rem; }
 .ow-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 36px 30px; gap: 6px; align-items: center; }
 .ow-row .ow-n { width: 100%; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; padding: 9px 10px; min-width: 0; }
 .ow-row .money-in { margin: 0; display: flex; align-items: center; gap: 4px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); padding: 0 10px; height: 42px; }
@@ -2254,11 +2260,6 @@ html[data-txt="xl"] { font-size: 124%; }
 .ow-hist div { display: flex; justify-content: space-between; gap: 8px; }
 .owe-card { background: linear-gradient(135deg, color-mix(in srgb, var(--good) 16%, var(--surface)), color-mix(in srgb, var(--good) 6%, var(--surface))) !important; }
 
-.ow-even button.on { background: var(--brand); color: #fff; }
-.ow-cnt { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 10px; padding: 0 4px 0 0; }
-.ow-cnt input { width: 46px; height: 34px; border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 800; text-align: center; outline: 0; }
-.ow-cnt input::placeholder { color: var(--muted); font-weight: 500; font-size: .8rem; }
-.ow-cnt button { width: auto !important; padding: 0 10px; background: var(--brand) !important; color: #fff !important; font-size: .8rem; height: 28px !important; border-radius: 8px !important; }
 
 .ow-lost { background: color-mix(in srgb, var(--warn) 10%, var(--bg)); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: .84rem; }
 .ow-lost small { color: var(--muted); font-size: .76rem; margin-top: -4px; }
@@ -10340,7 +10341,10 @@ function openOweFor(t) {
       <span class="grab" aria-hidden="true"></span>
       <div class="hd"><div><b>👥 מי חייב לי</b><br><span><bdi>${esc(t.merchant)}</bdi> · ${dd(t.date)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
       <div class="sp-tot"><span>סה״כ שילמת</span><b>${fmt2(total)}</b></div>
-      <div class="ow-even"><span>לחלק שווה, כולל אותי:</span>${[2, 3, 4, 5].map(n => `<button type="button" data-even="${n}" ${ppl.length + 1 === n && ppl.every(x => x.a) ? 'class="on"' : ""}>${n}</button>`).join("")}<span class="ow-cnt"><input id="owCnt" inputmode="numeric" maxlength="2" placeholder="אחר" aria-label="כמה אנשים, כולל אותי" value="${ppl.length + 1 > 5 && ppl.every(x => x.a) ? ppl.length + 1 : ""}"><button type="button" id="owCntGo">חלוקה</button></span></div>
+      ${(() => { const n = ppl.length + 1, ev = ppl.every(x => x.a) && new Set(ppl.map(x => String(x.a))).size === 1 && Math.abs(+ppl[0].a * n - total) < n * 0.01;
+        return `<div class="ow-even"><div class="ow-eq"><b>לחלק שווה</b><small>כמה אנשים, כולל אותי</small></div>
+        <div class="ow-step"><button type="button" data-step="-1" aria-label="פחות אנשים" ${n <= 2 && ev ? "disabled" : ""}>−</button><input id="owCnt" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${n}" aria-label="כמה אנשים, כולל אותי"><button type="button" data-step="1" aria-label="עוד אדם" ${n >= 30 ? "disabled" : ""}>+</button></div>
+        <div class="ow-each">${ev ? `<b class="num">${fmtA(+ppl[0].a)}</b><small>לכל אחד</small>` : `<small>לוחצים + או −<br>והסכום מתחלק</small>`}</div></div>`; })()}
       <div class="sp-rows">${ppl.map((x, i) => `<div class="ow-row ${x.paid ? "paid" : ""}">
         <input class="ow-n" data-n="${i}" value="${esc(x.n)}" placeholder="שם" aria-label="שם" autocomplete="off" autocorrect="off">
         <label class="money-in"><span aria-hidden="true">₪</span><input class="ow-a" data-a="${i}" inputmode="decimal" value="${x.a}" placeholder="0" aria-label="כמה"></label>
@@ -10372,10 +10376,11 @@ function openOweFor(t) {
   };
   bg.addEventListener("keydown", e => { if (e.target.id === "owCnt" && e.key === "Enter") { e.preventDefault(); evenSplit(parseInt(e.target.value, 10)); } });
   bg.addEventListener("change", e => { if (e.target.id === "oweMine") mine = e.target.checked; if (e.target.id === "owCnt" && e.target.value) evenSplit(parseInt(e.target.value, 10)); });
+  bg.addEventListener("focusin", e => { if (e.target.id === "owCnt") setTimeout(() => e.target.select(), 0); });
   bg.addEventListener("click", async e => {
     const ev = e.target.closest("[data-even]");
     if (ev) { evenSplit(+ev.dataset.even); return; }
-    if (e.target.closest("#owCntGo")) { evenSplit(parseInt($("owCnt").value, 10)); return; }
+    const st = e.target.closest("[data-step]"); if (st) { evenSplit(Math.min(30, Math.max(2, ppl.length + 1 + +st.dataset.step))); return; }
     const rm = e.target.closest("[data-rm]"); if (rm) { ppl.splice(+rm.dataset.rm, 1); if (!ppl.length) ppl.push({ n: "", a: "", paid: "" }); draw(); return; }
     const pd = e.target.closest("[data-pd]"); if (pd) { const x = ppl[+pd.dataset.pd]; x.paid = x.paid ? "" : iso(today); draw(); return; }
     if (e.target.closest("[data-add]")) { ppl.push({ n: "", a: ppl[0] && ppl[0].a || "", paid: "" }); draw(ppl.length - 1); return; }
@@ -11242,7 +11247,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113005634";
+const BUILD_ID = "20261113005833";
 let updToast = null;
 async function checkUpdate() {
   try {
