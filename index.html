@@ -10331,7 +10331,7 @@ function oweSheet(id, label) {
 /* one purchase: how many paid, who, how much each */
 function openOweFor(t) {
   const total = t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
-  let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: "", paid: "" }], mine = old ? old.mine !== false : false;
+  let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: String(Math.round(total / 2 * 100) / 100), paid: "" }], mine = old ? old.mine !== false : false;
   const { bg, close } = oweSheet("oweSheet");
   const round = v => Math.round(v * 100) / 100;
   const others = () => round(ppl.reduce((s, x) => s + (+x.a || 0), 0));
@@ -10383,7 +10383,11 @@ function openOweFor(t) {
     const st = e.target.closest("[data-step]"); if (st) { evenSplit(Math.min(30, Math.max(2, ppl.length + 1 + +st.dataset.step))); return; }
     const rm = e.target.closest("[data-rm]"); if (rm) { ppl.splice(+rm.dataset.rm, 1); if (!ppl.length) ppl.push({ n: "", a: "", paid: "" }); draw(); return; }
     const pd = e.target.closest("[data-pd]"); if (pd) { const x = ppl[+pd.dataset.pd]; x.paid = x.paid ? "" : iso(today); draw(); return; }
-    if (e.target.closest("[data-add]")) { ppl.push({ n: "", a: ppl[0] && ppl[0].a || "", paid: "" }); draw(ppl.length - 1); return; }
+    if (e.target.closest("[data-add]")) {
+      // still an even split (nothing typed by hand)? then one more person splits it again; otherwise the new row copies the last amount
+      const n = ppl.length + 1, even = ppl.every(x => x.a) && new Set(ppl.map(x => String(x.a))).size === 1 && Math.abs(+ppl[0].a * n - total) < n * 0.01;
+      if (even && n < 30) { evenSplit(n + 1); draw(ppl.length - 1); return; }
+      ppl.push({ n: "", a: ppl[0] && ppl[0].a || "", paid: "" }); draw(ppl.length - 1); return; }
     const del = e.target.closest("#owDel"), sv = e.target.closest("#owSave"); if (!del && !sv) return;
     const clean = ppl.map(x => ({ n: String(x.n || "").trim(), a: round(+x.a || 0), paid: x.paid || "" })).filter(x => x.n || x.a > 0);
     if (sv) {
@@ -11247,7 +11251,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113005833";
+const BUILD_ID = "20261113010237";
 let updToast = null;
 async function checkUpdate() {
   try {
