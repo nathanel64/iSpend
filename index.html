@@ -10165,7 +10165,7 @@ function oweSheet(id, label) {
 /* one purchase: how many paid, who, how much each */
 function openOweFor(t) {
   const total = t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
-  let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: "", paid: "" }], mine = old ? old.mine !== false : true;
+  let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: "", paid: "" }], mine = old ? old.mine !== false : false;
   const { bg, close } = oweSheet("oweSheet");
   const round = v => Math.round(v * 100) / 100;
   const others = () => round(ppl.reduce((s, x) => s + (+x.a || 0), 0));
@@ -10936,7 +10936,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112225856";
+const BUILD_ID = "20261112230019";
 let updToast = null;
 async function checkUpdate() {
   try {
