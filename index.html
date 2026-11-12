@@ -3874,7 +3874,7 @@ function build() {
   // "who owes me": the purchase counts only your part (the rest is money that comes back)
   oweLinked = new Set();
   out.forEach(t => { if (t.income || t.refund || t.gen || t.splitOf || t.parts) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
-    t.owe = it; oweLinked.add(it.k); if (it.mine === false) return; const others = it.ppl.reduce((s, x) => s + (+x.a || 0), 0);
+    t.owe = it; oweLinked.add(it.k); if (it.mine === false) return; const others = it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
     if (others > 0) { t.fullAmount = t.amount; t.amount = Math.max(0, Math.round((t.amount - others) * 100) / 100); } });
   txAll = out;
   tx = hiddenMonths.size ? out.filter(t => !hiddenMonths.has(mIdxOf(t.date))) : out;
@@ -10134,6 +10134,24 @@ function loadOwe(j) {
   if (!Array.isArray(o)) return;
   oweList = o.filter(it => it && it.k && Array.isArray(it.ppl)); oweByK = new Map(oweList.map(it => [it.k, it]));
 }
+/* money that came back goes into the bank account as a refund ("החזר"), in the purchase's category,
+   so it shows as a transaction, the account shows it came in, and that category's spending goes down by it */
+function oweRefundAdd(it, x) {
+  const t = txAll.find(t => t.oweK === it.k), id = "ow-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const row = [iso(today), String(x.a), `החזר מ${x.n} · ${it.what}`, bankName(), (t && t.category) || it.cat || CATS[0], "החזר", "ידני", id, ""];
+  writePending([...readPending(), row]); data.apple = [...(data.apple || []), row]; sendingIds.add(id); sendRow(row);
+  x.rx = id;
+}
+async function oweRefundDel(id) {
+  if (!id) return;
+  // still on its way: just drop it from the phone
+  const pend = readPending(); if (pend.some(r => r[7] === id)) { writePending(pend.filter(r => r[7] !== id)); data.apple = (data.apple || []).filter(r => r[7] !== id); }
+  try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+  const rows = ((await mcp.callTool(SERVER, "get_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A2:I" })).payload || {}).values || [];
+  const i = rows.findIndex(r => String(r[7] || "").trim() === id);
+  if (i >= 0) await mcp.callTool(SERVER, "update_spreadsheet", { spreadsheetId: SHEET_ID, requests: [{ deleteDimension: { range: { sheetId: 777001, dimension: "ROWS", startIndex: i + 1, endIndex: i + 2 } } }] });
+  data.apple = (data.apple || []).filter(r => String(r[7] || "").trim() !== id);
+}
 async function saveOwe() {
   oweByK = new Map(oweList.map(it => [it.k, it]));
   const j = oweList.length ? JSON.stringify(oweList) : "";
@@ -10197,7 +10215,7 @@ function openOweFor(t) {
       <p class="sp-msg" id="owMsg"></p>
       <button type="button" class="sp-save" id="owSave">שמירה</button>
       ${old ? `<button type="button" class="sp-undo" id="owDel">מחיקת החוב (הקנייה חוזרת להיות כולה שלך)</button>` : ""}
-      <p class="jar-note">✓ ליד שם מסמן שהוא כבר החזיר. אם ההחזר נכנס לבנק כהכנסה (למשל בביט), כדאי לסמן אותו כאן ולמחוק את ההכנסה, כדי שלא ייספר פעמיים.</p>
+      <p class="jar-note">✓ ליד שם מסמן שהוא החזיר: נוספת לחשבון הבנק תנועה של החזר, באותה קטגוריה.</p>
     </div>`;
     if (focus != null) { const el = bg.querySelector(`[data-n="${focus}"]`); if (el) el.focus(); }
   };
@@ -10234,8 +10252,16 @@ function openOweFor(t) {
     }
     const btn = del || sv; btn.disabled = true; btn.textContent = "שומר…";
     const before = oweList.slice();
+    const prev = new Map(((old && old.ppl) || []).map(x => [x.n.trim(), x]));
     oweList = oweList.filter(it => it.k !== t.oweK);
-    if (sv) oweList.push({ k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), total: round(total), mine, ppl: clean });
+    const item = { k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), cat: t.category, total: round(total), mine, ppl: clean };
+    const gone = [];
+    if (sv) {
+      clean.forEach(x => { const o = prev.get(x.n); if (o && o.rx) x.rx = o.rx; if (x.paid && !x.rx) oweRefundAdd(item, x); if (!x.paid && x.rx) { gone.push(x.rx); delete x.rx; } });
+      prev.forEach((o, n) => { if (o.rx && !clean.some(x => x.n === n)) gone.push(o.rx); });
+      oweList.push(item);
+    }
+    if (gone.length) Promise.all(gone.map(id => oweRefundDel(id).catch(() => {}))).then(() => afterData());
     try { await saveOwe(); close(); afterData(); toast(del ? "החוב נמחק" : `נשמר: חייבים לך ${fmt2(clean.filter(x => !x.paid).reduce((s, x) => s + x.a, 0))} 👥`, 2600); }
     catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); btn.disabled = false; btn.textContent = del ? "מחיקת החוב" : "שמירה"; $("owMsg").textContent = "השמירה לא הצליחה: " + writeError(err); }
   });
@@ -10272,7 +10298,7 @@ function openOweList() {
       try { await saveOwe(); afterData(); draw(); toast("נמחק", 1600); } catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("המחיקה לא הצליחה: " + writeError(err), 3500); } return; }
     const g = e.target.closest("[data-got]"); if (!g) return;
     const n = g.dataset.got, before = JSON.stringify(oweList);
-    oweList.forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) x.paid = iso(today); }));
+    oweLive().forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) { x.paid = iso(today); oweRefundAdd(it, x); } }));
     g.disabled = true; g.textContent = "שומר…";
     try { await saveOwe(); afterData(); draw(); toast(`${n} החזיר הכול ✓`, 2200); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
     catch (err) { oweList = JSON.parse(before); oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("השמירה לא הצליחה: " + writeError(err), 3500); }
@@ -10960,7 +10986,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112230910";
+const BUILD_ID = "20261112231050";
 let updToast = null;
 async function checkUpdate() {
   try {
