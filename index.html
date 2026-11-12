@@ -2276,6 +2276,7 @@ html[data-txt="xl"] { font-size: 124%; }
 .bk-row .aft { color: var(--muted); font-size: .74rem; white-space: nowrap; } .bk-row .aft.bad { color: var(--bad); font-weight: 700; }
 .bk-warn { margin-top: 8px; background: color-mix(in srgb, var(--bad) 12%, var(--surface)); color: var(--bad); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; font-size: .9rem; }
 .bk-warn small { color: var(--muted); font-size: .78rem; }
+.bk-ok small { display: block; font-weight: 400; color: var(--muted); font-size: .78rem; margin-top: 2px; }
 .bk-ok { margin-top: 8px; background: color-mix(in srgb, var(--good) 10%, var(--surface)); color: var(--good); border-radius: 14px; padding: 9px 12px; font-size: .86rem; font-weight: 700; }
 .bk-stale { margin-top: 8px; background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-radius: 14px; padding: 9px 12px; font-size: .84rem; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .bk-stale button { border: 0; background: var(--brand); color: #fff; font: inherit; font-weight: 700; border-radius: 10px; padding: 6px 12px; flex: none; cursor: pointer; }
@@ -10450,7 +10451,7 @@ function renderBank() {
     ${f.future.length ? bankChart(f) : ""}
     <div class="bk-rows">${f.future.map(e => `<div class="bk-row"><span class="d">${dd(e.d)}</span><span class="w">${lbl(e)}</span><span class="v"><b class="num ${e.a < 0 ? "" : "good"}">${e.a < 0 ? "−" : "+"}${fmt2(Math.abs(e.a))}</b><small class="num aft ${e.after < 0 ? "bad" : ""}">נשאר ${e.after < 0 ? "−" : ""}${fmt2(Math.abs(e.after))}</small></span></div>`).join("") || `<p class="bk-intro">אין חיובים צפויים בשבועות הקרובים.${bankSt.pay ? "" : " כדאי לבחור יום משכורת בעדכון."}</p>`}</div>
     ${neg ? `<div class="bk-warn">⚠️ <b>ב-${dd(neg.d)} החשבון צפוי להיכנס למינוס של ${fmt2(Math.abs(neg.after))}</b><small>כדאי להעביר כסף לפני, או לדחות הוצאה גדולה</small></div>`
-      : f.future.length ? `<div class="bk-ok">✓ החשבון נשאר בפלוס. הכי נמוך: ${fmt2(f.low.v)}${+f.low.d !== +dayOf(today) ? " ב-" + dd(f.low.d) : ""}</div>` : ""}
+      : f.future.length ? `<div class="bk-ok">✓ החשבון נשאר בפלוס בשבועות הקרובים${+f.low.d !== +dayOf(today) && f.low.v < f.now ? `<small>הנקודה הכי נמוכה: ${fmt2(f.low.v)} ב-${dd(f.low.d)}, אחרי ${f.future.find(e => +e.d === +f.low.d && e.kind === "card") ? "חיוב האשראי" : "החיוב"}</small>` : ""}</div>` : ""}
     ${f.old >= 14 ? `<div class="bk-stale">עברו ${Math.floor(f.old)} ימים מאז שעדכנת. כדאי לבדוק מול הבנק, כי מה שלא נרשם באתר לא נספר. <button type="button" id="bkUpd2">עדכון</button></div>` : ""}
     <p class="jar-note">נספר: מה שיורד מחשבון הבנק באתר, קניות באשראי ביום החיוב (ב-${startDay} לחודש) והמשכורת. עמלות או משיכות שלא נרשמו לא נספרות, ולכן כדאי לעדכן מדי פעם.</p>`;
   const up = () => { bankEdit = true; render(); setTimeout(() => { const i = $("bkAmt"); if (i) i.scrollIntoView({ block: "center", behavior: "smooth" }); }, 50); };
@@ -11122,7 +11123,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112233730";
+const BUILD_ID = "20261112234502";
 let updToast = null;
 async function checkUpdate() {
   try {
