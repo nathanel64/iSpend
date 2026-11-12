@@ -2206,6 +2206,40 @@ html[data-txt="xl"] { font-size: 124%; }
 @media (prefers-reduced-motion: reduce) { .bdg2.on .bm::after, .bdg2.next .bm, .ch-days .cd.good i { animation: none; } }
 
 .income-form .inc-x { background: var(--surface) !important; color: var(--muted) !important; width: 38px; height: 38px; padding: 0 !important; border-radius: 50% !important; display: grid; place-items: center; font-size: .95rem; box-shadow: inset 0 0 0 1px var(--line); }
+
+/* ===== who owes me ===== */
+.owe-btn { margin-top: 8px; }
+.owe-tag { color: var(--good) !important; background: color-mix(in srgb, var(--good) 10%, var(--bg)) !important; }
+.ow-even { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .82rem; color: var(--muted); }
+.ow-even button { border: 0; background: var(--bg); color: var(--ink); font: inherit; font-weight: 800; width: 38px; height: 34px; border-radius: 10px; cursor: pointer; }
+.ow-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 36px 30px; gap: 6px; align-items: center; }
+.ow-row .ow-n { width: 100%; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; padding: 9px 10px; min-width: 0; }
+.ow-row .money-in { margin: 0; display: flex; align-items: center; gap: 4px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); padding: 0 10px; height: 42px; }
+.ow-row .money-in span { color: var(--muted); }
+.ow-row .money-in input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 700; padding: 0; direction: ltr; text-align: right; }
+.ow-row .ow-n { height: 42px; }
+.ow-pd { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted); font: inherit; font-weight: 800; cursor: pointer; }
+.ow-row.paid .ow-pd { background: var(--good); border-color: var(--good); color: #fff; }
+.ow-row.paid .ow-n, .ow-row.paid .money-in { opacity: .55; }
+.ow-row .rm { border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; width: 30px; height: 36px; }
+.ow-mine { display: flex; justify-content: space-between; align-items: center; background: var(--bg); border-radius: 14px; padding: 10px 14px; }
+.ow-mine b { font-size: 1.15rem; } .ow-mine b.bad { color: var(--bad); }
+.ow-sw { display: flex; align-items: center; gap: 10px; font-size: .9rem; padding: 2px 4px; cursor: pointer; }
+.ow-sw input { width: 20px; height: 20px; accent-color: var(--brand); }
+.sp-tot b.good { color: var(--good); }
+.ow-empty { color: var(--muted); font-size: .9rem; line-height: 1.5; text-align: center; padding: 6px 10px; }
+.ow-people { display: flex; flex-direction: column; gap: 10px; }
+.ow-p { background: var(--bg); border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ow-ph { display: flex; align-items: center; gap: 10px; }
+.ow-ph .av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800; flex: none; }
+.ow-ph .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; } .ow-ph .nm small { color: var(--muted); font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ow-ph > b { font-size: 1.05rem; }
+.ow-acts { display: flex; gap: 8px; }
+.ow-acts a, .ow-acts button { flex: 1; text-align: center; border: 0; border-radius: 12px; padding: 9px 10px; font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; text-decoration: none; }
+.ow-acts a { background: #25d366; color: #fff; } .ow-acts button { background: color-mix(in srgb, var(--good) 14%, var(--surface)); color: var(--good); }
+.ow-hist { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; color: var(--muted); }
+.ow-hist div { display: flex; justify-content: space-between; gap: 8px; }
+.owe-card { background: linear-gradient(135deg, color-mix(in srgb, var(--good) 16%, var(--surface)), color-mix(in srgb, var(--good) 6%, var(--surface))) !important; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -3110,6 +3144,7 @@ function makeSupaAdapter(uid) {
     </div>
     <p class="note dt" id="instHint" style="margin:0" hidden></p>
     <button type="button" class="split-btn dt" id="splitBtn" hidden>✂️ <span id="splitBtnT">פיצול לכמה קטגוריות</span></button>
+    <button type="button" class="split-btn dt owe-btn" id="oweBtn" hidden>👥 <span id="oweBtnT">שילמתי גם על אחרים · מי חייב לי</span></button>
     <label class="ce-tg auto-tg dt" id="autoRow" hidden><span><b>הוספה אוטומטית</b><small id="autoSub"></small></span><input type="checkbox" id="addAuto"><span class="ce-sw" aria-hidden="true"></span></label>
     <p class="note dt" id="addHint" style="margin:0" hidden>העברה מחבר על הוצאה משותפת? בחרו את הקטגוריה של ההוצאה והיא תקוזז ממנה. משכורת או הכנסה אחרת: בחרו "הכנסה".</p>
     <p class="form-msg" id="addMsg"></p>
@@ -3825,6 +3860,10 @@ function build() {
   { const byRid = new Map(out.filter(t => t.rid && !/^sp-/.test(t.rid)).map(t => [t.rid, t]));
     out.forEach(t => { const m = /^sp-(.+)-(\d+)$/.exec(t.rid || ""); if (!m) return; const p = byRid.get(m[1]); if (!p) return; t.splitOf = p; (p.parts = p.parts || [p]).push(t); });
     out.forEach(t => { if (t.parts) t.splitTotal = Math.round(t.parts.reduce((s, x) => s + x.amount, 0) * 100) / 100; }); }
+  // "who owes me": the purchase counts only your part (the rest is money that comes back)
+  out.forEach(t => { if (t.income || t.refund || t.gen || t.splitOf || t.parts) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
+    t.owe = it; if (it.mine === false) return; const others = it.ppl.reduce((s, x) => s + (+x.a || 0), 0);
+    if (others > 0) { t.fullAmount = t.amount; t.amount = Math.max(0, Math.round((t.amount - others) * 100) / 100); } });
   txAll = out;
   tx = hiddenMonths.size ? out.filter(t => !hiddenMonths.has(mIdxOf(t.date))) : out;
 }
@@ -5484,6 +5523,7 @@ function txRowHtml(t, withDate) {
     <div class="a num ${pos ? "in" : ""}">${pos ? ltr("+" + fmt2(t.amount)) : fmt2(t.amount)}</div>
     <div class="meta">${isPendingTx(t) ? `<span class="pend" title="נשמר בטלפון, יישלח כשיהיה חיבור"><svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 01-.5-9.97A6 6 0 0118 9a4.5 4.5 0 01-.5 9z"/></svg>ממתין · </span>` : ""}<span class="${t.category === "לא מסווג" ? "uncat" : ""}">${esc(t.category)}</span>${withDate === true ? " · " + dd(t.date) : ""} · ${esc(t.account)}${t.gen ? " · מתוך " + fmt(t.total) : ""}</div>
     ${t.inst && t.inst.k === t.inst.n && t.inst.n > 1 && !pos ? lastPayTag() : ""}
+    ${t.owe ? `<span class="split-tag owe-tag">👥 ${t.fullAmount ? "החלק שלך מתוך " + fmt2(t.fullAmount) + " · " : ""}${oweLeft(t.owe) > 0 ? "חייבים לך " + fmt2(oweLeft(t.owe)) : "הכול הוחזר ✓"}</span>` : ""}
     ${t.parts && splitMerge ? `<span class="split-tag">✂️ מפוצל ל-${t.parts.length}: ${t.parts.map(x => esc(x.category)).join(" · ")}</span>` : ""}
   </div>`;
   if (!k) return row;
@@ -5899,6 +5939,7 @@ function applySettings(values) {
   { const cj = String((values[8] || [])[21] || "").trim(); if (cj) { try { const o = JSON.parse(cj); if (o && typeof o === "object" && JSON.stringify(o) !== JSON.stringify(cardColors)) { cardColors = o; try { localStorage.setItem("cardColors", cj); } catch (e) {} } } catch (e) {} } }
   { const aj = String((values[12] || [])[21] || "").trim(); if (aj) loadAuto(aj); }
   { const pj = String((values[13] || [])[21] || "").trim(); if (pj && typeof loadPlans === "function") loadPlans(pj); }
+  { const oj = String((values[14] || [])[21] || "").trim(); if (typeof loadOwe === "function") loadOwe(oj); }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -7158,7 +7199,7 @@ function openEdit(t) {
   const src = t.del.key === "apple" ? t.del.raw : null;
   $("addInst").value = String(src ? Math.max(1, parseInt(src[8], 10) || 1) : 1);
   // a purchase in payments is edited as the whole purchase: full price and the first payment's date
-  $("addAmount").value = t.gen ? t.total : t.amount; $("addDesc").value = t.merchant; $("addDate").value = iso(t.gen ? parseDate(src[0]) : t.date); $("dateReset").hidden = true;
+  $("addAmount").value = t.gen ? t.total : (t.fullAmount != null ? t.fullAmount : t.amount); $("addDesc").value = t.merchant; $("addDate").value = iso(t.gen ? parseDate(src[0]) : t.date); $("dateReset").hidden = true;
   instShown();
   $("addSave").textContent = "שמירת שינויים";
 }
@@ -8017,6 +8058,7 @@ boot();
     bell: "M6 16V11a6 6 0 0112 0v5l1.5 2h-15z M10 20.5a2 2 0 004 0",
     money: "M3 7h18v10H3z M7 12h.01 M17 12h.01 M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z",
     grid: "M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z",
+    users: "M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7z M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6 M16 4.3a3.5 3.5 0 010 6.4 M18 14.4c2.1.7 3.5 2.7 3.5 5.6",
     tag: "M3 12l9-9h8v8l-9 9z M15.5 8.5h.01",
     card: "M3 6h18v12H3z M3 10h18 M7 15h4",
     wallet: "M4 7h15v12H4z M4 7l11-3v3 M16 13h.01",
@@ -8110,6 +8152,7 @@ boot();
     <div class="set-grp" data-g="me">
       <div class="set-row" style="cursor:default">${ico("moon", 250)}<span class="set-rt"><b>מראה</b></span><span id="setLook"></span></div>
       <button type="button" class="set-row" data-act="look">${ico("moon", 215)}<span class="set-rt"><b>צבע וגודל טקסט</b><small>הצבע הראשי של האתר, וטקסט רגיל, גדול או ענק</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="owe">${ico("users", 150)}<span class="set-rt"><b>מי חייב לי</b><small>מי שילם לך פחות ממה שהוא חייב, ותזכורת בוואטסאפ</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="arrange">${ico("grid", 255)}<span class="set-rt"><b>התאמת מסך הבית</b><small>סדר הכרטיסים, מה מוצג ומה מוסתר</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="privacy">${ico("eye", 280)}<span class="set-rt"><b>מצב פרטיות</b><small>מטשטש את כל הסכומים, כשמראים את הטלפון או מצלמים מסך</small></span><span class="set-pill" id="privPill"></span></button>
       <button type="button" class="set-row" data-act="remind"${window.ISPEND_PUSH ? "" : " hidden"}>${ico("bell", 330)}<span class="set-rt"><b>תזכורת יומית</b><small>בשעה שתבחר, אם לא הוספת כלום באותו יום</small></span><span class="set-pill" id="remindPill"></span><span class="set-chev" aria-hidden="true">‹</span></button>
@@ -8159,6 +8202,7 @@ boot();
     if (r.dataset.go) return setGo(r.dataset.go);
     if (r.dataset.act === "privacy") { setPrivacy(!privacyOn()); return; }
     if (r.dataset.act === "look") { openLook(); return; }
+    if (r.dataset.act === "owe") { openOweList(); return; }
     if (r.dataset.act === "arrange") { showView("flow"); scrollTo(0, 0); setTimeout(() => { try { startArrange(); } catch (e) {} }, 350); return; }
     if (r.dataset.act === "xlsx") { exportXlsx(r); return; }
     if (r.dataset.act === "import") { openImport(); return; }
@@ -10053,6 +10097,144 @@ function openLook() {
   draw(); document.body.appendChild(bg); document.documentElement.classList.add("modal-open");
 }
 
+/* ===== who owes me: you paid for others too. Each one's part is kept until it comes back, and the month counts only yours.
+   Kept in the settings (V16), so every device sees the same list ===== */
+let oweList = [], oweByK = new Map();
+const oweKeyOf = t => t.rid ? "r:" + t.rid : [t.del ? t.del.key : "x", iso(t.date), t.amount, String(t.rawMerchant || t.merchant || "").trim()].join("|");
+const oweLeft = it => it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
+function loadOwe(j) {
+  if (document.getElementById("oweSheet")) return;
+  let o = []; try { o = j ? JSON.parse(j) : []; } catch (e) { return; }
+  if (!Array.isArray(o)) return;
+  oweList = o.filter(it => it && it.k && Array.isArray(it.ppl)); oweByK = new Map(oweList.map(it => [it.k, it]));
+}
+async function saveOwe() {
+  oweByK = new Map(oweList.map(it => [it.k, it]));
+  const j = oweList.length ? JSON.stringify(oweList) : "";
+  if (j.length > 48000) throw new Error("too long");
+  await writeRange("'הגדרות'!V16", [[j]]);
+}
+function oweShown() {
+  const t = editTx; return !!t && !!t.del && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts && addKind === "exp";
+}
+function oweSync() {
+  const on = oweShown(); $("oweBtn").hidden = !on; if (!on) return;
+  const it = editTx.owe; $("oweBtnT").textContent = it ? (oweLeft(it) > 0 ? `חייבים לך ${fmt2(oweLeft(it))} · עריכה` : "הכול הוחזר ✓ · עריכה") : "שילמתי גם על אחרים · מי חייב לי";
+}
+{ const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); try { oweSync(); } catch (e) {} return r; };
+  const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("oweBtn").hidden = true; return r; }; }
+$("oweBtn").addEventListener("click", () => { const t = editTx; if (!t) return; closeAdd(); openOweFor(t); });
+const oweNames = () => [...new Set(oweList.flatMap(it => it.ppl.map(x => x.n)).filter(Boolean))].slice(0, 30);
+function oweSheet(id, label) {
+  const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = id; bg.dir = "rtl";
+  const close = () => { bg.remove(); document.documentElement.classList.remove("modal-open"); };
+  bg.addEventListener("click", e => { if (e.target === bg || e.target.closest(".x")) close(); });
+  document.body.appendChild(bg); document.documentElement.classList.add("modal-open");
+  return { bg, close };
+}
+/* one purchase: how many paid, who, how much each */
+function openOweFor(t) {
+  const total = t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
+  let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: "", paid: "" }], mine = old ? old.mine !== false : true;
+  const { bg, close } = oweSheet("oweSheet");
+  const round = v => Math.round(v * 100) / 100;
+  const others = () => round(ppl.reduce((s, x) => s + (+x.a || 0), 0));
+  const draw = focus => {
+    const myPart = round(total - others());
+    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="מי חייב לי">
+      <span class="grab" aria-hidden="true"></span>
+      <div class="hd"><div><b>👥 מי חייב לי</b><br><span><bdi>${esc(t.merchant)}</bdi> · ${dd(t.date)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      <div class="sp-tot"><span>סה״כ שילמת</span><b>${fmt2(total)}</b></div>
+      <div class="ow-even"><span>לחלק שווה, כולל אותי:</span>${[2, 3, 4, 5, 6].map(n => `<button type="button" data-even="${n}">${n}</button>`).join("")}</div>
+      <div class="sp-rows">${ppl.map((x, i) => `<div class="ow-row ${x.paid ? "paid" : ""}">
+        <input class="ow-n" data-n="${i}" value="${esc(x.n)}" placeholder="שם" list="oweNamesL" aria-label="שם" autocomplete="off">
+        <label class="money-in"><span aria-hidden="true">₪</span><input class="ow-a" data-a="${i}" inputmode="decimal" value="${x.a}" placeholder="0" aria-label="כמה"></label>
+        <button type="button" class="ow-pd" data-pd="${i}" aria-pressed="${!!x.paid}" title="${x.paid ? "הוחזר ב-" + dd(new Date(x.paid + "T00:00")) : "סימון שהחזיר"}" aria-label="${x.paid ? "החזיר" : "סימון שהחזיר"}">✓</button>
+        <button type="button" class="rm" data-rm="${i}" aria-label="הסרה">✕</button></div>`).join("")}</div>
+      <datalist id="oweNamesL">${oweNames().map(n => `<option value="${esc(n)}">`).join("")}</datalist>
+      ${ppl.length < 12 ? `<button type="button" class="sp-add" data-add>＋ עוד מישהו</button>` : ""}
+      <div class="ow-mine"><span>החלק שלך</span><b class="num ${myPart < 0 ? "bad" : ""}">${fmt2(myPart)}</b></div>
+      <label class="ow-sw"><input type="checkbox" id="oweMine" ${mine ? "checked" : ""}><span>בחודש לספור רק את החלק שלי</span></label>
+      <p class="sp-msg" id="owMsg"></p>
+      <button type="button" class="sp-save" id="owSave">שמירה</button>
+      ${old ? `<button type="button" class="sp-undo" id="owDel">מחיקת החוב (הקנייה חוזרת להיות כולה שלך)</button>` : ""}
+      <p class="jar-note">✓ ליד שם מסמן שהוא כבר החזיר. אם ההחזר נכנס לבנק כהכנסה (למשל בביט), כדאי לסמן אותו כאן ולמחוק את ההכנסה, כדי שלא ייספר פעמיים.</p>
+    </div>`;
+    if (focus != null) { const el = bg.querySelector(`[data-n="${focus}"]`); if (el) el.focus(); }
+  };
+  const live = () => { const m = bg.querySelector(".ow-mine b"); if (m) { const v = round(total - others()); m.textContent = fmt2(v); m.classList.toggle("bad", v < 0); } };
+  bg.addEventListener("input", e => {
+    const n = e.target.closest("[data-n]"), a = e.target.closest("[data-a]");
+    if (n) ppl[+n.dataset.n].n = n.value.slice(0, 30);
+    if (a) { a.value = a.value.replace(/[^\d.]/g, ""); ppl[+a.dataset.a].a = a.value; live(); }
+  });
+  bg.addEventListener("change", e => { if (e.target.id === "oweMine") mine = e.target.checked; });
+  bg.addEventListener("click", async e => {
+    const ev = e.target.closest("[data-even]");
+    if (ev) { const n = +ev.dataset.even, each = round(total / n); while (ppl.length < n - 1) ppl.push({ n: "", a: "", paid: "" }); ppl = ppl.slice(0, Math.max(n - 1, ppl.filter(x => x.n).length)); ppl.forEach(x => x.a = String(each)); draw(ppl.findIndex(x => !x.n)); return; }
+    const rm = e.target.closest("[data-rm]"); if (rm) { ppl.splice(+rm.dataset.rm, 1); if (!ppl.length) ppl.push({ n: "", a: "", paid: "" }); draw(); return; }
+    const pd = e.target.closest("[data-pd]"); if (pd) { const x = ppl[+pd.dataset.pd]; x.paid = x.paid ? "" : iso(today); draw(); return; }
+    if (e.target.closest("[data-add]")) { ppl.push({ n: "", a: ppl[0] && ppl[0].a || "", paid: "" }); draw(ppl.length - 1); return; }
+    const del = e.target.closest("#owDel"), sv = e.target.closest("#owSave"); if (!del && !sv) return;
+    const clean = ppl.map(x => ({ n: String(x.n || "").trim(), a: round(+x.a || 0), paid: x.paid || "" })).filter(x => x.n || x.a > 0);
+    if (sv) {
+      if (!clean.length) { $("owMsg").textContent = "צריך לפחות אדם אחד עם סכום"; return; }
+      if (clean.some(x => !x.n)) { $("owMsg").textContent = "חסר שם ליד אחד הסכומים"; return; }
+      if (clean.some(x => !(x.a > 0))) { $("owMsg").textContent = "חסר סכום ליד אחד השמות"; return; }
+      if (others() > total + 0.001) { $("owMsg").textContent = "החלקים של האחרים גדולים ממה ששילמת"; return; }
+    }
+    const btn = del || sv; btn.disabled = true; btn.textContent = "שומר…";
+    const before = oweList.slice();
+    oweList = oweList.filter(it => it.k !== t.oweK);
+    if (sv) oweList.push({ k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), total: round(total), mine, ppl: clean });
+    try { await saveOwe(); close(); afterData(); toast(del ? "החוב נמחק" : `נשמר: חייבים לך ${fmt2(clean.filter(x => !x.paid).reduce((s, x) => s + x.a, 0))} 👥`, 2600); }
+    catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); btn.disabled = false; btn.textContent = del ? "מחיקת החוב" : "שמירה"; $("owMsg").textContent = "השמירה לא הצליחה: " + writeError(err); }
+  });
+  draw(old ? null : 0);
+}
+/* everyone who owes you, by person: what for, a reminder on WhatsApp, and "got it" */
+function openOweList() {
+  const { bg, close } = oweSheet("oweList");
+  let showDone = false;
+  const draw = () => {
+    const by = new Map();
+    oweList.forEach(it => it.ppl.forEach((x, i) => { const k = x.n.trim(); if (!by.has(k)) by.set(k, { n: k, open: [], done: [] }); by.get(k)[x.paid ? "done" : "open"].push({ it, x, i }); }));
+    const people = [...by.values()].map(p => ({ ...p, sum: p.open.reduce((s, o) => s + o.x.a, 0) })).sort((a, b) => b.sum - a.sum);
+    const open = people.filter(p => p.sum > 0), done = people.filter(p => !p.sum), tot = open.reduce((s, p) => s + p.sum, 0);
+    const col = n => `hsl(${[...n].reduce((h, c) => h * 31 + c.charCodeAt(0) >>> 0, 7) % 360} 62% 52%)`;
+    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="מי חייב לי">
+      <span class="grab" aria-hidden="true"></span>
+      <div class="hd"><div><b>👥 מי חייב לי</b><br><span>${open.length ? `${open.length} ${open.length === 1 ? "אדם" : "אנשים"}` : "אף אחד, הכול הוחזר"}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      ${open.length ? `<div class="sp-tot"><span>סה״כ מגיע לך</span><b class="good">${fmt2(tot)}</b></div>` : `<p class="ow-empty">כדי להוסיף: פותחים קנייה ששילמת גם על אחרים, ולוחצים <b>👥 מי חייב לי</b>.</p>`}
+      <div class="ow-people">${open.map(p => `<div class="ow-p">
+        <div class="ow-ph"><span class="av" style="background:${col(p.n)}">${esc(p.n.slice(0, 1))}</span><span class="nm"><b>${esc(p.n)}</b><small>${p.open.map(o => `${esc(o.it.what)} ${fmt2(o.x.a)}`).join(" · ")}</small></span><b class="num">${fmt2(p.sum)}</b></div>
+        <div class="ow-acts"><a class="ow-wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(`היי ${p.n} 🙂 תזכורת קטנה: ${p.open.map(o => `${o.it.what} (${dd(new Date(o.it.d + "T00:00"))}) ₪${o.x.a}`).join(", ")}. סה״כ ₪${p.sum}. תודה!`)}">תזכורת בוואטסאפ</a><button type="button" data-got="${esc(p.n)}">קיבלתי ✓</button></div>
+      </div>`).join("")}</div>
+      ${done.length || people.some(p => p.done.length) ? `<button type="button" class="pl-skip" id="owDone">${showDone ? "הסתרת מה שהוחזר" : "מה שכבר הוחזר"}</button>` : ""}
+      ${showDone ? `<div class="ow-hist">${oweList.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(x.a)} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
+    </div>`;
+  };
+  bg.addEventListener("click", async e => {
+    if (e.target.closest("#owDone")) { showDone = !showDone; draw(); return; }
+    const g = e.target.closest("[data-got]"); if (!g) return;
+    const n = g.dataset.got, before = JSON.stringify(oweList);
+    oweList.forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) x.paid = iso(today); }));
+    g.disabled = true; g.textContent = "שומר…";
+    try { await saveOwe(); afterData(); draw(); toast(`${n} החזיר הכול ✓`, 2200); if (!oweList.some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
+    catch (err) { oweList = JSON.parse(before); oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("השמירה לא הצליחה: " + writeError(err), 3500); }
+  });
+  draw();
+}
+/* on the home screen: a small card while someone still owes you */
+function oweHome() {
+  let c = $("oweCard");
+  if (!c) { $("todayBox").insertAdjacentHTML("afterend", `<button type="button" class="plan-card owe-card" id="oweCard" hidden><span class="e">👥</span><span><b id="oweCardT"></b><small id="oweCardS"></small></span></button>`); c = $("oweCard"); c.onclick = () => openOweList(); }
+  const tot = oweList.reduce((s, it) => s + oweLeft(it), 0), n = new Set(oweList.flatMap(it => it.ppl.filter(x => !x.paid).map(x => x.n))).size;
+  c.hidden = !(tot > 0) || currentView !== "flow";
+  if (tot > 0) { $("oweCardT").textContent = `חייבים לך ${fmt2(tot)}`; $("oweCardS").textContent = `${n} ${n === 1 ? "אדם" : "אנשים"} · לחיצה לרשימה ולתזכורת`; }
+}
+{ const r0 = render; render = function () { const o = r0.apply(this, arguments); try { oweHome(); } catch (e) {} return o; }; }
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -10369,6 +10551,7 @@ const TOUR = [
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
+  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "שילמתם גם על אחרים? בעריכת התנועה לוחצים ״מי חייב לי״, מחלקים, ובחודש נספר רק החלק שלכם. כאן רואים מי עוד חייב ושולחים תזכורת בוואטסאפ." },
   { t: '#setMenu [data-act="arrange"]', view: "admin", opt: true, h: "התאמת מסך הבית 🧩", b: "משנים את סדר הכרטיסים במסך הבית, ומסתירים את מה שלא צריך." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -10714,7 +10897,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112223105";
+const BUILD_ID = "20261112224708";
 let updToast = null;
 async function checkUpdate() {
   try {
