@@ -2251,6 +2251,33 @@ html[data-txt="xl"] { font-size: 124%; }
 .ow-lost small { color: var(--muted); font-size: .76rem; margin-top: -4px; }
 .ow-lost div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ow-lost button { border: 0; border-radius: 10px; padding: 6px 10px; background: color-mix(in srgb, var(--bad) 14%, var(--surface)); color: var(--bad); font: inherit; font-weight: 700; font-size: .8rem; cursor: pointer; flex: none; }
+
+/* ===== the bank account ===== */
+.bk h2 .side { margin-inline-start: auto; }
+.bk-upd { border: 0; background: color-mix(in srgb, var(--brand) 10%, transparent); color: var(--brand); font: inherit; font-size: .78rem; font-weight: 700; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.bk-intro { color: var(--muted); font-size: .88rem; line-height: 1.55; margin: 0 0 10px; }
+.bk-form { display: flex; flex-direction: column; gap: 10px; }
+.bk-form .money-in { display: flex; align-items: center; gap: 6px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); padding: 0 14px; height: 52px; margin: 0; }
+.bk-form .money-in span { color: var(--muted); font-size: 1.1rem; }
+.bk-form .money-in input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 1.4rem; font-weight: 800; direction: ltr; text-align: right; padding: 0; }
+.bk-neg { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--muted); } .bk-neg input { width: 18px; height: 18px; accent-color: var(--bad); }
+.bk-pay { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg); border-radius: 14px; padding: 8px 12px; font-size: .9rem; }
+.bk-pay select { border: 0; background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; border-radius: 10px; padding: 8px 10px; }
+.bk-acts { display: flex; gap: 8px; } .bk-acts .sp-save { flex: 1; } .bk-acts .ghost { border: 0; background: var(--bg); color: var(--ink); font: inherit; font-weight: 700; border-radius: 14px; padding: 0 18px; cursor: pointer; }
+.bk-now { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.bk-now span { color: var(--muted); font-size: .86rem; } .bk-now b { font-size: 1.7rem; font-weight: 800; } .bk-now b.bad { color: var(--bad); }
+.bk-chart { width: 100%; height: auto; margin: 8px 0 4px; overflow: visible; }
+.bk-rows { display: flex; flex-direction: column; }
+.bk-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto 70px; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+.bk-row .d { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .8rem; }
+.bk-row .w { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .bk-row .w small { color: var(--muted); font-size: .72rem; }
+.bk-row b { font-weight: 800; } .bk-row b.good { color: var(--good); }
+.bk-row .aft { text-align: left; color: var(--muted); font-size: .8rem; } .bk-row .aft.bad { color: var(--bad); font-weight: 700; }
+.bk-warn { margin-top: 8px; background: color-mix(in srgb, var(--bad) 12%, var(--surface)); color: var(--bad); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; font-size: .9rem; }
+.bk-warn small { color: var(--muted); font-size: .78rem; }
+.bk-ok { margin-top: 8px; background: color-mix(in srgb, var(--good) 10%, var(--surface)); color: var(--good); border-radius: 14px; padding: 9px 12px; font-size: .86rem; font-weight: 700; }
+.bk-stale { margin-top: 8px; background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-radius: 14px; padding: 9px 12px; font-size: .84rem; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.bk-stale button { border: 0; background: var(--brand); color: #fff; font: inherit; font-weight: 700; border-radius: 10px; padding: 6px 12px; flex: none; cursor: pointer; }
 </style>
 <style>
 html { color-scheme: light dark; }
@@ -2872,6 +2899,10 @@ function makeSupaAdapter(uid) {
   <section class="card" id="instCard" data-k="inst" hidden>
     <h2>תשלומים פתוחים <span class="side num" id="instLeft"></span></h2>
     <div id="instList"></div>
+  </section>
+  <section class="card bk" id="bankCard" data-k="bank">
+    <h2>העו״ש שלך <span class="side" id="bkSide"></span></h2>
+    <div id="bkBody"></div>
   </section>
   <section class="card" id="payCard" data-k="pay">
     <h2>הארנק שלך <span class="side num" id="payTotal"></span><button type="button" class="wl-ord" id="wlOrd" hidden aria-label="סידור הכרטיסים">סידור</button><button type="button" class="wl-all" id="wlAll" hidden><span aria-hidden="true">›</span> כל הכרטיסים</button></h2>
@@ -5954,6 +5985,7 @@ function applySettings(values) {
   { const aj = String((values[12] || [])[21] || "").trim(); if (aj) loadAuto(aj); }
   { const pj = String((values[13] || [])[21] || "").trim(); if (pj && typeof loadPlans === "function") loadPlans(pj); }
   { const oj = String((values[14] || [])[21] || "").trim(); if (typeof loadOwe === "function") loadOwe(oj); }
+  { const bj = String((values[15] || [])[21] || "").trim(); if (typeof loadBank === "function") loadBank(bj); }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -7934,8 +7966,8 @@ document.querySelectorAll("[data-theme-set]").forEach(b => b.onclick = async () 
 }
 
 /* 1: arrange the home and analysis screens: order, which screen, hide. Kept on this device and in the settings (V5) */
-const ARR_NAMES = { ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "הארנק שלך", fix: "חיובים קבועים", cal: "החודש בשעון", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
-const ARR_DEFAULT = { flow: ["ins", "cats", "pay", "inst"], ana: ["week", "cal", "cmp", "merch", "fc", "fix", "burn", "up"], hidden: [] };
+const ARR_NAMES = { bank: "העו״ש שלך", ins: "תובנות", cats: "לאן הלך הכסף", week: "תקציב שבועי", burn: "הוצאה מצטברת", inst: "תשלומים פתוחים", pay: "הארנק שלך", fix: "חיובים קבועים", cal: "החודש בשעון", cmp: "הוצאות לפי קטגוריות", fc: "תחזית לסוף החודש", merch: "העסקים של החודש", up: "חיובים צפויים בחודש הבא" };
+const ARR_DEFAULT = { flow: ["ins", "cats", "pay", "inst", "bank"], ana: ["week", "cal", "cmp", "merch", "fc", "fix", "burn", "up"], hidden: [] };
 var layout = null, arranging = false;
 function normLayout(l) {
   if (!l) l = ARR_DEFAULT;
@@ -10323,6 +10355,106 @@ function oweHome() {
 }
 { const r0 = render; render = function () { const o = r0.apply(this, arguments); try { oweHome(); } catch (e) {} return o; }; }
 
+/* ===== the bank account: you type what is there now; from then on the site follows it: what is paid from the account
+   goes out at once, card purchases go out together on the charge day, the salary comes in on its day.
+   Kept in the settings (V17): { bal, at (ms), pay (salary day, or 0) } ===== */
+let bankSt = null, bankEdit = false;
+function loadBank(j) { if (bankEdit) return; try { const o = j ? JSON.parse(j) : null; bankSt = o && typeof o.bal === "number" && o.at ? o : null; } catch (e) {} }
+async function saveBank(o) { await writeRange("'הגדרות'!V17", [[o ? JSON.stringify(o) : ""]]); bankSt = o; }
+const dayOf = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const chargeOn = (y, m) => new Date(y, m, Math.min(startDay, new Date(y, m + 1, 0).getDate()));
+// the day a card purchase is charged: the next charge day (a payment of an installment plan is already dated on one)
+function chargeOf(t) {
+  const d = dayOf(t.date), c = chargeOn(d.getFullYear(), d.getMonth());
+  if (t.gen && +d === +c) return c;
+  return d >= c ? chargeOn(d.getFullYear(), d.getMonth() + 1) : c;
+}
+const isCardTx = t => !isBankAcc(t) && t.account !== "מזומן" && t.source !== "bank";
+// when a row was written (ids carry the time), so what was added after the balance was typed counts, and what came before it does not
+const tsOf = t => { const r = String(t.rid || ""); let m = /^(?:m|ap)-(\d{12,14})/.exec(r); if (m) return +m[1]; m = /^ow-([0-9a-z]{6,})/.exec(r); if (m) { const v = parseInt(m[1].slice(0, 8), 36); return v > 1e12 ? v : 0; } return 0; };
+function bankFlow() {
+  if (!bankSt) return null;
+  const at = new Date(bankSt.at), atDay = dayOf(at), now = dayOf(today), horizon = new Date(now); horizon.setDate(horizon.getDate() + 45);
+  const after = t => { const d = dayOf(t.date); return d > atDay || (+d === +atDay && tsOf(t) > bankSt.at); };
+  const val = t => (t.income || t.refund ? 1 : -1) * (t.income || t.refund ? t.amount : (t.fullAmount != null ? t.fullAmount : t.amount));
+  let bal = bankSt.bal;
+  // the account itself: what happened since the balance was typed
+  const own = txAll.filter(t => isBankAcc(t) && !t.splitOf && after(t) && dayOf(t.date) <= now);
+  own.forEach(t => { bal += val(t); });
+  // the cards: everything charged after the balance was typed
+  const charges = new Map();
+  txAll.filter(t => isCardTx(t) && !t.splitOf).forEach(t => { const c = chargeOf(t); if (c <= atDay || c > horizon) return; const k = +c; charges.set(k, (charges.get(k) || 0) + (t.income || t.refund ? -1 : 1) * (t.fullAmount != null ? t.fullAmount : t.amount) * 1); });
+  // the salary on its day
+  const pays = [];
+  if (bankSt.pay) for (let i = -2; i < 3; i++) { const y = now.getFullYear(), m = now.getMonth() + i, d = new Date(y, m, Math.min(bankSt.pay, new Date(y, m + 1, 0).getDate()));
+    if (d <= atDay || d > horizon) continue; const pm = d.getDate() >= startDay ? [d.getFullYear(), d.getMonth()] : prevYM(d.getFullYear(), d.getMonth()); const s = salaryFor(pm[0], pm[1], true); if (s && s.amount > 0) pays.push({ d, a: s.amount, est: s.est }); }
+  const ev = [];
+  charges.forEach((a, k) => { if (Math.abs(a) >= 1) ev.push({ d: new Date(k), a: -a, kind: "card", open: new Date(k) > now }); });
+  pays.forEach(p => ev.push({ d: p.d, a: p.a, kind: "sal", est: p.est }));
+  ev.sort((a, b) => a.d - b.d);
+  ev.filter(e => e.d <= now).forEach(e => { bal += e.a; });
+  const future = ev.filter(e => e.d > now);
+  let run = bal; future.forEach(e => { run += e.a; e.after = run; });
+  const low = future.reduce((m, e) => e.after < m.v ? { v: e.after, d: e.d } : m, { v: bal, d: now });
+  return { now: bal, future, low, ownN: own.length, at, old: (Date.now() - bankSt.at) / 864e5 };
+}
+function bankChart(f) {
+  const W = 320, H = 120, P = 8, start = dayOf(today), end = f.future.length ? f.future[f.future.length - 1].d : new Date(+start + 30 * 864e5);
+  const span = Math.max(1, (end - start) / 864e5 + 3), X = d => P + (W - 2 * P) * ((d - start) / 864e5) / span;
+  const vals = [f.now, ...f.future.map(e => e.after), 0], mx = Math.max(...vals), mn = Math.min(...vals), Y = v => P + (H - 2 * P) * (mx - v) / Math.max(1, mx - mn);
+  let pts = `${X(start)},${Y(f.now)}`, prev = f.now;
+  f.future.forEach(e => { pts += ` ${X(e.d)},${Y(prev)} ${X(e.d)},${Y(e.after)}`; prev = e.after; });
+  pts += ` ${W - P},${Y(prev)}`;
+  const dots = f.future.map(e => `<circle cx="${X(e.d)}" cy="${Y(e.after)}" r="4.5" fill="${e.after < 0 ? "var(--bad)" : e.a > 0 ? "var(--good)" : "var(--brand)"}"/>`).join("");
+  const zero = mn < 0 ? `<line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--bad)" stroke-dasharray="4 4" stroke-width="1.2"/>` : "";
+  return `<svg class="bk-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="היתרה הצפויה">${zero}<polyline points="${pts}" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(start)}" cy="${Y(f.now)}" r="5" fill="var(--surface)" stroke="var(--brand)" stroke-width="3"/>${dots}</svg>`;
+}
+function renderBank() {
+  const card = $("bankCard"); if (!card) return;
+  const body = $("bkBody"), side = $("bkSide");
+  const sel = p => `<select id="bkPay" aria-label="יום המשכורת"><option value="0"${!p ? " selected" : ""}>לא קבוע</option>${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}"${p === i + 1 ? " selected" : ""}>ב-${i + 1} לחודש</option>`).join("")}</select>`;
+  if (!bankSt || bankEdit) {
+    side.innerHTML = "";
+    const cur = bankSt ? bankFlow() : null;
+    body.innerHTML = `<p class="bk-intro">${bankSt ? "כמה יש עכשיו בחשבון, לפי האפליקציה של הבנק?" : "מקלידים פעם אחת כמה יש עכשיו בחשבון, ומשם האתר ממשיך לבד: מה שיורד מהחשבון, חיוב האשראי ב-" + startDay + " לחודש והמשכורת. כך רואים מראש אם החשבון ייכנס למינוס."}</p>
+      <form class="bk-form" id="bkForm" autocomplete="off">
+        <label class="money-in"><span aria-hidden="true">₪</span><input id="bkAmt" inputmode="decimal" placeholder="${cur ? Math.round(cur.now) : "0"}" aria-label="היתרה עכשיו"></label>
+        <label class="bk-neg"><input type="checkbox" id="bkNeg"> במינוס</label>
+        <label class="bk-pay"><span>המשכורת נכנסת</span>${sel(bankSt ? bankSt.pay : 0)}</label>
+        <div class="bk-acts"><button type="submit" class="sp-save">שמירה</button>${bankSt ? `<button type="button" class="ghost" id="bkX">ביטול</button>` : ""}</div>
+        <p class="sp-msg" id="bkMsg"></p>
+      </form>${bankSt ? `<button type="button" class="pl-skip" id="bkOff">הפסקת המעקב אחרי העו״ש</button>` : ""}`;
+    $("bkAmt").addEventListener("input", e => { e.target.value = e.target.value.replace(/[^\d.,]/g, ""); });
+    $("bkForm").onsubmit = async e => {
+      e.preventDefault();
+      const raw = $("bkAmt").value.replace(/,/g, ""), v = parseFloat(raw);
+      if (!raw && bankSt) { // only the salary day changed
+        try { await saveBank({ ...bankSt, pay: +$("bkPay").value }); bankEdit = false; render(); toast("נשמר", 1600); } catch (err) { $("bkMsg").textContent = "השמירה לא הצליחה: " + writeError(err); } return; }
+      if (isNaN(v)) { $("bkMsg").textContent = "הקלידו כמה יש עכשיו בחשבון"; return; }
+      const btn = e.submitter || $("bkForm").querySelector(".sp-save"); btn.disabled = true; btn.textContent = "שומר…";
+      try { await saveBank({ bal: ($("bkNeg").checked ? -1 : 1) * Math.round(v * 100) / 100, at: Date.now(), pay: +$("bkPay").value }); bankEdit = false; render(); toast("העו״ש נשמר 🏦", 2000); }
+      catch (err) { btn.disabled = false; btn.textContent = "שמירה"; $("bkMsg").textContent = "השמירה לא הצליחה: " + writeError(err); }
+    };
+    if ($("bkX")) $("bkX").onclick = () => { bankEdit = false; render(); };
+    if ($("bkOff")) $("bkOff").onclick = async () => { try { await saveBank(null); bankEdit = false; render(); toast("המעקב אחרי העו״ש הופסק", 2200); } catch (err) { toast("לא הצליח: " + writeError(err), 3000); } };
+    return;
+  }
+  const f = bankFlow(), ago = f.old < 1 ? "היום" : f.old < 2 ? "אתמול" : `לפני ${Math.floor(f.old)} ימים`;
+  side.innerHTML = `<button type="button" class="bk-upd" id="bkUpd">עדכון · ${ago}</button>`;
+  const lbl = e => e.kind === "card" ? `💳 חיוב האשראי${e.open ? " <small>עד עכשיו</small>" : ""}` : `💰 משכורת${e.est ? " <small>לפי הקודמות</small>" : ""}`;
+  const neg = f.future.find(e => e.after < 0);
+  body.innerHTML = `<div class="bk-now"><span>יש בחשבון, לפי החישוב</span><b class="num ${f.now < 0 ? "bad" : ""}">${f.now < 0 ? "−" : ""}${fmt(Math.abs(f.now))}</b></div>
+    ${f.future.length ? bankChart(f) : ""}
+    <div class="bk-rows">${f.future.map(e => `<div class="bk-row"><span class="d">${dd(e.d)}</span><span class="w">${lbl(e)}</span><b class="num ${e.a < 0 ? "" : "good"}">${e.a < 0 ? "−" : "+"}${fmt(Math.abs(e.a))}</b><span class="num aft ${e.after < 0 ? "bad" : ""}">${e.after < 0 ? "−" : ""}${fmt(Math.abs(e.after))}</span></div>`).join("") || `<p class="bk-intro">אין חיובים צפויים בשבועות הקרובים.${bankSt.pay ? "" : " כדאי לבחור יום משכורת בעדכון."}</p>`}</div>
+    ${neg ? `<div class="bk-warn">⚠️ <b>ב-${dd(neg.d)} החשבון צפוי להיכנס למינוס של ${fmt(Math.abs(neg.after))}</b><small>כדאי להעביר כסף לפני, או לדחות הוצאה גדולה</small></div>`
+      : f.future.length ? `<div class="bk-ok">✓ החשבון נשאר בפלוס. הכי נמוך: ${fmt(f.low.v)}${+f.low.d !== +dayOf(today) ? " ב-" + dd(f.low.d) : ""}</div>` : ""}
+    ${f.old >= 14 ? `<div class="bk-stale">עברו ${Math.floor(f.old)} ימים מאז שעדכנת. כדאי לבדוק מול הבנק, כי מה שלא נרשם באתר לא נספר. <button type="button" id="bkUpd2">עדכון</button></div>` : ""}
+    <p class="jar-note">נספר: מה שיורד מחשבון הבנק באתר, קניות באשראי ביום החיוב (ב-${startDay} לחודש) והמשכורת. עמלות או משיכות שלא נרשמו לא נספרות, ולכן כדאי לעדכן מדי פעם.</p>`;
+  const up = () => { bankEdit = true; render(); setTimeout(() => { const i = $("bkAmt"); if (i) i.scrollIntoView({ block: "center", behavior: "smooth" }); }, 50); };
+  $("bkUpd").onclick = up; if ($("bkUpd2")) $("bkUpd2").onclick = up;
+}
+{ const r0 = render; render = function () { const o = r0.apply(this, arguments); try { renderBank(); } catch (e) { console.error(e); } return o; }; }
+
 /* 14: everything as an Excel file: the transactions, a monthly summary and the categories by month.
    The file is written right here (a small zip of XML), with no outside library. */
 const XLSX_W = (() => {
@@ -10627,6 +10759,7 @@ const TOUR = [
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כרטיס לכל אמצעי תשלום. לחיצה שולפת אותו עם הסכום המדויק, ולחיצה מחוץ לו מחזירה. ״סידור״ קובע את הסדר." },
+  { t: "#bankCard", card: true, soft: true, opt: true, e: "🏦", h: "העו״ש שלך", b: "מקלידים פעם אחת כמה יש בחשבון, והאתר ממשיך לבד: מה שיורד מהבנק, חיוב האשראי ביום החיוב והמשכורת. רואים מראש אם החשבון ייכנס למינוס." },
   { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "הרמה שלכם עולה עם כל תג, אתגר ויום בלי הוצאות. אתגר שבועי עם כל ימי השבוע, מה אפשר לקנות במה שחסכתם, ו-17 תגים לאסוף." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "המסך מתאים את עצמו אליכם: מזיזים, מסתירים ומעבירים כרטיסים בין הבית ל״חודשי״." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: השעון שמראה כמה הוצאתם בכל יום, והחיובים הקבועים שעוד צפויים." },
@@ -10986,7 +11119,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112231050";
+const BUILD_ID = "20261112233017";
 let updToast = null;
 async function checkUpdate() {
   try {
