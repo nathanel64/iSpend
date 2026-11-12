@@ -2270,7 +2270,7 @@ html[data-txt="xl"] { font-size: 124%; }
 .bk-rows { display: flex; flex-direction: column; }
 .bk-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto 70px; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: .88rem; }
 .bk-row .d { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .8rem; }
-.bk-row .w { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .bk-row .w small { color: var(--muted); font-size: .72rem; }
+.bk-row .w { min-width: 0; line-height: 1.3; } .bk-row .w small { color: var(--muted); font-size: .72rem; white-space: nowrap; }
 .bk-row b { font-weight: 800; } .bk-row b.good { color: var(--good); }
 .bk-row .aft { text-align: left; color: var(--muted); font-size: .8rem; } .bk-row .aft.bad { color: var(--bad); font-weight: 700; }
 .bk-warn { margin-top: 8px; background: color-mix(in srgb, var(--bad) 12%, var(--surface)); color: var(--bad); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; font-size: .9rem; }
@@ -10385,9 +10385,11 @@ function bankFlow() {
   const charges = new Map();
   txAll.filter(t => isCardTx(t) && !t.splitOf).forEach(t => { const c = chargeOf(t); if (c <= atDay || c > horizon) return; const k = +c; charges.set(k, (charges.get(k) || 0) + (t.income || t.refund ? -1 : 1) * (t.fullAmount != null ? t.fullAmount : t.amount) * 1); });
   // the salary on its day
+  // the salary that will come in: the average of every salary on the site
+  const salAll = Object.values(salaries).map(Number).filter(v => v > 0), salAvg = salAll.length ? salAll.reduce((a, b) => a + b, 0) / salAll.length : 0;
   const pays = [];
   if (bankSt.pay) for (let i = -2; i < 3; i++) { const y = now.getFullYear(), m = now.getMonth() + i, d = new Date(y, m, Math.min(bankSt.pay, new Date(y, m + 1, 0).getDate()));
-    if (d <= atDay || d > horizon) continue; const pm = d.getDate() >= startDay ? [d.getFullYear(), d.getMonth()] : prevYM(d.getFullYear(), d.getMonth()); const s = salaryFor(pm[0], pm[1], true); if (s && s.amount > 0) pays.push({ d, a: s.amount, est: s.est }); }
+    if (d <= atDay || d > horizon) continue; const pm = d.getDate() >= startDay ? [d.getFullYear(), d.getMonth()] : prevYM(d.getFullYear(), d.getMonth()); if (salAvg > 0) pays.push({ d, a: Math.round(salAvg), est: true }); }
   const ev = [];
   charges.forEach((a, k) => { if (Math.abs(a) >= 1) ev.push({ d: new Date(k), a: -a, kind: "card", open: new Date(k) > now }); });
   pays.forEach(p => ev.push({ d: p.d, a: p.a, kind: "sal", est: p.est }));
@@ -10399,9 +10401,9 @@ function bankFlow() {
   return { now: bal, future, low, ownN: own.length, at, old: (Date.now() - bankSt.at) / 864e5 };
 }
 function bankChart(f) {
-  const W = 320, H = 120, P = 8, start = dayOf(today), end = f.future.length ? f.future[f.future.length - 1].d : new Date(+start + 30 * 864e5);
+  const W = 320, H = 96, P = 10, start = dayOf(today), end = f.future.length ? f.future[f.future.length - 1].d : new Date(+start + 30 * 864e5);
   const span = Math.max(1, (end - start) / 864e5 + 3), X = d => P + (W - 2 * P) * ((d - start) / 864e5) / span;
-  const vals = [f.now, ...f.future.map(e => e.after), 0], mx = Math.max(...vals), mn = Math.min(...vals), Y = v => P + (H - 2 * P) * (mx - v) / Math.max(1, mx - mn);
+  const vs = [f.now, ...f.future.map(e => e.after)], vals = Math.min(...vs) < Math.max(...vs) * .25 ? [...vs, 0] : vs, mx = Math.max(...vals), mn = Math.min(...vals), Y = v => P + (H - 2 * P) * (mx - v) / Math.max(1, mx - mn);
   let pts = `${X(start)},${Y(f.now)}`, prev = f.now;
   f.future.forEach(e => { pts += ` ${X(e.d)},${Y(prev)} ${X(e.d)},${Y(e.after)}`; prev = e.after; });
   pts += ` ${W - P},${Y(prev)}`;
@@ -10441,7 +10443,7 @@ function renderBank() {
   }
   const f = bankFlow(), ago = f.old < 1 ? "היום" : f.old < 2 ? "אתמול" : `לפני ${Math.floor(f.old)} ימים`;
   side.innerHTML = `<button type="button" class="bk-upd" id="bkUpd">עדכון · ${ago}</button>`;
-  const lbl = e => e.kind === "card" ? `💳 חיוב האשראי${e.open ? " <small>עד עכשיו</small>" : ""}` : `💰 משכורת${e.est ? " <small>לפי הקודמות</small>" : ""}`;
+  const lbl = e => e.kind === "card" ? `💳 חיוב האשראי${e.open ? " <small>עד עכשיו</small>" : ""}` : `💰 משכורת${e.est ? " <small>(ממוצע)</small>" : ""}`;
   const neg = f.future.find(e => e.after < 0);
   body.innerHTML = `<div class="bk-now"><span>יש בחשבון, לפי החישוב</span><b class="num ${f.now < 0 ? "bad" : ""}">${f.now < 0 ? "−" : ""}${fmt(Math.abs(f.now))}</b></div>
     ${f.future.length ? bankChart(f) : ""}
@@ -11119,7 +11121,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112233017";
+const BUILD_ID = "20261112233528";
 let updToast = null;
 async function checkUpdate() {
   try {
