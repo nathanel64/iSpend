@@ -4188,7 +4188,8 @@ function renderPayMethods(f) {
     const name = isBankAcc(t) ? bankName() : (t.account || "לא צוין");
     if (!by.has(name)) by.set(name, { out: 0, in: 0 });
     const r = by.get(name);
-    if (t.income || t.refund) r.in += t.amount; else r.out += t.amount;
+    // a purchase others owe part of: the card was still charged all of it
+    if (t.income || t.refund) r.in += t.amount; else r.out += t.fullAmount != null ? t.fullAmount : t.amount;
   });
   const rows = [...by.entries()].map(([name, r]) => ({ name, bank: name === bankName(), out: r.out, in: r.in, spent: name === bankName() ? r.out : r.out - r.in }))
     .filter(r => r.out || r.in).sort((a, b) => (a.bank - b.bank) || b.spent - a.spent);
@@ -4201,7 +4202,7 @@ function renderPayMethods(f) {
   const tops = new Map();
   f.inP.forEach(t => { const a = isBankAcc(t) ? bankName() : (t.account || "לא צוין");
     if (!tops.has(a)) tops.set(a, { n: 0, m: new Map(), inM: new Map() }); const o = tops.get(a); o.n++;
-    const k = t.merchant || t.category || "ללא שם", mm = (t.income || t.refund) ? o.inM : o.m; mm.set(k, (mm.get(k) || 0) + t.amount); });
+    const k = t.merchant || t.category || "ללא שם", mm = (t.income || t.refund) ? o.inM : o.m; mm.set(k, (mm.get(k) || 0) + (t.fullAmount != null ? t.fullAmount : t.amount)); });
   walletRows = rows;
   if (walletSel && !rows.some(r => r.name === walletSel)) { walletSel = null; walletFlip = false; }
   $("wlOrd").hidden = rows.length < 2 || wlArranging;
@@ -5521,6 +5522,7 @@ let splitMerge = false;
 function txRowHtml(t, withDate) {
   const pos = t.income || t.refund;
   if (t.parts && splitMerge) t = Object.assign(Object.create(t), { amount: t.splitTotal });
+  if (t.fullAmount != null && filterAcc) t = Object.assign(Object.create(t), { amount: t.fullAmount });
   const k = txKey(t);
   const open = k && openTx === k;
   const row = `<div class="tx ${t.del ? "can-del" : ""}" ${k ? `role="button" tabindex="0" aria-expanded="${open}"` : ""}>
@@ -9839,17 +9841,20 @@ new MutationObserver(() => { if ($("privPill") && !$("privPill").textContent) pr
 /* ===== split a purchase into categories =====
    The first part stays the original row (its id, its Apple Pay link); the others are rows "sp-<id>-1", "-2"... */
 const SP_COL = ["#5b4cf0", "#1f9d6a", "#e85d9a", "#f2a33a", "#2f8fd6", "#9a52d6"];
+const addFresh = () => !editTx && addKind === "exp" && !$("sheetBg").hidden;
 function splitShown() {
+  if (addFresh()) return !(+$("addInst").value > 1);
   const t = editTx; return !!t && t.del && t.del.key === "apple" && !t.income && !t.refund && !t.gen && addKind === "exp" && !(+((t.del.raw || [])[8]) > 1);
 }
 function splitSync() {
   const on = splitShown(); $("splitBtn").hidden = !on; if (!on) return;
+  if (!editTx) { $("splitBtnT").textContent = "פיצול לכמה קטגוריות"; return; }
   const p = editTx.splitOf || editTx; $("splitBtnT").textContent = p.parts ? `מפוצל ל-${p.parts.length} קטגוריות · עריכת הפיצול` : "פיצול לכמה קטגוריות";
 }
 ["input", "change"].forEach(ev => $("addForm").addEventListener(ev, () => requestAnimationFrame(splitSync)));
 { const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); splitSync(); return r; };
   const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("splitBtn").hidden = true; return r; }; }
-$("splitBtn").addEventListener("click", () => { const p = editTx && (editTx.splitOf || editTx); if (!p) return; closeAdd(); openSplit(p); });
+$("splitBtn").addEventListener("click", () => { if (!editTx) { saveThen("split"); return; } const p = editTx.splitOf || editTx; closeAdd(); openSplit(p); });
 
 function openSplit(p) {
   const total = p.splitTotal || p.amount;
@@ -9905,6 +9910,11 @@ async function saveSplit(p, out) {
   let rows = await read();
   let pid = p.rid;
   let pi = pid ? rows.findIndex(r => String(r[7] || "").trim() === pid) : rows.findIndex(r => JSON.stringify(trimRow(r)) === JSON.stringify(trimRow(p.del.raw)));
+  // just added: wait a little for it to reach the sheet
+  for (let k = 0; pi < 0 && pid && k < 12 && (sendingIds.has(pid) || readPending().some(r => r[7] === pid)); k++) {
+    await new Promise(r => setTimeout(r, 700)); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+    rows = await read(); pi = rows.findIndex(r => String(r[7] || "").trim() === pid);
+  }
   if (pi < 0) throw { code: "changed" };
   if (!pid) pid = "m-" + Date.now();
   const pr = rows[pi].slice(); while (pr.length < 9) pr.push("");
@@ -10121,15 +10131,29 @@ async function saveOwe() {
   await writeRange("'הגדרות'!V16", [[j]]);
 }
 function oweShown() {
+  if (addFresh()) return true;
   const t = editTx; return !!t && !!t.del && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts && addKind === "exp";
 }
 function oweSync() {
   const on = oweShown(); $("oweBtn").hidden = !on; if (!on) return;
+  if (!editTx) { $("oweBtnT").textContent = "שילמתי גם על אחרים · מי חייב לי"; return; }
   const it = editTx.owe; $("oweBtnT").textContent = it ? (oweLeft(it) > 0 ? `חייבים לך ${fmt2(oweLeft(it))} · עריכה` : "הכול הוחזר ✓ · עריכה") : "שילמתי גם על אחרים · מי חייב לי";
 }
 { const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); try { oweSync(); } catch (e) {} return r; };
-  const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("oweBtn").hidden = true; return r; }; }
-$("oweBtn").addEventListener("click", () => { const t = editTx; if (!t) return; closeAdd(); openOweFor(t); });
+  const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("oweBtn").hidden = true; requestAnimationFrame(() => { try { oweSync(); splitSync(); } catch (e) {} }); return r; }; }
+["input", "change"].forEach(ev => $("addForm").addEventListener(ev, () => requestAnimationFrame(oweSync)));
+{ const sk = setKind; setKind = function () { const r = sk.apply(this, arguments); requestAnimationFrame(() => { try { oweSync(); splitSync(); } catch (e) {} }); return r; }; }
+/* in a new entry: save it as usual, then open the window for it */
+function saveThen(act) {
+  const t0 = Date.now(); $("addForm").requestSubmit();
+  setTimeout(() => {
+    const t = tx.filter(x => /^m-\d+$/.test(x.rid || "") && +x.rid.slice(2) >= t0 - 50).sort((a, b) => +b.rid.slice(2) - +a.rid.slice(2))[0];
+    if (!t) return; // the form did not save (a missing amount, say): it stays open with its message
+    if (!$("sheetBg").hidden) closeAdd();
+    act === "split" ? openSplit(t) : openOweFor(t);
+  }, 120);
+}
+$("oweBtn").addEventListener("click", () => { if (!editTx) { saveThen("owe"); return; } const t = editTx; closeAdd(); openOweFor(t); });
 const oweNames = () => [...new Set(oweList.flatMap(it => it.ppl.map(x => x.n)).filter(Boolean))].slice(0, 30);
 function oweSheet(id, label) {
   const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = id; bg.dir = "rtl";
@@ -10567,7 +10591,7 @@ const TOUR = [
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות, תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
-  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "שילמתם גם על אחרים? בעריכת התנועה לוחצים ״מי חייב לי״, מחלקים, ובחודש נספר רק החלק שלכם. כאן רואים מי עוד חייב ושולחים תזכורת בוואטסאפ." },
+  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "שילמתם גם על אחרים? כבר בהוספה (או בעריכה) לוחצים ״מי חייב לי״, מחלקים, ובחודש נספר רק החלק שלכם. כאן רואים מי עוד חייב ושולחים תזכורת בוואטסאפ." },
   { t: '#setMenu [data-act="arrange"]', view: "admin", opt: true, h: "התאמת מסך הבית 🧩", b: "משנים את סדר הכרטיסים במסך הבית, ומסתירים את מה שלא צריך." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -10913,7 +10937,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112225241";
+const BUILD_ID = "20261112225541";
 let updToast = null;
 async function checkUpdate() {
   try {
