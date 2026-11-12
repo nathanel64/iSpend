@@ -2264,15 +2264,16 @@ html[data-txt="xl"] { font-size: 124%; }
 .bk-pay { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg); border-radius: 14px; padding: 8px 12px; font-size: .9rem; }
 .bk-pay select { border: 0; background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; border-radius: 10px; padding: 8px 10px; }
 .bk-acts { display: flex; gap: 8px; } .bk-acts .sp-save { flex: 1; } .bk-acts .ghost { border: 0; background: var(--bg); color: var(--ink); font: inherit; font-weight: 700; border-radius: 14px; padding: 0 18px; cursor: pointer; }
-.bk-now { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.bk-now { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .bk-now span { color: var(--muted); font-size: .86rem; } .bk-now b { font-size: 1.7rem; font-weight: 800; } .bk-now b.bad { color: var(--bad); }
 .bk-chart { width: 100%; height: auto; margin: 8px 0 4px; overflow: visible; }
 .bk-rows { display: flex; flex-direction: column; }
-.bk-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto 70px; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+.bk-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: .88rem; }
 .bk-row .d { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .8rem; }
 .bk-row .w { min-width: 0; line-height: 1.3; } .bk-row .w small { color: var(--muted); font-size: .72rem; white-space: nowrap; }
 .bk-row b { font-weight: 800; } .bk-row b.good { color: var(--good); }
-.bk-row .aft { text-align: left; color: var(--muted); font-size: .8rem; } .bk-row .aft.bad { color: var(--bad); font-weight: 700; }
+.bk-row .v { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3; }
+.bk-row .aft { color: var(--muted); font-size: .74rem; white-space: nowrap; } .bk-row .aft.bad { color: var(--bad); font-weight: 700; }
 .bk-warn { margin-top: 8px; background: color-mix(in srgb, var(--bad) 12%, var(--surface)); color: var(--bad); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; font-size: .9rem; }
 .bk-warn small { color: var(--muted); font-size: .78rem; }
 .bk-ok { margin-top: 8px; background: color-mix(in srgb, var(--good) 10%, var(--surface)); color: var(--good); border-radius: 14px; padding: 9px 12px; font-size: .86rem; font-weight: 700; }
@@ -10389,7 +10390,7 @@ function bankFlow() {
   const salAll = Object.values(salaries).map(Number).filter(v => v > 0), salAvg = salAll.length ? salAll.reduce((a, b) => a + b, 0) / salAll.length : 0;
   const pays = [];
   if (bankSt.pay) for (let i = -2; i < 3; i++) { const y = now.getFullYear(), m = now.getMonth() + i, d = new Date(y, m, Math.min(bankSt.pay, new Date(y, m + 1, 0).getDate()));
-    if (d <= atDay || d > horizon) continue; const pm = d.getDate() >= startDay ? [d.getFullYear(), d.getMonth()] : prevYM(d.getFullYear(), d.getMonth()); if (salAvg > 0) pays.push({ d, a: Math.round(salAvg), est: true }); }
+    if (d <= atDay || d > horizon) continue; const pm = d.getDate() >= startDay ? [d.getFullYear(), d.getMonth()] : prevYM(d.getFullYear(), d.getMonth()); if (salAvg > 0) pays.push({ d, a: Math.round(salAvg * 100) / 100, est: true }); }
   const ev = [];
   charges.forEach((a, k) => { if (Math.abs(a) >= 1) ev.push({ d: new Date(k), a: -a, kind: "card", open: new Date(k) > now }); });
   pays.forEach(p => ev.push({ d: p.d, a: p.a, kind: "sal", est: p.est }));
@@ -10445,11 +10446,11 @@ function renderBank() {
   side.innerHTML = `<button type="button" class="bk-upd" id="bkUpd">עדכון · ${ago}</button>`;
   const lbl = e => e.kind === "card" ? `💳 חיוב האשראי${e.open ? " <small>עד עכשיו</small>" : ""}` : `💰 משכורת${e.est ? " <small>(ממוצע)</small>" : ""}`;
   const neg = f.future.find(e => e.after < 0);
-  body.innerHTML = `<div class="bk-now"><span>יש בחשבון, לפי החישוב</span><b class="num ${f.now < 0 ? "bad" : ""}">${f.now < 0 ? "−" : ""}${fmt(Math.abs(f.now))}</b></div>
+  body.innerHTML = `<div class="bk-now"><span>יש בחשבון, לפי החישוב</span><b class="num ${f.now < 0 ? "bad" : ""}">${f.now < 0 ? "−" : ""}${fmt2(Math.abs(f.now))}</b></div>
     ${f.future.length ? bankChart(f) : ""}
-    <div class="bk-rows">${f.future.map(e => `<div class="bk-row"><span class="d">${dd(e.d)}</span><span class="w">${lbl(e)}</span><b class="num ${e.a < 0 ? "" : "good"}">${e.a < 0 ? "−" : "+"}${fmt(Math.abs(e.a))}</b><span class="num aft ${e.after < 0 ? "bad" : ""}">${e.after < 0 ? "−" : ""}${fmt(Math.abs(e.after))}</span></div>`).join("") || `<p class="bk-intro">אין חיובים צפויים בשבועות הקרובים.${bankSt.pay ? "" : " כדאי לבחור יום משכורת בעדכון."}</p>`}</div>
-    ${neg ? `<div class="bk-warn">⚠️ <b>ב-${dd(neg.d)} החשבון צפוי להיכנס למינוס של ${fmt(Math.abs(neg.after))}</b><small>כדאי להעביר כסף לפני, או לדחות הוצאה גדולה</small></div>`
-      : f.future.length ? `<div class="bk-ok">✓ החשבון נשאר בפלוס. הכי נמוך: ${fmt(f.low.v)}${+f.low.d !== +dayOf(today) ? " ב-" + dd(f.low.d) : ""}</div>` : ""}
+    <div class="bk-rows">${f.future.map(e => `<div class="bk-row"><span class="d">${dd(e.d)}</span><span class="w">${lbl(e)}</span><span class="v"><b class="num ${e.a < 0 ? "" : "good"}">${e.a < 0 ? "−" : "+"}${fmt2(Math.abs(e.a))}</b><small class="num aft ${e.after < 0 ? "bad" : ""}">נשאר ${e.after < 0 ? "−" : ""}${fmt2(Math.abs(e.after))}</small></span></div>`).join("") || `<p class="bk-intro">אין חיובים צפויים בשבועות הקרובים.${bankSt.pay ? "" : " כדאי לבחור יום משכורת בעדכון."}</p>`}</div>
+    ${neg ? `<div class="bk-warn">⚠️ <b>ב-${dd(neg.d)} החשבון צפוי להיכנס למינוס של ${fmt2(Math.abs(neg.after))}</b><small>כדאי להעביר כסף לפני, או לדחות הוצאה גדולה</small></div>`
+      : f.future.length ? `<div class="bk-ok">✓ החשבון נשאר בפלוס. הכי נמוך: ${fmt2(f.low.v)}${+f.low.d !== +dayOf(today) ? " ב-" + dd(f.low.d) : ""}</div>` : ""}
     ${f.old >= 14 ? `<div class="bk-stale">עברו ${Math.floor(f.old)} ימים מאז שעדכנת. כדאי לבדוק מול הבנק, כי מה שלא נרשם באתר לא נספר. <button type="button" id="bkUpd2">עדכון</button></div>` : ""}
     <p class="jar-note">נספר: מה שיורד מחשבון הבנק באתר, קניות באשראי ביום החיוב (ב-${startDay} לחודש) והמשכורת. עמלות או משיכות שלא נרשמו לא נספרות, ולכן כדאי לעדכן מדי פעם.</p>`;
   const up = () => { bankEdit = true; render(); setTimeout(() => { const i = $("bkAmt"); if (i) i.scrollIntoView({ block: "center", behavior: "smooth" }); }, 50); };
@@ -11121,7 +11122,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261112233528";
+const BUILD_ID = "20261112233730";
 let updToast = null;
 async function checkUpdate() {
   try {
