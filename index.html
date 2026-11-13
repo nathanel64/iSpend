@@ -362,6 +362,10 @@ body.arrange .auto-empty { display: block !important; }
 .cat-row .cx em { display: block; width: 84px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .cat-row .cx em i { display: block; height: 100%; border-radius: 3px; }
 .cat-hint { color: var(--muted); font-size: .84rem; margin: 0 4px 8px; }
+.dup-w { display: flex; gap: 10px; align-items: flex-start; background: color-mix(in srgb, var(--warn) 14%, var(--surface)); border-radius: 14px; padding: 10px 12px; margin: 0 0 12px; font-size: .84rem; color: var(--ink); }
+.dup-w[hidden] { display: none; } .dup-w b { display: block; } .dup-w #dupTxt { color: var(--muted); }
+.dup-bt { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.dup-bt button { border: 0; border-radius: 999px; padding: 7px 12px; font: inherit; font-weight: 700; font-size: .8rem; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
 .rc-hist { background: var(--bg); border-radius: 14px; padding: 10px 12px; margin: 10px 0 2px; font-size: .82rem; text-align: right; }
 .rc-hist > b { font-size: .86rem; display: block; }
 .rc-hist .r { display: flex; justify-content: space-between; color: var(--muted); margin-top: 4px; } .rc-hist .r b { color: var(--ink); }
@@ -3252,6 +3256,7 @@ function makeSupaAdapter(uid) {
     <div class="quick-k st1only" id="quickK" hidden>מהאחרונים, לחיצה אחת ממלאת הכול</div>
     <div class="quick st1only" id="quickChips" role="group" aria-label="הוספה מהירה מהאחרונים" hidden></div>
     <div class="field dt"><label for="addDesc">תיאור</label><input id="addDesc" type="text" placeholder="למשל: קניות בסופר" autocomplete="off" aria-autocomplete="list" aria-controls="descSugg"><div class="sugg" id="descSugg" role="listbox" aria-label="השלמות מהתנועות שלך" hidden></div></div>
+    <div class="dup-w dt" id="dupWarn" role="status" hidden><span aria-hidden="true">⚠️</span><span><b>אולי זו כבר נכנסה?</b><span id="dupTxt"></span><span class="dup-bt"><button type="button" id="dupSame">זו אותה קנייה, לא להוסיף</button><button type="button" id="dupNew">זו קנייה נוספת</button></span></span></div>
     <div class="pk dt" id="pk">
       <div class="pk-l">קטגוריה</div><div class="pk-cats" id="pkCats" role="group" aria-label="קטגוריה"></div>
       <div class="pk-l" id="pkCardL">שולם עם</div><div class="pk-cards" id="pkCards" role="group" aria-label="אמצעי תשלום"></div>
@@ -9690,6 +9695,31 @@ $("askAns").addEventListener("click", e => {
   const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); show(false); return r; };
 })();
 
+/* adding by hand something that already came in by itself (or was already added): same amount, same day (± a day).
+   Only a note in the window; saving still works as usual. */
+(function dupCheck() {
+  const box = $("dupWarn"); let skip = new Set(), timer = null;
+  const amt = () => Math.round((parseFloat(String($("addAmount").value).replace(/[,\s₪]/g, "")) || 0) * 100) / 100;
+  const run = () => {
+    box.hidden = true; if (editTx || addKind !== "exp" || $("sheetBg").hidden) return;
+    const a = amt(), dv = $("addDate").value; if (!(a > 0) || !dv) return;
+    const key = a + "|" + dv; if (skip.has(key)) return;
+    const d0 = parseDate(dv); if (!d0) return;
+    const hit = txAll.find(t => !t.income && !t.refund && !t.gen && Math.abs((t.fullAmount || t.amount) - a) < 0.005 && Math.abs(Math.round((t.date - d0) / 864e5)) <= 1);
+    if (!hit) return;
+    const diff = Math.round((hit.date - d0) / 864e5), when = diff === 0 ? (dv === iso(today) ? "היום" : "באותו יום") : `ב-${hit.date.getDate()}.${hit.date.getMonth() + 1}`;
+    $("dupTxt").innerHTML = `${when} כבר נרשמו ${fmtA(a)} ב<bdi>${esc(hit.merchant)}</bdi>${hit.source === "applepay" ? " · נכנס לבד מ-<bdi>Apple Pay</bdi>" : ""}`;
+    box.dataset.k = key; box.hidden = false;
+  };
+  const soon = () => { clearTimeout(timer); timer = setTimeout(run, 120); };
+  $("addAmount").addEventListener("input", soon); $("addDate").addEventListener("change", soon);
+  $("addForm").addEventListener("click", e => { if (!e.target.closest("#dupWarn")) soon(); });
+  $("dupNew").onclick = () => { skip.add(box.dataset.k); box.hidden = true; };
+  $("dupSame").onclick = () => { box.hidden = true; closeAdd(); };
+  const oa = openAdd; openAdd = function () { skip = new Set(); box.hidden = true; const r = oa.apply(this, arguments); soon(); return r; };
+  const oe = openEdit; openEdit = function () { box.hidden = true; return oe.apply(this, arguments); };
+})();
+
 /* "+": add up a few amounts into one (several receipts for one thing). Tap a part to drop it. */
 (function amtAdd() {
   const inp = $("addAmount"), btn = $("amtPlus"), box = $("amtSum"); let parts = [];
@@ -10983,7 +11013,7 @@ const TOUR = [
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "הוצאות שחוזרות על עצמן? לחיצה אחת ממלאת את כל הפרטים מהפעם הקודמת." },
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
-  { t: "#pkDays", demo: tourAddDemo2, h: "מתי, ועוד", b: "היום, אתמול או שלשום בלחיצה, ו״📅 תאריך אחר״ פותח לוח שנה. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם." },
+  { t: "#pkDays", demo: tourAddDemo2, h: "מתי, ועוד", b: "היום, אתמול או שלשום בלחיצה, ו״📅 תאריך אחר״ פותח לוח שנה. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם. אם אותו סכום כבר נרשם באותו יום, תופיע הערה ״אולי זו כבר נכנסה?״." },
   { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול קנייה לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר כבר בהוספה, או אחר כך בעריכה." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והסכום, העסק והכרטיס מתמלאים לבד." },
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
@@ -11349,7 +11379,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113174640";
+const BUILD_ID = "20261113203558";
 let updToast = null;
 async function checkUpdate() {
   try {
