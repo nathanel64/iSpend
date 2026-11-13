@@ -362,6 +362,17 @@ body.arrange .auto-empty { display: block !important; }
 .cat-row .cx em { display: block; width: 84px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .cat-row .cx em i { display: block; height: 100%; border-radius: 3px; }
 .cat-hint { color: var(--muted); font-size: .84rem; margin: 0 4px 8px; }
+.rc-hist { background: var(--bg); border-radius: 14px; padding: 10px 12px; margin: 10px 0 2px; font-size: .82rem; text-align: right; }
+.rc-hist > b { font-size: .86rem; display: block; }
+.rc-hist .r { display: flex; justify-content: space-between; color: var(--muted); margin-top: 4px; } .rc-hist .r b { color: var(--ink); }
+.rc-hist .rc-all { display: block; margin-top: 8px; border: 0; background: none; padding: 0; color: var(--brand); font: inherit; font-weight: 700; cursor: pointer; }
+.amount-in { position: relative; }
+.amt-plus { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; border-radius: 12px; background: var(--brand-soft); color: var(--brand); font: 800 1.4rem var(--font-body); display: grid; place-items: center; cursor: pointer; }
+.amt-plus:disabled { opacity: .35; cursor: default; }
+.amt-sum { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; font-size: .86rem; color: var(--muted); margin: 2px 0 10px; direction: ltr; }
+.amt-sum[hidden] { display: none; }
+.amt-sum button { border: 0; font: inherit; background: var(--surface); border-radius: 999px; padding: 4px 10px; color: var(--ink); font-weight: 700; box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
+.amt-sum .cur { color: var(--brand); } .amt-sum b { color: var(--ink); }
 .rc-qa { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin: 10px 0 8px; }
 .rc-qa button { border: 0; background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; font-size: .82rem; border-radius: 16px; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
 .rc-qa button span { font-size: 1.2rem; line-height: 1; }
@@ -3231,7 +3242,8 @@ function makeSupaAdapter(uid) {
       <button type="button" id="kInc" aria-pressed="false">קיבלתי כסף</button>
     </div>
     <button type="button" class="amt-mini" id="amtMini" hidden><b class="num" id="amtMiniV"></b><span>שינוי הסכום</span></button>
-    <div class="amount-in"><span>₪</span><input id="addAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" aria-label="סכום"></div>
+    <div class="amount-in"><span>₪</span><input id="addAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" aria-label="סכום"><button type="button" class="amt-plus" id="amtPlus" aria-label="עוד סכום לחיבור" disabled>+</button></div>
+    <div class="amt-sum" id="amtSum" aria-live="polite" hidden></div>
     <div class="numpad" id="numpad" hidden>
       <div class="np-quick"><button type="button" data-add="10">+10</button><button type="button" data-add="50">+50</button><button type="button" data-add="100">+100</button><button type="button" data-add="500">+500</button></div>
       <div class="np-keys"><button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k=".">.</button><button type="button" data-k="0">0</button><button type="button" data-k="del" aria-label="מחיקת ספרה">⌫</button></div>
@@ -7641,7 +7653,7 @@ function openReceipt(k, sw) {
   const qaOwe = !!t.del && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts && typeof openOweFor === "function";
   openObj(`<div class="paper both" role="dialog" aria-modal="true" aria-label="קבלה: ${esc(t.merchant)}">
     <div class="pp-head"><span class="pp-logo">iSpend</span><small>יום ${WEEKDAYS[t.date.getDay()]}, ${t.date.getDate()} ב${MONTHS[t.date.getMonth()]} ${t.date.getFullYear()}</small></div>
-    <div class="rc-merch">${catIcon(t.category)}<bdi>${esc(t.merchant)}</bdi></div>
+    <div class="rc-merch">${catIcon(t.category)}<bdi>${esc(t.merchant)}</bdi></div>${rcHist(t)}
     <hr class="pp-rule">
     <div class="pp-row"><span>קטגוריה</span><i></i><b>${esc(t.category)}</b></div>
     <div class="pp-row"><span>${pos ? "נכנס ל" : "שולם ב"}</span><i></i><b><bdi>${esc(accOf(t))}</bdi></b></div>
@@ -7660,6 +7672,7 @@ function openReceipt(k, sw) {
     return q.length ? `<div class="rc-qa">${q.join("")}</div>` : ""; })()}
   <div class="obj-btns"><button type="button" class="ob-main" data-oedit>עריכה</button><button type="button" class="ob-del" data-odel>מחיקה</button><button type="button" data-oclose>סגירה</button></div>`);
   const w = $("objWrap");
+  const hl = w.querySelector("[data-rchall]"); if (hl) hl.onclick = () => { closeObj(); showMerchant(t.merchant); };
   w.querySelectorAll("[data-qa]").forEach(b => b.onclick = () => {
     const a = b.dataset.qa; closeObj();
     if (a === "split") openSplit(t.splitOf || t);
@@ -7672,6 +7685,27 @@ function openReceipt(k, sw) {
     if (t.gen && !b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "למחוק הכול?"; return; }
     closeObj(); const row = document.querySelector(`.tx-sw[data-k="${CSS.escape(k)}"]`) || sw; if (row) softDelete(k, row);
   };
+}
+
+// the receipt: this place in the same month (only when it isn't the first visit or there are others)
+function rcHist(t) {
+  if (!t || t.income || t.refund || !t.merchant) return "";
+  const nm = String(t.merchant).trim(), same = x => !x.income && !x.refund && String(x.merchant || "").trim() === nm;
+  const all = txAll.filter(same); if (all.length < 2) return "";
+  let y = t.date.getFullYear(), m = t.date.getMonth(); if (t.date < period(y, m).start) { m--; if (m < 0) { m = 11; y--; } }
+  const { start, end } = period(y, m), inM = all.filter(x => x.date >= start && x.date <= end).sort((a, b) => a.date - b.date);
+  const ord = Math.max(1, inM.indexOf(t) + 1 || inM.filter(x => x.date <= t.date).length), sumM = inM.reduce((a, x) => a + x.amount, 0);
+  const avg = all.reduce((a, x) => a + x.amount, 0) / all.length;
+  const head = inM.length > 1 ? `פעם ${ord} החודש ב${esc(nm)}` : `פעם ראשונה החודש ב${esc(nm)}`;
+  return `<div class="rc-hist"><b>${head}</b>
+    ${inM.length > 1 ? `<div class="r"><span>החודש שם, ${inM.length} פעמים</span><b class="num">${fmtA(Math.round(sumM * 100) / 100)}</b></div>` : ""}
+    <div class="r"><span>בממוצע לביקור (${all.length})</span><b class="num">${fmt(avg)}</b></div>
+    <button type="button" class="rc-all" data-rchall>כל התנועות ב${esc(nm)} ›</button></div>`;
+}
+// the transactions list, searched for one place
+function showMerchant(nm) {
+  const inp = $("txSearch"); inp.value = nm; inp.dispatchEvent(new Event("input", { bubbles: true }));
+  showView("tx"); scrollTo(0, 0);
 }
 
 // the receipt's "again today": the same purchase once more, dated today (like adding it by hand)
@@ -9652,6 +9686,30 @@ $("askAns").addEventListener("click", e => {
   const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); show(false); return r; };
 })();
 
+/* "+": add up a few amounts into one (several receipts for one thing). Tap a part to drop it. */
+(function amtAdd() {
+  const inp = $("addAmount"), btn = $("amtPlus"), box = $("amtSum"); let parts = [];
+  const num = () => Math.round((parseFloat(String(inp.value).replace(/[,\s₪]/g, "")) || 0) * 100) / 100;
+  const r2 = v => Math.round(v * 100) / 100, show = v => fmtA(r2(v)).replace("₪", "");
+  const draw = () => {
+    const cur = num(); btn.disabled = !(cur > 0) && !parts.length; box.hidden = !parts.length;
+    if (!parts.length) { box.innerHTML = ""; return; }
+    const total = r2(parts.reduce((a, b) => a + b, 0) + cur);
+    box.innerHTML = parts.map((v, i) => `<button type="button" data-pi="${i}" aria-label="הסרת ${show(v)}">${show(v)}</button>`).join("<span>+</span>")
+      + `<span>+</span><span class="cur">${cur > 0 ? show(cur) : "…"}</span><span>=</span><b>${fmtA(total)}</b>`;
+  };
+  // fold everything into the one amount (leaving the amount, or saving)
+  const fold = () => { if (!parts.length) return; const t = r2(parts.reduce((a, b) => a + b, 0) + num()); parts = []; inp.value = String(t); inp.dispatchEvent(new Event("input", { bubbles: true })); draw(); };
+  btn.addEventListener("click", () => { const v = num(); if (!(v > 0)) return; parts.push(v); inp.value = ""; inp.dispatchEvent(new Event("input", { bubbles: true })); draw(); if (!inp.readOnly) inp.focus(); });
+  box.addEventListener("click", e => { const b = e.target.closest("[data-pi]"); if (!b) return; parts.splice(+b.dataset.pi, 1); draw(); });
+  inp.addEventListener("input", draw);
+  document.addEventListener("submit", e => { if (e.target.id === "addForm") fold(); }, true);
+  $("addForm").addEventListener("focusin", e => { if (e.target !== inp && !e.target.closest(".amount-in, #numpad, #amtSum")) fold(); });
+  const done = $("npDone"); if (done) done.addEventListener("click", fold, true);
+  const oa = openAdd; openAdd = function () { parts = []; const r = oa.apply(this, arguments); draw(); return r; };
+  const oe = openEdit; openEdit = function () { parts = []; const r = oe.apply(this, arguments); draw(); return r; };
+})();
+
 /* the salary window on a phone: the phone keyboard used to cover half of it, so it gets our own keys.
    First the salary (the keys and "המשך"), then the savings goal with the slider; tapping an amount brings its keys back. */
 (function salPad() {
@@ -10917,7 +10975,7 @@ const TOUR = [
   { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה, ובתוכה התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
   { t: "#slipBtn", opt: true, h: "התלוש של החודש", b: "כל מה שנכנס ויצא לפי קטגוריות, כמו תלוש. אפשר לשתף אותו כתמונה." },
   { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או הכנסה. לחיצה רגילה פותחת חלון, ולחיצה ארוכה מקליטה בקול." },
-  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. ״המשך״ עובר לפרטים." },
+  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. כמה קבלות? ה-+ שליד הסכום מחבר אותן. ״המשך״ עובר לפרטים." },
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "הוצאות שחוזרות על עצמן? לחיצה אחת ממלאת את כל הפרטים מהפעם הקודמת." },
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
@@ -10932,7 +10990,7 @@ const TOUR = [
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "המסך מתאים את עצמו אליכם: מזיזים, מסתירים ומעבירים כרטיסים בין הבית ל״חודשי״." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: השעון שמראה כמה הוצאתם בכל יום, והחיובים הקבועים שעוד צפויים." },
   { t: "#navTx", h: "תנועות", b: "כל התנועות לפי ימים. אפשר לחפש, לסנן, ולבחור כמה ביחד כדי לערוך או למחוק." },
-  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "לחיצה פותחת קבלה, ובה גם ↻ שוב היום, ✂️ פיצול ו-👥 מי חייב לי. החלקה הצידה: עריכה או מחיקה. לחיצה ארוכה וגרירה מעבירה ליום אחר." },
+  { t: "#days .day-grp", view: "tx", demo: tourTxDemo, enter: tourLift, h: "עריכה, מחיקה וגרירה", b: "לחיצה פותחת קבלה: כמה פעמים הייתם באותו עסק החודש, וגם ↻ שוב היום, ✂️ פיצול ו-👥 מי חייב לי. החלקה הצידה: עריכה או מחיקה. לחיצה ארוכה וגרירה מעבירה ליום אחר." },
   { t: "#tabYear", h: "שנתי", b: "כל השנה בגרף אחד, כדי לראות מגמות. לחיצה על חודש פותחת את הסיכום שלו, עם ▲▼ כמה השתנה מהחודש הקודם." },
   { t: "#tabAdmin", h: "הגדרות", b: "כאן מתאימים את האתר אליכם, בקבוצות קצרות. בואו נציץ." },
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
@@ -11287,7 +11345,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113130211";
+const BUILD_ID = "20261113173412";
 let updToast = null;
 async function checkUpdate() {
   try {
