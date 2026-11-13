@@ -2243,6 +2243,18 @@ html[data-txt="xl"] { font-size: 124%; }
 .ow-row .rm { border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; width: 30px; height: 36px; }
 .ow-mine { display: flex; justify-content: space-between; align-items: center; background: var(--bg); border-radius: 14px; padding: 10px 14px; }
 .ow-mine b { font-size: 1.15rem; } .ow-mine b.bad { color: var(--bad); }
+.ow-mine small { display: block; color: var(--muted); font-size: .74rem; } .ow-mine small.up { color: var(--good); font-weight: 700; }
+.ow-who { display: flex; background: var(--bg); border-radius: 14px; padding: 4px; gap: 4px; }
+.ow-who button { flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-weight: 700; font-size: .88rem; padding: 9px 6px; border-radius: 11px; cursor: pointer; }
+.ow-who button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.ow-got { display: flex; align-items: center; gap: 8px; margin: -2px 0 2px; padding: 6px 10px; background: color-mix(in srgb, var(--good) 10%, var(--surface)); border-radius: 12px; font-size: .84rem; color: var(--good); font-weight: 700; }
+.ow-got .money-in { margin: 0; display: flex; align-items: center; gap: 4px; border: 1.5px solid color-mix(in srgb, var(--good) 35%, var(--line)); border-radius: 10px; background: var(--surface); padding: 0 8px; height: 36px; width: 110px; margin-inline-start: auto; }
+.ow-got input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 700; padding: 0; direction: ltr; text-align: right; }
+.ow-got small { color: var(--muted); font-weight: 400; font-size: .74rem; }
+.ow-gotbox { display: flex; gap: 8px; align-items: center; margin-top: 8px; background: color-mix(in srgb, var(--good) 10%, var(--surface)); border-radius: 12px; padding: 8px 10px; font-size: .86rem; font-weight: 700; color: var(--good); }
+.ow-gotbox .money-in { margin: 0; display: flex; align-items: center; gap: 4px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); padding: 0 8px; height: 38px; flex: 1; }
+.ow-gotbox input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 700; padding: 0; direction: ltr; text-align: right; }
+.ow-gotbox button { border: 0; border-radius: 10px; background: var(--good); color: #fff; font: inherit; font-weight: 800; padding: 9px 14px; cursor: pointer; }
 .ow-sw { display: flex; align-items: center; gap: 10px; font-size: .9rem; padding: 2px 4px; cursor: pointer; }
 .ow-sw input { width: 20px; height: 20px; accent-color: var(--brand); }
 .sp-tot b.good { color: var(--good); }
@@ -10274,9 +10286,11 @@ function loadOwe(j) {
 }
 /* money that came back goes into the bank account as a refund ("החזר"), in the purchase's category,
    so it shows as a transaction, the account shows it came in, and that category's spending goes down by it */
+// what really came back from someone (may be more or less than their share)
+const oweGot = x => Math.round((x.got != null ? +x.got : +x.a || 0) * 100) / 100;
 function oweRefundAdd(it, x) {
   const t = txAll.find(t => t.oweK === it.k), id = "ow-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const row = [iso(today), String(x.a), `החזר מ${x.n} · ${it.what}`, bankName(), (t && t.category) || it.cat || CATS[0], "החזר", "ידני", id, ""];
+  const row = [iso(today), String(oweGot(x)), `החזר מ${x.n} · ${it.what}`, bankName(), (t && t.category) || it.cat || CATS[0], "החזר", "ידני", id, ""];
   writePending([...readPending(), row]); data.apple = [...(data.apple || []), row]; sendingIds.add(id); sendRow(row);
   x.rx = id;
 }
@@ -10331,7 +10345,11 @@ function oweSheet(id, label) {
 /* one purchase: how many paid, who, how much each */
 function openOweFor(t) {
   const total = t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
+  // me: am I one of the people splitting it, or do the others pay the whole thing back
+  let me = old ? old.me !== false : true;
   let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: String(Math.round(total / 2 * 100) / 100), paid: "" }], mine = old ? old.mine !== false : false;
+  const heads = () => ppl.length + (me ? 1 : 0), minHeads = () => (me ? 2 : 1);
+  const isEven = () => ppl.every(x => x.a) && new Set(ppl.map(x => String(x.a))).size === 1 && Math.abs(+ppl[0].a * heads() - total) < heads() * 0.01;
   const { bg, close } = oweSheet("oweSheet");
   const round = v => Math.round(v * 100) / 100;
   const others = () => round(ppl.reduce((s, x) => s + (+x.a || 0), 0));
@@ -10341,18 +10359,19 @@ function openOweFor(t) {
       <span class="grab" aria-hidden="true"></span>
       <div class="hd"><div><b>👥 מי חייב לי</b><br><span><bdi>${esc(t.merchant)}</bdi> · ${dd(t.date)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
       <div class="sp-tot"><span>סה״כ שילמת</span><b>${fmt2(total)}</b></div>
-      ${(() => { const n = ppl.length + 1, ev = ppl.every(x => x.a) && new Set(ppl.map(x => String(x.a))).size === 1 && Math.abs(+ppl[0].a * n - total) < n * 0.01;
-        return `<div class="ow-even"><div class="ow-eq"><b>לחלק שווה</b><small>כמה אנשים, כולל אותי</small></div>
-        <div class="ow-step"><button type="button" data-step="-1" aria-label="פחות אנשים" ${n <= 2 && ev ? "disabled" : ""}>−</button><input id="owCnt" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${n}" aria-label="כמה אנשים, כולל אותי"><button type="button" data-step="1" aria-label="עוד אדם" ${n >= 30 ? "disabled" : ""}>+</button></div>
+      <div class="ow-who" role="group" aria-label="מי משלם"><button type="button" data-me="1" class="${me ? "on" : ""}" aria-pressed="${me}">גם אני משתתף</button><button type="button" data-me="0" class="${me ? "" : "on"}" aria-pressed="${!me}">הכול עליהם</button></div>
+      ${(() => { const n = heads(), ev = isEven(), lab = me ? "כמה אנשים, כולל אותי" : "בין כמה אנשים";
+        return `<div class="ow-even"><div class="ow-eq"><b>לחלק שווה</b><small>${lab}</small></div>
+        <div class="ow-step"><button type="button" data-step="-1" aria-label="פחות אנשים" ${n <= minHeads() && ev ? "disabled" : ""}>−</button><input id="owCnt" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${n}" aria-label="${lab}"><button type="button" data-step="1" aria-label="עוד אדם" ${n >= 30 ? "disabled" : ""}>+</button></div>
         <div class="ow-each">${ev ? `<b class="num">${fmtA(+ppl[0].a)}</b><small>לכל אחד</small>` : `<small>לוחצים + או −<br>והסכום מתחלק</small>`}</div></div>`; })()}
       <div class="sp-rows">${ppl.map((x, i) => `<div class="ow-row ${x.paid ? "paid" : ""}">
         <input class="ow-n" data-n="${i}" value="${esc(x.n)}" placeholder="שם" aria-label="שם" autocomplete="off" autocorrect="off">
         <label class="money-in"><span aria-hidden="true">₪</span><input class="ow-a" data-a="${i}" inputmode="decimal" value="${x.a}" placeholder="0" aria-label="כמה"></label>
         <button type="button" class="ow-pd" data-pd="${i}" aria-pressed="${!!x.paid}" title="${x.paid ? "הוחזר ב-" + dd(new Date(x.paid + "T00:00")) : "סימון שהחזיר"}" aria-label="${x.paid ? "החזיר" : "סימון שהחזיר"}">✓</button>
-        <button type="button" class="rm" data-rm="${i}" aria-label="הסרה">✕</button></div>`).join("")}</div>
+        <button type="button" class="rm" data-rm="${i}" aria-label="הסרה">✕</button></div>${x.paid ? `<label class="ow-got"><span style="white-space:nowrap">✓ כמה קיבלת בפועל?</span><span class="money-in"><span aria-hidden="true">₪</span><input data-g="${i}" inputmode="decimal" value="${x.got != null ? x.got : x.a}" aria-label="כמה קיבלת בפועל"></span></label>` : ""}`).join("")}</div>
       ${ppl.length < 29 ? `<button type="button" class="sp-add" data-add>＋ עוד מישהו</button>` : ""}
-      <div class="ow-mine"><span>החלק שלך</span><b class="num ${myPart < 0 ? "bad" : ""}">${fmt2(myPart)}</b></div>
-      <label class="ow-sw"><input type="checkbox" id="oweMine" ${mine ? "checked" : ""}><span>בחודש לספור רק את החלק שלי</span></label>
+      <div class="ow-mine">${mineRow()}</div>
+      <label class="ow-sw"><input type="checkbox" id="oweMine" ${mine ? "checked" : ""}><span>${me ? "בחודש לספור רק את החלק שלי" : "בחודש לא לספור את הקנייה (הכסף חוזר אליי)"}</span></label>
       <p class="sp-msg" id="owMsg"></p>
       <button type="button" class="sp-save" id="owSave">שמירה</button>
       ${old ? `<button type="button" class="sp-undo" id="owDel">מחיקת החוב (הקנייה חוזרת להיות כולה שלך)</button>` : ""}
@@ -10360,50 +10379,65 @@ function openOweFor(t) {
     </div>`;
     if (focus != null) { const el = bg.querySelector(`[data-n="${focus}"]`); if (el) el.focus(); }
   };
-  const live = () => { const m = bg.querySelector(".ow-mine b"); if (m) { const v = round(total - others()); m.textContent = fmt2(v); m.classList.toggle("bad", v < 0); } };
+  // what's left on me / what comes back (getting back more or less than I paid is fine)
+  function mineRow() {
+    const o = others(), d = round(total - o);
+    if (me && d >= 0) return `<span>החלק שלך</span><b class="num">${fmt2(d)}</b>`;
+    const note = d < 0 ? `<small class="up">${fmt2(-d)} יותר ממה ששילמת</small>` : d > 0 ? `<small>${fmt2(d)} נשארים עליך</small>` : `<small>כל הסכום חוזר אליך</small>`;
+    return `<span>יחזירו לך${note}</span><b class="num">${fmt2(o)}</b>`;
+  }
+  const live = () => { const m = bg.querySelector(".ow-mine"); if (m) m.innerHTML = mineRow(); };
   bg.addEventListener("input", e => {
     const n = e.target.closest("[data-n]"), a = e.target.closest("[data-a]");
     if (n) ppl[+n.dataset.n].n = n.value.slice(0, 30);
     if (a) { a.value = a.value.replace(/[^\d.]/g, ""); ppl[+a.dataset.a].a = a.value; live(); }
+    const g = e.target.closest("[data-g]"); if (g) { g.value = g.value.replace(/[^\d.]/g, ""); ppl[+g.dataset.g].got = g.value; }
     if (e.target.id === "owCnt") e.target.value = e.target.value.replace(/\D/g, "").slice(0, 2);
   });
-  // split evenly between n people, me included (any number, typed or tapped)
+  // split evenly between n people (me included or not; any number, typed or tapped)
   const evenSplit = n => {
-    if (!(n >= 2 && n <= 30)) { $("owMsg").textContent = "אפשר לחלק בין 2 ל-30 אנשים"; return; }
-    const each = round(total / n); while (ppl.length < n - 1) ppl.push({ n: "", a: "", paid: "" });
-    if (ppl.length > n - 1) { const named = ppl.filter(x => x.n || x.paid), blank = ppl.filter(x => !x.n && !x.paid); ppl = named.concat(blank).slice(0, Math.max(n - 1, named.length)); }
+    if (!(n >= minHeads() && n <= 30)) { $("owMsg").textContent = `אפשר לחלק בין ${minHeads()} ל-30 אנשים`; return; }
+    const rows = me ? n - 1 : n, each = round(total / n); while (ppl.length < rows) ppl.push({ n: "", a: "", paid: "" });
+    if (ppl.length > rows) { const named = ppl.filter(x => x.n || x.paid), blank = ppl.filter(x => !x.n && !x.paid); ppl = named.concat(blank).slice(0, Math.max(rows, named.length)); }
     ppl.forEach(x => x.a = String(each)); draw();
   };
-  bg.addEventListener("keydown", e => { if (e.target.id === "owCnt" && e.key === "Enter") { e.preventDefault(); evenSplit(parseInt(e.target.value, 10)); } });
-  bg.addEventListener("change", e => { if (e.target.id === "oweMine") mine = e.target.checked; if (e.target.id === "owCnt" && e.target.value) evenSplit(parseInt(e.target.value, 10)); });
+  // Enter just leaves the box; the change that follows splits (redrawing inside a blur breaks Safari/Chrome)
+  bg.addEventListener("keydown", e => { if (e.target.id === "owCnt" && e.key === "Enter") { e.preventDefault(); e.target.blur(); } });
+  bg.addEventListener("change", e => { if (e.target.id === "oweMine") mine = e.target.checked; if (e.target.id === "owCnt" && e.target.value) { const v = parseInt(e.target.value, 10); setTimeout(() => evenSplit(v), 0); } });
   bg.addEventListener("focusin", e => { if (e.target.id === "owCnt") setTimeout(() => e.target.select(), 0); });
   bg.addEventListener("click", async e => {
     const ev = e.target.closest("[data-even]");
     if (ev) { evenSplit(+ev.dataset.even); return; }
-    const st = e.target.closest("[data-step]"); if (st) { evenSplit(Math.min(30, Math.max(2, ppl.length + 1 + +st.dataset.step))); return; }
+    const st = e.target.closest("[data-step]"); if (st) { evenSplit(Math.min(30, Math.max(minHeads(), heads() + +st.dataset.step))); return; }
+    const wm = e.target.closest("[data-me]");
+    if (wm) { const nv = wm.dataset.me === "1"; if (nv === me) return; const was = isEven(), keep = ppl.length; me = nv; $("owMsg").textContent = "";
+      if (was || !ppl.some(x => +x.a > 0)) evenSplit(Math.max(minHeads(), keep + (me ? 1 : 0))); else draw(); return; }
     const rm = e.target.closest("[data-rm]"); if (rm) { ppl.splice(+rm.dataset.rm, 1); if (!ppl.length) ppl.push({ n: "", a: "", paid: "" }); draw(); return; }
-    const pd = e.target.closest("[data-pd]"); if (pd) { const x = ppl[+pd.dataset.pd]; x.paid = x.paid ? "" : iso(today); draw(); return; }
+    const pd = e.target.closest("[data-pd]"); if (pd) { const x = ppl[+pd.dataset.pd]; x.paid = x.paid ? "" : iso(today); if (!x.paid) delete x.got; draw(); return; }
     if (e.target.closest("[data-add]")) {
       // still an even split (nothing typed by hand)? then one more person splits it again; otherwise the new row copies the last amount
-      const n = ppl.length + 1, even = ppl.every(x => x.a) && new Set(ppl.map(x => String(x.a))).size === 1 && Math.abs(+ppl[0].a * n - total) < n * 0.01;
-      if (even && n < 30) { evenSplit(n + 1); draw(ppl.length - 1); return; }
+      if (isEven() && heads() < 30) { evenSplit(heads() + 1); draw(ppl.length - 1); return; }
       ppl.push({ n: "", a: ppl[0] && ppl[0].a || "", paid: "" }); draw(ppl.length - 1); return; }
     const del = e.target.closest("#owDel"), sv = e.target.closest("#owSave"); if (!del && !sv) return;
-    const clean = ppl.map(x => ({ n: String(x.n || "").trim(), a: round(+x.a || 0), paid: x.paid || "" })).filter(x => x.n || x.a > 0);
+    const clean = ppl.map(x => { const c = { n: String(x.n || "").trim(), a: round(+x.a || 0), paid: x.paid || "" };
+      if (c.paid && x.got != null && x.got !== "" && round(+x.got) !== c.a) c.got = round(+x.got || 0); return c; }).filter(x => x.n || x.a > 0);
     if (sv) {
       if (!clean.length) { $("owMsg").textContent = "צריך לפחות אדם אחד עם סכום"; return; }
       if (clean.some(x => !x.n)) { $("owMsg").textContent = "חסר שם ליד אחד הסכומים"; return; }
       if (clean.some(x => !(x.a > 0))) { $("owMsg").textContent = "חסר סכום ליד אחד השמות"; return; }
-      if (others() > total + 0.001) { $("owMsg").textContent = "החלקים של האחרים גדולים ממה ששילמת"; return; }
     }
     const btn = del || sv; btn.disabled = true; btn.textContent = "שומר…";
     const before = oweList.slice();
     const prev = new Map(((old && old.ppl) || []).map(x => [x.n.trim(), x]));
     oweList = oweList.filter(it => it.k !== t.oweK);
     const item = { k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), cat: t.category, total: round(total), mine, ppl: clean };
+    if (!me) item.me = false;
     const gone = [];
     if (sv) {
-      clean.forEach(x => { const o = prev.get(x.n); if (o && o.rx) x.rx = o.rx; if (x.paid && !x.rx) oweRefundAdd(item, x); if (!x.paid && x.rx) { gone.push(x.rx); delete x.rx; } });
+      clean.forEach(x => { const o = prev.get(x.n); if (o && o.rx) x.rx = o.rx;
+        // the amount that came back changed: replace its bank row
+        if (x.paid && x.rx && o && oweGot(o) !== oweGot(x)) { gone.push(x.rx); delete x.rx; }
+        if (x.paid && !x.rx) oweRefundAdd(item, x); if (!x.paid && x.rx) { gone.push(x.rx); delete x.rx; } });
       prev.forEach((o, n) => { if (o.rx && !clean.some(x => x.n === n)) gone.push(o.rx); });
       oweList.push(item);
     }
@@ -10416,7 +10450,7 @@ function openOweFor(t) {
 /* everyone who owes you, by person: what for, a reminder on WhatsApp, and "got it" */
 function openOweList() {
   const { bg, close } = oweSheet("oweList");
-  let showDone = false;
+  let showDone = false, gotFor = null;
   const draw = () => {
     const by = new Map();
     const live = oweLive(), lost = oweList.filter(it => !oweLinked.has(it.k));
@@ -10431,10 +10465,11 @@ function openOweList() {
       <div class="ow-people">${open.map(p => `<div class="ow-p">
         <div class="ow-ph"><span class="av" style="background:${col(p.n)}">${esc(p.n.slice(0, 1))}</span><span class="nm"><b>${esc(p.n)}</b><small>${p.open.map(o => `${esc(o.it.what)} ${fmt2(o.x.a)}`).join(" · ")}</small></span><b class="num">${fmt2(p.sum)}</b></div>
         <div class="ow-acts"><a class="ow-wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(oweMsg(p))}">תזכורת בוואטסאפ</a><button type="button" data-got="${esc(p.n)}">קיבלתי ✓</button></div>
+        ${gotFor === p.n ? `<div class="ow-gotbox"><span>כמה קיבלת?</span><label class="money-in"><span aria-hidden="true">₪</span><input id="owGotIn" inputmode="decimal" value="${String(Math.round(p.sum * 100) / 100)}" aria-label="כמה קיבלת מ${esc(p.n)}"></label><button type="button" data-gotok="${esc(p.n)}">אישור</button></div>` : ""}
       </div>`).join("")}</div>
       ${done.length || people.some(p => p.done.length) ? `<button type="button" class="pl-skip" id="owDone">${showDone ? "הסתרת מה שהוחזר" : "מה שכבר הוחזר"}</button>` : ""}
       ${lost.length && dataFresh() ? `<div class="ow-lost"><b>חובות של קניות שכבר לא ברשימה</b><small>הקנייה נמחקה או השתנתה, אז הם לא נספרים</small>${lost.map(it => `<div><span>${esc(it.what)} · ${dd(new Date(it.d + "T00:00"))} · ${it.ppl.map(x => esc(x.n)).join(", ")}</span><button type="button" data-lost="${esc(it.k)}">מחיקה</button></div>`).join("")}</div>` : ""}
-      ${showDone ? `<div class="ow-hist">${live.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(x.a)} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
+      ${showDone ? `<div class="ow-hist">${live.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(oweGot(x))} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
     </div>`;
   };
   bg.addEventListener("click", async e => {
@@ -10442,13 +10477,18 @@ function openOweList() {
     const lo = e.target.closest("[data-lost]");
     if (lo) { const before = oweList.slice(); oweList = oweList.filter(it => it.k !== lo.dataset.lost); lo.disabled = true;
       try { await saveOwe(); afterData(); draw(); toast("נמחק", 1600); } catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("המחיקה לא הצליחה: " + writeError(err), 3500); } return; }
-    const g = e.target.closest("[data-got]"); if (!g) return;
-    const n = g.dataset.got, before = JSON.stringify(oweList);
-    oweLive().forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) { x.paid = iso(today); oweRefundAdd(it, x); } }));
-    g.disabled = true; g.textContent = "שומר…";
-    try { await saveOwe(); afterData(); draw(); toast(`${n} החזיר הכול ✓`, 2200); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
+    const g0 = e.target.closest("[data-got]"); if (g0) { gotFor = gotFor === g0.dataset.got ? null : g0.dataset.got; draw(); const i = $("owGotIn"); if (i) i.select(); return; }
+    const g = e.target.closest("[data-gotok]"); if (!g) return;
+    const n = g.dataset.gotok, before = JSON.stringify(oweList), got = Math.round((+String($("owGotIn").value).replace(/[^\d.]/g, "") || 0) * 100) / 100;
+    // what came back goes to their purchases in order; any difference (more or less) sits on the last one
+    const mineOpen = []; oweLive().forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) mineOpen.push({ it, x }); }));
+    const owed = Math.round(mineOpen.reduce((s, o) => s + o.x.a, 0) * 100) / 100;
+    mineOpen.forEach((o, i) => { o.x.paid = iso(today); if (i === mineOpen.length - 1 && got !== owed) o.x.got = Math.max(0, Math.round((o.x.a + got - owed) * 100) / 100); oweRefundAdd(o.it, o.x); });
+    gotFor = null; g.disabled = true; g.textContent = "שומר…";
+    try { await saveOwe(); afterData(); draw(); toast(got === owed ? `${n} החזיר הכול ✓` : `נרשם: קיבלת ${fmt2(got)} מ${n} ✓`, 2400); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
     catch (err) { oweList = JSON.parse(before); oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("השמירה לא הצליחה: " + writeError(err), 3500); }
   });
+  bg.addEventListener("keydown", e => { if (e.target.id === "owGotIn" && e.key === "Enter") { e.preventDefault(); const b = bg.querySelector("[data-gotok]"); if (b) b.click(); } });
   draw();
 }
 /* the reminder: "היי דני\nמזכיר לך להעביר לי ₪100 על על האש" (several purchases: "על א, ב ו-ג") */
@@ -10905,7 +10945,7 @@ const TOUR = [
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
-  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר." },
+  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר, עם הסכום שקיבלתם בפועל. שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״." },
   { t: '#setMenu [data-act="arrange"]', view: "admin", opt: true, h: "התאמת מסך הבית 🧩", b: "משנים את סדר הכרטיסים במסך הבית, ומסתירים את מה שלא צריך." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -11251,7 +11291,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113010237";
+const BUILD_ID = "20261113124148";
 let updToast = null;
 async function checkUpdate() {
   try {
