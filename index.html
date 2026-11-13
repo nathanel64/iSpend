@@ -10368,7 +10368,7 @@ function openOweFor(t) {
         <input class="ow-n" data-n="${i}" value="${esc(x.n)}" placeholder="שם" aria-label="שם" autocomplete="off" autocorrect="off">
         <label class="money-in"><span aria-hidden="true">₪</span><input class="ow-a" data-a="${i}" inputmode="decimal" value="${x.a}" placeholder="0" aria-label="כמה"></label>
         <button type="button" class="ow-pd" data-pd="${i}" aria-pressed="${!!x.paid}" title="${x.paid ? "הוחזר ב-" + dd(new Date(x.paid + "T00:00")) : "סימון שהחזיר"}" aria-label="${x.paid ? "החזיר" : "סימון שהחזיר"}">✓</button>
-        <button type="button" class="rm" data-rm="${i}" aria-label="הסרה">✕</button></div>${x.paid ? `<label class="ow-got"><span style="white-space:nowrap">✓ כמה קיבלת בפועל?</span><span class="money-in"><span aria-hidden="true">₪</span><input data-g="${i}" inputmode="decimal" value="${x.got != null ? x.got : x.a}" aria-label="כמה קיבלת בפועל"></span></label>` : ""}`).join("")}</div>
+        <button type="button" class="rm" data-rm="${i}" aria-label="הסרה">✕</button></div>`).join("")}</div>
       ${ppl.length < 29 ? `<button type="button" class="sp-add" data-add>＋ עוד מישהו</button>` : ""}
       <div class="ow-mine">${mineRow()}</div>
       <p class="sp-msg" id="owMsg"></p>
@@ -10464,11 +10464,10 @@ function openOweList() {
       <div class="ow-people">${open.map(p => `<div class="ow-p">
         <div class="ow-ph"><span class="av" style="background:${col(p.n)}">${esc(p.n.slice(0, 1))}</span><span class="nm"><b>${esc(p.n)}</b><small>${p.open.map(o => `${esc(o.it.what)} ${fmt2(o.x.a)}`).join(" · ")}</small></span><b class="num">${fmt2(p.sum)}</b></div>
         <div class="ow-acts"><a class="ow-wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(oweMsg(p))}">תזכורת בוואטסאפ</a><button type="button" data-got="${esc(p.n)}">קיבלתי ✓</button></div>
-        ${gotFor === p.n ? `<div class="ow-gotbox"><span>כמה קיבלת?</span><label class="money-in"><span aria-hidden="true">₪</span><input id="owGotIn" inputmode="decimal" value="${String(Math.round(p.sum * 100) / 100)}" aria-label="כמה קיבלת מ${esc(p.n)}"></label><button type="button" data-gotok="${esc(p.n)}">אישור</button></div>` : ""}
       </div>`).join("")}</div>
       ${done.length || people.some(p => p.done.length) ? `<button type="button" class="pl-skip" id="owDone">${showDone ? "הסתרת מה שהוחזר" : "מה שכבר הוחזר"}</button>` : ""}
       ${lost.length && dataFresh() ? `<div class="ow-lost"><b>חובות של קניות שכבר לא ברשימה</b><small>הקנייה נמחקה או השתנתה, אז הם לא נספרים</small>${lost.map(it => `<div><span>${esc(it.what)} · ${dd(new Date(it.d + "T00:00"))} · ${it.ppl.map(x => esc(x.n)).join(", ")}</span><button type="button" data-lost="${esc(it.k)}">מחיקה</button></div>`).join("")}</div>` : ""}
-      ${showDone ? `<div class="ow-hist">${live.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(oweGot(x))} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
+      ${showDone ? `<div class="ow-hist">${live.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(((x.rx && txAll.find(t => t.id === x.rx)) || {}).amount ?? oweGot(x))} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
     </div>`;
   };
   bg.addEventListener("click", async e => {
@@ -10476,18 +10475,16 @@ function openOweList() {
     const lo = e.target.closest("[data-lost]");
     if (lo) { const before = oweList.slice(); oweList = oweList.filter(it => it.k !== lo.dataset.lost); lo.disabled = true;
       try { await saveOwe(); afterData(); draw(); toast("נמחק", 1600); } catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("המחיקה לא הצליחה: " + writeError(err), 3500); } return; }
-    const g0 = e.target.closest("[data-got]"); if (g0) { gotFor = gotFor === g0.dataset.got ? null : g0.dataset.got; draw(); const i = $("owGotIn"); if (i) i.select(); return; }
-    const g = e.target.closest("[data-gotok]"); if (!g) return;
-    const n = g.dataset.gotok, before = JSON.stringify(oweList), got = Math.round((+String($("owGotIn").value).replace(/[^\d.]/g, "") || 0) * 100) / 100;
+    // "got it": just confirm (a different amount is fixed later on the payback row itself)
+    const g = e.target.closest("[data-got]"); if (!g) return;
+    const n = g.dataset.got, before = JSON.stringify(oweList);
     // what came back goes to their purchases in order; any difference (more or less) sits on the last one
     const mineOpen = []; oweLive().forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) mineOpen.push({ it, x }); }));
-    const owed = Math.round(mineOpen.reduce((s, o) => s + o.x.a, 0) * 100) / 100;
-    mineOpen.forEach((o, i) => { o.x.paid = iso(today); if (i === mineOpen.length - 1 && got !== owed) o.x.got = Math.max(0, Math.round((o.x.a + got - owed) * 100) / 100); oweRefundAdd(o.it, o.x); });
-    gotFor = null; g.disabled = true; g.textContent = "שומר…";
-    try { await saveOwe(); afterData(); draw(); toast(got === owed ? `${n} החזיר הכול ✓` : `נרשם: קיבלת ${fmt2(got)} מ${n} ✓`, 2400); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
+    mineOpen.forEach(o => { o.x.paid = iso(today); oweRefundAdd(o.it, o.x); });
+    g.disabled = true; g.textContent = "שומר…";
+    try { await saveOwe(); afterData(); draw(); toast(`${n} החזיר הכול ✓`, 2200); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
     catch (err) { oweList = JSON.parse(before); oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("השמירה לא הצליחה: " + writeError(err), 3500); }
   });
-  bg.addEventListener("keydown", e => { if (e.target.id === "owGotIn" && e.key === "Enter") { e.preventDefault(); const b = bg.querySelector("[data-gotok]"); if (b) b.click(); } });
   draw();
 }
 /* the reminder: "היי דני\nמזכיר לך להעביר לי ₪100 על על האש" (several purchases: "על א, ב ו-ג") */
@@ -10944,7 +10941,7 @@ const TOUR = [
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
-  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר, עם הסכום שקיבלתם בפועל. שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״." },
+  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר, ואת הסכום שלה אפשר לשנות). שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״." },
   { t: '#setMenu [data-act="arrange"]', view: "admin", opt: true, h: "התאמת מסך הבית 🧩", b: "משנים את סדר הכרטיסים במסך הבית, ומסתירים את מה שלא צריך." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -11290,7 +11287,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113124622";
+const BUILD_ID = "20261113125824";
 let updToast = null;
 async function checkUpdate() {
   try {
