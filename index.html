@@ -2283,6 +2283,20 @@ html[data-txt="xl"] { font-size: 124%; }
 .ow-acts { display: flex; gap: 8px; }
 .ow-acts a, .ow-acts button { flex: 1; text-align: center; border: 0; border-radius: 12px; padding: 9px 10px; font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; text-decoration: none; }
 .ow-acts a { background: #25d366; color: #fff; } .ow-acts button { background: color-mix(in srgb, var(--good) 14%, var(--surface)); color: var(--good); }
+.ow-rep { margin-top: 12px; }
+.ow-reps { background: var(--bg); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: .86rem; }
+.ow-reps > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ow-reps small { display: block; color: var(--muted); font-size: .74rem; }
+.ow-reps button, .bin-row button, .mg-g .mg-go button { border: 0; border-radius: 999px; padding: 7px 13px; font: inherit; font-weight: 700; font-size: .8rem; background: var(--brand-soft); color: var(--brand); cursor: pointer; flex: none; }
+.bin-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+.bin-row > span:nth-child(2) { flex: 1; min-width: 0; } .bin-row b { display: block; } .bin-row small { color: var(--muted); font-size: .75rem; }
+.mg-g { background: var(--bg); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
+.mg-g > b { font-size: .95rem; }
+.mg-nm { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.mg-nm button { border: 0; font: inherit; background: var(--surface); border-radius: 999px; padding: 6px 11px; font-size: .8rem; box-shadow: 0 0 0 1.5px var(--brand); color: var(--ink); cursor: pointer; }
+.mg-nm button.off { box-shadow: 0 0 0 1px var(--line); color: var(--muted); text-decoration: line-through; }
+.mg-go { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); }
+.mg-h { color: var(--muted); font-size: .78rem; font-weight: 700; margin: 14px 2px 8px; }
 .ow-hist { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; color: var(--muted); }
 .ow-hist div { display: flex; justify-content: space-between; gap: 8px; }
 .owe-card { background: linear-gradient(135deg, color-mix(in srgb, var(--good) 16%, var(--surface)), color-mix(in srgb, var(--good) 6%, var(--surface))) !important; }
@@ -5157,7 +5171,10 @@ function renderWrappedPill(isCurrent) {
 
 /* the fixed charges of the month on screen, as a checklist: what already went out, what is still due,
    and what looks off (a different price, charged twice, late) */
-const mKey = t => String(t.merchant || "").trim().toLowerCase();
+// one business under several names ("שופרסל דיל", "SHUFERSAL ONLINE"): merged names count as one in the summaries
+let mergeMap = {}; // lower-case name -> the name to show
+const mergedName = t => { const n = String((t && t.merchant) || "").trim(); return mergeMap[n.toLowerCase()] || n; };
+const mKey = t => mergedName(t).toLowerCase();
 function renderFixed(f, isCurrent) {
   const card = $("fixCard"), { start, end } = f, ref = isCurrent ? today : end;
   const items = [];
@@ -5233,7 +5250,7 @@ $("fcRange").addEventListener("input", () => { fcTouched = true; drawFc(); });
 /* 4: the businesses of the month: where the money went, and how often */
 function renderMerch(f) {
   const card = $("merchCard"), by = new Map();
-  f.spend.filter(t => !t.refund && !t.gen).forEach(t => { const k = mKey(t), o = by.get(k) || { name: t.merchant, cat: t.category, n: 0, a: 0 }; o.n++; o.a += t.amount; by.set(k, o); });
+  f.spend.filter(t => !t.refund && !t.gen).forEach(t => { const k = mKey(t), o = by.get(k) || { name: mergedName(t), cat: t.category, n: 0, a: 0 }; o.n++; o.a += t.amount; by.set(k, o); });
   const top = [...by.values()].sort((a, b) => b.a - a.a).slice(0, 10);
   if (top.length < 2) { card.hidden = true; return; }
   card.hidden = layout.hidden.includes("merch");
@@ -5713,7 +5730,7 @@ function matchQuery(t, sq) {
   if (sq.max != null && t.amount > sq.max) return false;
   if (sq.month != null && t.date.getMonth() !== sq.month) return false;
   if (sq.year != null && t.date.getFullYear() !== sq.year) return false;
-  const hay = [t.merchant, t.rawMerchant, t.category, t.account, accOf(t), String(t.amount)].map(x => String(x || "").toLowerCase()).join(" | ");
+  const hay = [t.merchant, t.rawMerchant, mergedName(t), t.category, t.account, accOf(t), String(t.amount)].map(x => String(x || "").toLowerCase()).join(" | ");
   return sq.words.every(w => hay.includes(w));
 }
 function renderList(inP) {
@@ -6088,6 +6105,8 @@ function applySettings(values) {
   { const pj = String((values[13] || [])[21] || "").trim(); if (pj && typeof loadPlans === "function") loadPlans(pj); }
   { const oj = String((values[14] || [])[21] || "").trim(); if (typeof loadOwe === "function") loadOwe(oj); }
   { const bj = String((values[15] || [])[21] || "").trim(); if (typeof loadBank === "function") loadBank(bj); }
+  { const j = String((values[16] || [])[21] || "").trim(); if (typeof loadBin === "function") loadBin(j); }
+  { const j = String((values[17] || [])[21] || "").trim(); if (typeof loadMerge === "function") loadMerge(j); }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -7681,7 +7700,7 @@ function openReceipt(k, sw) {
     return q.length ? `<div class="rc-qa">${q.join("")}</div>` : ""; })()}
   <div class="obj-btns"><button type="button" class="ob-main" data-oedit>עריכה</button><button type="button" class="ob-del" data-odel>מחיקה</button><button type="button" data-oclose>סגירה</button></div>`);
   const w = $("objWrap");
-  const hl = w.querySelector("[data-rchall]"); if (hl) hl.onclick = () => { closeObj(); showMerchant(t.merchant); };
+  const hl = w.querySelector("[data-rchall]"); if (hl) hl.onclick = () => { closeObj(); showMerchant(mergedName(t)); };
   w.querySelectorAll("[data-qa]").forEach(b => b.onclick = () => {
     const a = b.dataset.qa; closeObj();
     if (a === "split") openSplit(t.splitOf || t);
@@ -7699,7 +7718,7 @@ function openReceipt(k, sw) {
 // the receipt: this place in the same month (only when it isn't the first visit or there are others)
 function rcHist(t) {
   if (!t || t.income || t.refund || !t.merchant) return "";
-  const nm = String(t.merchant).trim(), same = x => !x.income && !x.refund && String(x.merchant || "").trim() === nm;
+  const nm = mergedName(t), mk = mKey(t), same = x => !x.income && !x.refund && mKey(x) === mk;
   const all = txAll.filter(same); if (all.length < 2) return "";
   let y = t.date.getFullYear(), m = t.date.getMonth(); if (t.date < period(y, m).start) { m--; if (m < 0) { m = 11; y--; } }
   const { start, end } = period(y, m), inM = all.filter(x => x.date >= start && x.date <= end).sort((a, b) => a.date - b.date);
@@ -8323,6 +8342,8 @@ boot();
     <div class="set-grp" data-g="org">
       <button type="button" class="set-row" data-go="cats">${ico("tag", 330)}<span class="set-rt"><b>קטגוריות ותקרות</b><small data-s="cats"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-go="pay">${ico("card", 210)}<span class="set-rt"><b>אמצעי תשלום</b><small data-s="pay"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="merge">${ico("tag", 190)}<span class="set-rt"><b>אותו עסק?</b><small>שמות שונים של אותו מקום נספרים כעסק אחד</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="bin">${ico("trash", 25)}<span class="set-rt"><b>נמחקו לאחרונה</b><small>תנועות שמחקת ב-30 הימים האחרונים, ומשם מחזירים</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-go="wallet">${ico("wallet", 45)}<span class="set-rt"><b>כרטיסים מהארנק</b><small data-s="wallet"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
     </div>
     <div class="set-gh" data-gh="links">חיבורים</div>
@@ -8388,6 +8409,8 @@ boot();
     if (r.dataset.act === "privacy") { setPrivacy(!privacyOn()); return; }
     if (r.dataset.act === "look") { openLook(); return; }
     if (r.dataset.act === "owe") { openOweList(); return; }
+    if (r.dataset.act === "bin") { openBin(); return; }
+    if (r.dataset.act === "merge") { openMerge(); return; }
     if (r.dataset.act === "arrange") { showView("flow"); scrollTo(0, 0); setTimeout(() => { try { startArrange(); } catch (e) {} }, 350); return; }
     if (r.dataset.act === "xlsx") { exportXlsx(r); return; }
     if (r.dataset.act === "import") { openImport(); return; }
@@ -10438,7 +10461,7 @@ function oweSheet(id, label) {
 function openOweFor(t) {
   const total = t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
   // me: am I one of the people splitting it, or do the others pay the whole thing back
-  let me = old ? old.me !== false : true;
+  let me = old ? old.me !== false : true, rep = !!(old && old.rep);
   let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: String(Math.round(total / 2 * 100) / 100), paid: "" }], mine = false; // the purchase always counts in full; paybacks come in as their own bank rows
   const heads = () => ppl.length + (me ? 1 : 0), minHeads = () => (me ? 2 : 1);
   const isEven = () => ppl.every(x => x.a) && new Set(ppl.map(x => String(x.a))).size === 1 && Math.abs(+ppl[0].a * heads() - total) < heads() * 0.01;
@@ -10463,6 +10486,7 @@ function openOweFor(t) {
         <button type="button" class="rm" data-rm="${i}" aria-label="הסרה">✕</button></div>`).join("")}</div>
       ${ppl.length < 29 ? `<button type="button" class="sp-add" data-add>＋ עוד מישהו</button>` : ""}
       <div class="ow-mine">${mineRow()}</div>
+      <label class="ce-tg ow-rep"><span><b>🔁 כל חודש</b><small>כשהתשלום הבא ב<bdi>${esc(mergedName(t))}</bdi> ייכנס, אותה חלוקה תירשם לבד</small></span><input type="checkbox" id="owRep" ${rep ? "checked" : ""}><span class="ce-sw" aria-hidden="true"></span></label>
       <p class="sp-msg" id="owMsg"></p>
       <button type="button" class="sp-save" id="owSave">שמירה</button>
       ${old ? `<button type="button" class="sp-undo" id="owDel">מחיקת החוב (הקנייה חוזרת להיות כולה שלך)</button>` : ""}
@@ -10494,7 +10518,7 @@ function openOweFor(t) {
   };
   // Enter just leaves the box; the change that follows splits (redrawing inside a blur breaks Safari/Chrome)
   bg.addEventListener("keydown", e => { if (e.target.id === "owCnt" && e.key === "Enter") { e.preventDefault(); e.target.blur(); } });
-  bg.addEventListener("change", e => { if (e.target.id === "oweMine") mine = e.target.checked; if (e.target.id === "owCnt" && e.target.value) { const v = parseInt(e.target.value, 10); setTimeout(() => evenSplit(v), 0); } });
+  bg.addEventListener("change", e => { if (e.target.id === "oweMine") mine = e.target.checked; if (e.target.id === "owRep") rep = e.target.checked; if (e.target.id === "owCnt" && e.target.value) { const v = parseInt(e.target.value, 10); setTimeout(() => evenSplit(v), 0); } });
   bg.addEventListener("focusin", e => { if (e.target.id === "owCnt") setTimeout(() => e.target.select(), 0); });
   bg.addEventListener("click", async e => {
     const ev = e.target.closest("[data-even]");
@@ -10523,6 +10547,7 @@ function openOweFor(t) {
     oweList = oweList.filter(it => it.k !== t.oweK);
     const item = { k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), cat: t.category, total: round(total), mine, ppl: clean };
     if (!me) item.me = false;
+    if (sv && rep) { item.rep = true; item.rk = mKey(t); oweList.forEach(it => { if (it.rep && it.rk === item.rk) delete it.rep; }); }
     const gone = [];
     if (sv) {
       clean.forEach(x => { const o = prev.get(x.n); if (o && o.rx) x.rx = o.rx;
@@ -10559,11 +10584,16 @@ function openOweList() {
       </div>`).join("")}</div>
       ${done.length || people.some(p => p.done.length) ? `<button type="button" class="pl-skip" id="owDone">${showDone ? "הסתרת מה שהוחזר" : "מה שכבר הוחזר"}</button>` : ""}
       ${lost.length && dataFresh() ? `<div class="ow-lost"><b>חובות של קניות שכבר לא ברשימה</b><small>הקנייה נמחקה או השתנתה, אז הם לא נספרים</small>${lost.map(it => `<div><span>${esc(it.what)} · ${dd(new Date(it.d + "T00:00"))} · ${it.ppl.map(x => esc(x.n)).join(", ")}</span><button type="button" data-lost="${esc(it.k)}">מחיקה</button></div>`).join("")}</div>` : ""}
+      ${(() => { const reps = oweList.filter(it => it.rep); if (!reps.length) return "";
+        return `<div class="ow-reps"><b>🔁 חובות קבועים</b>${reps.map(it => `<div><span><bdi>${esc(it.what)}</bdi> · ${esc(it.ppl.map(x => x.n).join(", "))}<small>${it.ppl.length === 1 && it.me !== false && Math.abs(it.ppl[0].a * 2 - it.total) < .02 ? "חצי" : "אותה חלוקה"} · כל חודש</small></span><button type="button" data-repoff="${esc(it.k)}">הפסקה</button></div>`).join("")}</div>`; })()}
       ${showDone ? `<div class="ow-hist">${live.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(((x.rx && txAll.find(t => t.id === x.rx)) || {}).amount ?? oweGot(x))} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
     </div>`;
   };
   bg.addEventListener("click", async e => {
     if (e.target.closest("#owDone")) { showDone = !showDone; draw(); return; }
+    const ro = e.target.closest("[data-repoff]");
+    if (ro) { const it = oweList.find(x => x.k === ro.dataset.repoff); if (!it) return; delete it.rep; ro.disabled = true;
+      try { await saveOwe(); draw(); } catch (err) { it.rep = true; draw(); toast("לא נשמר: " + writeError(err), 3500); } return; }
     const lo = e.target.closest("[data-lost]");
     if (lo) { const before = oweList.slice(); oweList = oweList.filter(it => it.k !== lo.dataset.lost); lo.disabled = true;
       try { await saveOwe(); afterData(); draw(); toast("נמחק", 1600); } catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("המחיקה לא הצליחה: " + writeError(err), 3500); } return; }
@@ -10579,6 +10609,129 @@ function openOweList() {
   });
   draw();
 }
+/* 🔁 a "who owes me" set to repeat: the next payment at the same place gets the same split, by itself */
+let oweRepBusy = false;
+async function oweRepRun() {
+  if (oweRepBusy || !oweList.some(it => it.rep) || !dataFresh()) return;
+  oweRepBusy = true; let made = 0;
+  try {
+    const r2 = v => Math.round(v * 100) / 100;
+    for (let guard = 0; guard < 24; guard++) {
+      const it = oweList.find(x => x.rep && txAll.some(t => isNext(x, t))); if (!it) break;
+      const t = txAll.filter(t => isNext(it, t)).sort((a, b) => a.date - b.date)[0];
+      const total = r2(t.fullAmount != null ? t.fullAmount : t.amount);
+      const nu = { k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), cat: t.category, total, mine: false,
+        ppl: it.ppl.map(x => ({ n: x.n, a: r2(it.total > 0 ? x.a / it.total * total : x.a), paid: "" })), rep: true, rk: it.rk };
+      if (it.me === false) nu.me = false;
+      delete it.rep; oweList.push(nu); oweByK.set(nu.k, nu); oweLinked.add(nu.k); t.owe = nu; made++;
+    }
+    if (made) { await saveOwe(); afterData(); }
+  } catch (e) {} finally { oweRepBusy = false; }
+  function isNext(it, t) {
+    return t.oweK && !t.owe && !oweByK.has(t.oweK) && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts
+      && mKey(t) === it.rk && t.date > new Date(it.d + "T00:00") && iso(t.date) !== it.d;
+  }
+}
+{ const ad = afterData; let tm = null; afterData = function () { const r = ad.apply(this, arguments); clearTimeout(tm); tm = setTimeout(oweRepRun, 900); return r; }; }
+
+/* 🗑️ recently deleted: what was deleted in the last 30 days, with "put it back" */
+let binList = [];
+function loadBin(j) { try { const a = j ? JSON.parse(j) : []; binList = Array.isArray(a) ? a : []; } catch (e) { binList = []; } }
+const binFresh = () => { const lim = Date.now() - 30 * 864e5; return binList.filter(b => b && Array.isArray(b.r) && new Date(b.at).getTime() > lim); };
+async function saveBin() {
+  let list = binFresh().slice(-80), j = JSON.stringify(list);
+  while (j.length > 45000 && list.length) { list = list.slice(1); j = JSON.stringify(list); }
+  binList = list; await writeRange("'הגדרות'!V18", [[list.length ? j : ""]]);
+}
+{ const od = deleteTx; deleteTx = async function (k, btn) {
+    const t = txByKey(k), keep = t && t.del && t.del.key === "apple" && !t.gen ? { r: t.del.raw.slice(0, 10).map(v => v == null ? "" : String(v)), at: new Date().toISOString(), m: String(t.merchant || "").slice(0, 40), c: t.category } : null;
+    const ok = await od.apply(this, arguments);
+    if (ok && keep) { binList.push(keep); saveBin().catch(() => {}); }
+    return ok;
+  }; }
+function openBin() {
+  const { bg, close } = oweSheet("binSheet");
+  const ago = at => { const d = Math.floor((Date.now() - new Date(at).getTime()) / 864e5); return d <= 0 ? "היום" : d === 1 ? "אתמול" : d < 7 ? `לפני ${d} ימים` : d < 14 ? "לפני שבוע" : `לפני ${Math.floor(d / 7)} שבועות`; };
+  const draw = () => {
+    const list = binFresh().slice().reverse();
+    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="נמחקו לאחרונה">
+      <span class="grab" aria-hidden="true"></span>
+      <div class="hd"><div><b>🗑️ נמחקו לאחרונה</b><br><span>תנועות שמחקת ב-30 הימים האחרונים. אחרי זה הן נמחקות לגמרי.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      ${list.length ? list.map(b => { const d = parseDate(b.r[0]); return `<div class="bin-row">${catIcon(b.c || b.r[4])}<span><b><bdi>${esc(b.m || b.r[2] || "ללא תיאור")}</bdi></b><small>${fmtA(+b.r[1] || 0)} · ${d ? dd(d) : esc(b.r[0])} · נמחקה ${ago(b.at)}</small></span><button type="button" data-binback="${esc(b.at)}">החזרה</button></div>`; }).join("")
+        : `<p class="ow-empty">אין תנועות שנמחקו ב-30 הימים האחרונים.</p>`}
+    </div>`;
+  };
+  bg.addEventListener("click", async e => {
+    const bk = e.target.closest("[data-binback]"); if (!bk) return;
+    const b = binList.find(x => x.at === bk.dataset.binback); if (!b) return;
+    const row = b.r.slice(0, 10); while (row.length < 9) row.push("");
+    if (!row[7] || (data.apple || []).some(r => String(r[7] || "").trim() === String(row[7]).trim())) row[7] = "m-" + Date.now();
+    bk.disabled = true; bk.textContent = "מחזיר…";
+    writePending([...readPending(), row]); data.apple = [...(data.apple || []), row];
+    if (navigator.onLine) sendingIds.add(row[7]);
+    binList = binList.filter(x => x !== b); saveBin().catch(() => {});
+    afterData(); if (navigator.onLine) sendRow(row);
+    draw(); toast(`״${b.m || row[2]}״ חזרה לרשימה ✓`, 2200);
+  });
+  draw();
+}
+
+/* 🔗 "same business?": names that look like one place, merged for the summaries (the transactions stay as they are) */
+function loadMerge(j) { try { const o = j ? JSON.parse(j) : {}; mergeMap = o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { mergeMap = {}; } }
+async function saveMerge() { const j = JSON.stringify(mergeMap); await writeRange("'הגדרות'!V19", [[Object.keys(mergeMap).length ? j : ""]]); }
+const MG_STOP = new Set(["קפה", "סופר", "בעמ", "בע״מ", "בע\"מ", "סניף", "שלי", "דיל", "אקספרס", "online", "ltd", "inc", "tlv", "il", "the", "co", "מסעדת", "מסעדה", "חנות", "רשת", "בית", "www", "com"]);
+function mergeKey(name) {
+  const hit = recognizeMerchant(name, true);
+  if (hit && !hit.kind && hit.name) return "m:" + String(hit.name).trim().toLowerCase();
+  const w = String(name).toLowerCase().replace(/[׳'"`’]/g, "").split(/[^a-z0-9\u0590-\u05ff]+/).filter(x => x.length >= 3 && !MG_STOP.has(x) && !/^\d+$/.test(x));
+  return w.length ? "w:" + w[0] : "";
+}
+function mergeGroups() {
+  const by = new Map();
+  txAll.filter(t => !t.income && !t.refund && !t.gen && t.merchant).forEach(t => {
+    const n = String(t.merchant).trim(), k = mergeKey(n); if (!k) return;
+    const g = by.get(k) || new Map(); const o = g.get(n) || { n, c: 0, a: 0, cat: t.category }; o.c++; o.a += t.amount; g.set(n, o); by.set(k, g);
+  });
+  const out = [];
+  by.forEach(g => {
+    const names = [...g.values()].sort((a, b) => b.c - a.c); if (names.length < 2) return;
+    const shown = new Set(names.map(x => mergeMap[x.n.toLowerCase()] || x.n)); if (shown.size < 2) return; // already one
+    const br = recognizeMerchant(names[0].n, true), brand = br && !br.kind && br.name ? String(br.name).trim() : "";
+    out.push({ names, to: brand || names[0].n, brand, c: names.reduce((s, x) => s + x.c, 0), a: names.reduce((s, x) => s + x.a, 0), cat: names[0].cat });
+  });
+  return out.sort((a, b) => b.c - a.c).slice(0, 20);
+}
+function openMerge() {
+  const { bg, close } = oweSheet("mergeSheet"); const off = new Set();
+  const draw = () => {
+    const gs = mergeGroups(), done = new Map();
+    Object.entries(mergeMap).forEach(([low, to]) => { if (!done.has(to)) done.set(to, []); done.get(to).push(low); });
+    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="אותו עסק">
+      <span class="grab" aria-hidden="true"></span>
+      <div class="hd"><div><b>🔗 אותו עסק?</b><br><span>שמות שונים שנראים כמו אותו מקום. איחוד מסדר את הסיכומים לפי עסק, בלי לשנות את התנועות עצמן.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      ${gs.length ? gs.map((g, gi) => `<div class="mg-g"><b>${catIcon(g.cat)} <bdi>${esc(g.to)}</bdi></b>
+        <div class="mg-nm">${g.names.map(x => `<button type="button" data-tg="${gi}|${esc(x.n)}" class="${off.has(gi + "|" + x.n) ? "off" : ""}" aria-pressed="${!off.has(gi + "|" + x.n)}"><bdi>${esc(x.n)}</bdi></button>`).join("")}</div>
+        <div class="mg-go"><span>${g.c} תנועות · ${fmtA(Math.round(g.a))}</span><button type="button" data-mg="${gi}">לאחד</button></div></div>`).join("")
+        : `<p class="ow-empty">לא מצאתי שמות שנראים כמו אותו עסק.</p>`}
+      ${done.size ? `<div class="mg-h">מאוחדים</div>${[...done.entries()].map(([to, lows]) => `<div class="bin-row"><span>🔗</span><span><b><bdi>${esc(to)}</bdi></b><small>${lows.length === 1 ? "עוד שם אחד נספר כאן" : lows.length + " שמות נוספים נספרים כאן"}</small></span><button type="button" data-un="${esc(to)}">ביטול</button></div>`).join("")}` : ""}
+      <p class="jar-note">לחיצה על שם מוציאה אותו מהאיחוד.</p>
+    </div>`;
+    bg._gs = gs;
+  };
+  bg.addEventListener("click", async e => {
+    const tg = e.target.closest("[data-tg]"); if (tg) { const k = tg.dataset.tg; off.has(k) ? off.delete(k) : off.add(k); draw(); return; }
+    const mg = e.target.closest("[data-mg]"), un = e.target.closest("[data-un]"); if (!mg && !un) return;
+    const before = { ...mergeMap };
+    if (mg) { const gi = +mg.dataset.mg, g = bg._gs[gi], keep = g.names.filter(x => !off.has(gi + "|" + x.n)); if (keep.length < 2) { toast("צריך לפחות שני שמות", 1800); return; }
+      const to = g.brand || keep[0].n; keep.forEach(x => { if (x.n !== to) mergeMap[x.n.toLowerCase()] = to; });
+      Object.keys(mergeMap).forEach(l => { if (keep.some(x => mergeMap[l] === x.n && x.n !== to)) mergeMap[l] = to; }); }
+    if (un) Object.keys(mergeMap).forEach(l => { if (mergeMap[l] === un.dataset.un) delete mergeMap[l]; });
+    off.clear();
+    try { await saveMerge(); afterData(); draw(); } catch (err) { mergeMap = before; draw(); toast("לא נשמר: " + writeError(err), 3500); }
+  });
+  draw();
+}
+
 /* the reminder: "היי דני\nמזכיר לך להעביר לי ₪100 על על האש" (several purchases: "על א, ב ו-ג") */
 function oweMsg(p) {
   const money = v => "₪" + (Math.round(v * 100) % 100 ? (Math.round(v * 100) / 100).toFixed(2) : String(Math.round(v)));
@@ -11030,10 +11183,10 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "המשכורת של כל חודש, יעד החיסכון והחודשים שמופיעים באתר." },
   { t: '#setMenu [data-go="sal"]', view: "admin", h: "יום החיוב החודשי", b: "היום בחודש שבו יורד החיוב באשראי. החודש באתר מתחיל ממנו, כך שכל הוצאה נספרת בחודש של החיוב שלה. משנים ב״משכורות ומועד החיוב״." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
-  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר, ואת הסכום שלה אפשר לשנות). שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״." },
+  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר, ואת הסכום שלה אפשר לשנות). שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״. חשבון שמתחלקים בו כל חודש? ״🔁 כל חודש״ רושם את החוב לבד." },
   { t: '#setMenu [data-act="arrange"]', view: "admin", opt: true, h: "התאמת מסך הבית 🧩", b: "משנים את סדר הכרטיסים במסך הבית, ומסתירים את מה שלא צריך." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -11379,7 +11532,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113203558";
+const BUILD_ID = "20261114010934";
 let updToast = null;
 async function checkUpdate() {
   try {
