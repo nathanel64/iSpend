@@ -3977,7 +3977,7 @@ function build() {
   // "who owes me": the purchase counts only your part (the rest is money that comes back)
   oweLinked = new Set();
   out.forEach(t => { if (t.income || t.refund || t.gen || t.splitOf || t.parts) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
-    t.owe = it; oweLinked.add(it.k); if (it.mine === false) return; const others = it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
+    t.owe = it; oweLinked.add(it.k); return; const others = it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
     if (others > 0) { t.fullAmount = t.amount; t.amount = Math.max(0, Math.round((t.amount - others) * 100) / 100); } });
   txAll = out;
   tx = hiddenMonths.size ? out.filter(t => !hiddenMonths.has(mIdxOf(t.date))) : out;
@@ -10347,7 +10347,7 @@ function openOweFor(t) {
   const total = t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
   // me: am I one of the people splitting it, or do the others pay the whole thing back
   let me = old ? old.me !== false : true;
-  let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: String(Math.round(total / 2 * 100) / 100), paid: "" }], mine = old ? old.mine !== false : false;
+  let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: String(Math.round(total / 2 * 100) / 100), paid: "" }], mine = false; // the purchase always counts in full; paybacks come in as their own bank rows
   const heads = () => ppl.length + (me ? 1 : 0), minHeads = () => (me ? 2 : 1);
   const isEven = () => ppl.every(x => x.a) && new Set(ppl.map(x => String(x.a))).size === 1 && Math.abs(+ppl[0].a * heads() - total) < heads() * 0.01;
   const { bg, close } = oweSheet("oweSheet");
@@ -10371,7 +10371,6 @@ function openOweFor(t) {
         <button type="button" class="rm" data-rm="${i}" aria-label="הסרה">✕</button></div>${x.paid ? `<label class="ow-got"><span style="white-space:nowrap">✓ כמה קיבלת בפועל?</span><span class="money-in"><span aria-hidden="true">₪</span><input data-g="${i}" inputmode="decimal" value="${x.got != null ? x.got : x.a}" aria-label="כמה קיבלת בפועל"></span></label>` : ""}`).join("")}</div>
       ${ppl.length < 29 ? `<button type="button" class="sp-add" data-add>＋ עוד מישהו</button>` : ""}
       <div class="ow-mine">${mineRow()}</div>
-      <label class="ow-sw"><input type="checkbox" id="oweMine" ${mine ? "checked" : ""}><span>${me ? "בחודש לספור רק את החלק שלי" : "בחודש לא לספור את הקנייה (הכסף חוזר אליי)"}</span></label>
       <p class="sp-msg" id="owMsg"></p>
       <button type="button" class="sp-save" id="owSave">שמירה</button>
       ${old ? `<button type="button" class="sp-undo" id="owDel">מחיקת החוב (הקנייה חוזרת להיות כולה שלך)</button>` : ""}
@@ -11291,7 +11290,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113124148";
+const BUILD_ID = "20261113124622";
 let updToast = null;
 async function checkUpdate() {
   try {
