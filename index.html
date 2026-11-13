@@ -3379,7 +3379,7 @@ function makeSupaAdapter(uid) {
 <script>
 const SHEET_ID = "1CwS8tTfMiKgwk-ke0ScWgYEYvABhqIQltITGK3d9Px8";
 const SERVER = "Google Sheets";
-const R_APPLE = "'עסקאות'!A2:I"; // I: number of payments (empty = one)
+const R_APPLE = "'עסקאות'!A2:J"; // I: number of payments (empty = one); J: ✎ = an Apple Pay payment named by hand
 const R_BANK = "'_moneyman'!A2:L";
 const R_SETTINGS = "'הגדרות'!A2:Z300";
 const R_MANUAL = "'הוצאות יומיות'!D4:I";
@@ -3945,7 +3945,8 @@ function build() {
     const isSalary = type === "הכנסה" && (!cat || cat === "הכנסה" || cat === "משכורת");
     const fromPay = (v[6] || "") === "Apple Pay";
     let name = v[2] || "ללא תיאור";
-    if (fromPay) {
+    if (fromPay && v[9]) name = String(v[2] || "").trim() || name; // named by hand: stays as written
+    else if (fromPay) {
       const hit = recognizeMerchant(v[2]);
       if (hit) { name = hit.name || name; if (hit.cat && (merchantRules[(v[2] || "").trim()] || cat === "לא מסווג" || !cat)) cat = hit.cat; }
       else name = tidyMerchant(name);
@@ -3955,7 +3956,7 @@ function build() {
       date, amount: Math.abs(amt), income: isSalary, refund: type === "החזר" || (type === "הכנסה" && !isSalary), inst: pi && { k: pi.k, n: pi.n },
       merchant: (pi && pi.base) || name, rawMerchant: (v[2] || "").trim(), category: isSalary ? "הכנסה" : (cat || "לא מסווג"),
       account: accName((v[6] || "") === "Apple Pay" && !PAY.includes((v[3] || "").trim()) ? (cardMap[(v[3] || "").trim()] || v[3] || "Apple Pay") : (v[3] || "")), rawCard: (v[3] || "").trim(), source: (v[6] || "") === "Apple Pay" ? "applepay" : "manual", order: 100000 + i,
-      del: { key: "apple", index: i, file: SHEET_ID, sheetId: 777001, row: i + 2, range: "'עסקאות'!A" + (i + 2) + ":I" + (i + 2), raw: v }, rid: String(v[7] || "").trim()
+      del: { key: "apple", index: i, file: SHEET_ID, sheetId: 777001, row: i + 2, range: "'עסקאות'!A" + (i + 2) + ":J" + (i + 2), raw: v }, rid: String(v[7] || "").trim(), named: !!(fromPay && v[9])
     };
     if (payments === 1) { out.push(base); return; }
     // a purchase in payments: one row per month, each a share of the full price
@@ -5909,7 +5910,7 @@ async function aiClassify(force) {
   let asked = {}; try { asked = JSON.parse(localStorage.getItem("aiAsked") || "{}") || {}; } catch (e) {}
   const now = Date.now(), want = [];
   tx.forEach(t => {
-    const raw = t.rawMerchant; if (!raw || t.income || merchantRules[raw.trim()]) return;
+    const raw = t.rawMerchant; if (!raw || t.income || t.named || merchantRules[raw.trim()]) return;
     if (!(t.source === "applepay" || (t.del && t.del.key === "bank") || (t.del && t.del.raw && t.del.raw[6] === "ייבוא"))) return;
     const k = aiKey(raw); if (!k || aiMerch[k] || (!force && asked[k] && now - asked[k] < 7 * 864e5)) return;
     const hit = recognizeMerchant(raw); if (hit && !hit.kind && hit.cat && t.category !== "לא מסווג") return;
@@ -7330,9 +7331,12 @@ function openEdit(t) {
   $("addSave").textContent = "שמירת שינויים";
 }
 // the row of an edit, as the sheet holds it: what is written, and what the screen shows until the sheet answers
+// a payment that came in by itself (Apple Pay) and was given a name by hand keeps that name:
+// column J marks it, so neither the business list nor the AI renames it again
+const namedFlag = (t, desc) => { const r = t.del.raw || []; if (r[9]) return r[9]; return t.source === "applepay" && String(desc || "").trim() && String(desc).trim() !== String(t.merchant || "").trim() ? "✎" : ""; };
 function editRow(t, amount, desc, date, cat, card, kind, inst) {
   const d = parseDate(date), type = kind === "inc" ? "הכנסה" : "הוצאה";
-  if (t.del.key === "apple") { const r = t.del.raw; return { range: "'עסקאות'!A" + t.del.row + ":I" + t.del.row, values: [date, amount, desc, card, cat, type, r[6] || "", r[7] || "", inst > 1 ? inst : ""] }; }
+  if (t.del.key === "apple") { const r = t.del.raw; return { range: "'עסקאות'!A" + t.del.row + ":J" + t.del.row, values: [date, amount, desc, card, cat, type, r[6] || "", r[7] || "", inst > 1 ? inst : "", namedFlag(t, desc)] }; }
   const ddmm = String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
   return { range: "'_moneyman'!A" + (t.del.index + 2) + ":E" + (t.del.index + 2), values: [ddmm, kind === "inc" ? amount : -amount, desc, t.del.raw[3] || "", cat] };
 }
@@ -7375,7 +7379,7 @@ function fastEdit(t, amount, desc, date, cat, card, kind, inst) {
     arr[idx] = before; afterData();
     try {
       await job;
-      const oldVals = t.del.key === "apple" ? Array.from({ length: 9 }, (_, i) => before[i] ?? "") : Array.from({ length: 5 }, (_, i) => before[i] ?? "");
+      const oldVals = t.del.key === "apple" ? Array.from({ length: 10 }, (_, i) => before[i] ?? "") : Array.from({ length: 5 }, (_, i) => before[i] ?? "");
       await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: w.range, values: [oldVals] });
       try { arr[idx] = await readRowOf(t); } catch (e) {}
       afterData(); toast("השינוי בוטל", 1800); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
@@ -7387,7 +7391,7 @@ async function saveEdit(t, amount, desc, date, cat, card, kind) {
   const ddmm = String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
   const type = kind === "inc" ? "הכנסה" : "הוצאה";
   let range, values;
-  if (t.del.key === "apple") { const r = t.del.raw; range = "'עסקאות'!A" + t.del.row + ":I" + t.del.row; const n = +$("addInst").value; values = [[date, amount, desc, card, cat, type, r[6] || "", r[7] || "", n > 1 ? n : ""]]; }
+  if (t.del.key === "apple") { const r = t.del.raw; range = "'עסקאות'!A" + t.del.row + ":J" + t.del.row; const n = +$("addInst").value; values = [[date, amount, desc, card, cat, type, r[6] || "", r[7] || "", n > 1 ? n : "", namedFlag(t, desc)]]; }
   else if (t.del.key === "bank") { range = "'_moneyman'!A" + (t.del.index + 2) + ":E" + (t.del.index + 2); values = [[ddmm, kind === "inc" ? amount : -amount, desc, t.del.raw[3] || "", cat]]; }
   else { range = "'הוצאות יומיות'!D" + t.del.row + ":I" + t.del.row; values = [["=DATE(" + d.getFullYear() + "," + (d.getMonth() + 1) + "," + d.getDate() + ")", type, cat, desc, card, amount]]; }
   // same safety check as delete: the row must still hold this transaction
@@ -11345,7 +11349,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113173412";
+const BUILD_ID = "20261113174640";
 let updToast = null;
 async function checkUpdate() {
   try {
