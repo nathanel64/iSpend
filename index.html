@@ -10482,7 +10482,7 @@ function openOweList() {
     const mineOpen = []; oweLive().forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) mineOpen.push({ it, x }); }));
     mineOpen.forEach(o => { o.x.paid = iso(today); oweRefundAdd(o.it, o.x); });
     g.disabled = true; g.textContent = "שומר…";
-    try { await saveOwe(); afterData(); draw(); toast(`${n} החזיר הכול ✓`, 2200); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
+    try { await saveOwe(); afterData(); draw(); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
     catch (err) { oweList = JSON.parse(before); oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("השמירה לא הצליחה: " + writeError(err), 3500); }
   });
   draw();
@@ -11287,7 +11287,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261113125824";
+const BUILD_ID = "20261113130211";
 let updToast = null;
 async function checkUpdate() {
   try {
