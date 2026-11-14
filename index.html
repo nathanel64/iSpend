@@ -5789,7 +5789,7 @@ function renderList(inP) {
   // the exact total of what the list shows: money in for "הכנסות", otherwise spending minus refunds
   // a split purchase shows as one row; its whole amount counts (not only the part left on the main row)
   const amtOf = t => t.parts && splitMerge && t.splitTotal != null ? t.splitTotal : t.amount;
-  const lt = txKind === "inc" ? list.reduce((s, t) => s + t.amount, 0) : list.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -amtOf(t) : amtOf(t)), 0);
+  const lt = txKind === "inc" ? list.reduce((s, t) => s + amtOf(t), 0) : list.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -amtOf(t) : amtOf(t)), 0);
   $("listTotal").innerHTML = list.length ? (txKind === "inc" ? ltr("+" + fmtAX(lt)) : fmtAX(lt)) : "";
   if (all) {
     $("days").innerHTML = `<div class="empty"><strong>עוד אין תנועות</strong>אחרי שתחברו את הבנק והאשראי (או את Apple Pay), התנועות יופיעו כאן.</div>`;
@@ -7722,7 +7722,7 @@ function openReceipt(k, sw) {
   const code = (id || (t.merchant + t.amount)).replace(/\D/g, "").slice(-10).padStart(10, "0");
   const raw = (t.del && t.del.raw) || [];
   const qaAgain = !!t.del && t.del.key === "apple" && !t.gen && !t.splitOf && !t.parts && !t.refund && !/^(ow|sp)-/.test(id) && +raw[1] > 0;
-  const qaSplit = !!t.del && t.del.key === "apple" && !t.income && !t.refund && !t.gen && !(+raw[8] > 1) && typeof openSplit === "function";
+  const qaSplit = !!t.del && t.del.key === "apple" && !t.gen && !/^ow-/.test(id) && !(+raw[8] > 1) && typeof openSplit === "function";
   const qaOwe = !!t.del && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts && typeof openOweFor === "function";
   openObj(`<div class="paper both" role="dialog" aria-modal="true" aria-label="קבלה: ${esc(t.merchant)}">
     <div class="pp-head"><span class="pp-logo">iSpend</span><small>יום ${WEEKDAYS[t.date.getDay()]}, ${t.date.getDate()} ב${MONTHS[t.date.getMonth()]} ${t.date.getFullYear()}</small></div>
@@ -10171,7 +10171,7 @@ const SP_COL = ["#5b4cf0", "#1f9d6a", "#e85d9a", "#f2a33a", "#2f8fd6", "#9a52d6"
 const addFresh = () => !editTx && addKind === "exp" && !$("sheetBg").hidden;
 function splitShown() {
   if (addFresh()) return !(+$("addInst").value > 1);
-  const t = editTx; return !!t && t.del && t.del.key === "apple" && !t.income && !t.refund && !t.gen && addKind === "exp" && !(+((t.del.raw || [])[8]) > 1);
+  const t = editTx; return !!t && t.del && t.del.key === "apple" && !t.gen && !/^ow-/.test(t.rid || "") && !(+((t.del.raw || [])[8]) > 1);
 }
 function splitSync() {
   const on = splitShown(); $("splitBtn").hidden = !on; if (!on) return;
@@ -10185,20 +10185,22 @@ $("splitBtn").addEventListener("click", () => { if (!editTx) { saveThen("split")
 
 function openSplit(p) {
   let total = p.splitTotal || p.amount;
+  // money that came in splits too: "הכנסה", or back into spending categories (a payback for several things)
+  const inc = p.income || p.refund, CL = inc ? ["הכנסה", ...CATS.filter(c => c !== "הכנסה")] : CATS;
   let parts = (p.parts || [p]).map(x => ({ cat: x.category, amount: x.amount }));
-  if (parts.length === 1) parts.push({ cat: CATS.find(c => c !== parts[0].cat) || parts[0].cat, amount: 0 });
+  if (parts.length === 1) parts.push({ cat: CL.find(c => c !== parts[0].cat) || parts[0].cat, amount: 0 });
   const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = "splitSheet"; bg.dir = "rtl";
   const close = () => { bg.remove(); document.documentElement.classList.remove("modal-open"); };
   bg.addEventListener("click", e => { if (e.target === bg || e.target.closest(".x")) close(); });
   document.body.appendChild(bg); document.documentElement.classList.add("modal-open");
-  const opts = sel => (CATS.includes(sel) ? CATS : [sel, ...CATS]).map(c => `<option${c === sel ? " selected" : ""}>${esc(c)}</option>`).join("");
+  const opts = sel => (CL.includes(sel) ? CL : [sel, ...CL]).map(c => `<option${c === sel ? " selected" : ""}>${esc(c)}</option>`).join("");
   const rest = () => Math.round((total - parts.slice(1).reduce((s, x) => s + (+x.amount || 0), 0)) * 100) / 100;
   const draw = (focus) => {
     const r0 = rest();
     bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="פיצול לקטגוריות">
       <span class="grab" aria-hidden="true"></span>
       <div class="hd"><div><b>פיצול לקטגוריות</b><br><span><bdi>${esc(p.merchant)}</bdi> · ${dd(p.date)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
-      <label class="sp-tot sp-totin"><span>סה״כ הקנייה<small>אפשר לשנות</small></span><span class="money-in"><span aria-hidden="true">₪</span><input id="spTotal" inputmode="decimal" value="${total}" aria-label="סה״כ הקנייה"></span></label>
+      <label class="sp-tot sp-totin"><span>${inc ? "סה״כ שהתקבל" : "סה״כ הקנייה"}<small>אפשר לשנות</small></span><span class="money-in"><span aria-hidden="true">₪</span><input id="spTotal" inputmode="decimal" value="${total}" aria-label="סה״כ הקנייה"></span></label>
       <div class="sp-bar">${parts.map((x, i) => `<i style="width:${Math.max(0, (i ? +x.amount || 0 : r0) / total * 100)}%;background:${SP_COL[i % SP_COL.length]}"></i>`).join("")}</div>
       <div class="sp-rows">${parts.map((x, i) => `<div class="sp-row"><span class="sp-dot" style="background:${SP_COL[i % SP_COL.length]}"></span><select data-i="${i}" aria-label="קטגוריה">${opts(x.cat)}</select>
         ${i ? `<input data-i="${i}" inputmode="decimal" value="${x.amount || ""}" placeholder="0" aria-label="סכום"><button type="button" class="rm" data-rm="${i}" aria-label="הסרת החלק">✕</button>` : `<span class="rest num" title="מה שנשאר מהסכום">${fmt2(Math.max(0, r0))}</span><span></span>`}</div>`).join("")}</div>
@@ -10215,17 +10217,17 @@ function openSplit(p) {
     const el = e.target.closest("input[data-i]"); if (!el && e.target.id !== "spTotal") return; if (el) parts[+el.dataset.i].amount = el.value.replace(/[^\d.]/g, ""); const r0 = rest();
     const rs = bg.querySelector(".rest"); if (rs) rs.textContent = fmt2(Math.max(0, r0));
     bg.querySelectorAll(".sp-bar i").forEach((b, i) => b.style.width = Math.max(0, (i ? +parts[i].amount || 0 : r0) / (total || 1) * 100) + "%");
-    $("spMsg").textContent = r0 < 0 ? "החלקים גדולים מהסכום של הקנייה" : ""; });
+    $("spMsg").textContent = r0 < 0 ? "החלקים גדולים מהסכום הכולל" : ""; });
   bg.addEventListener("change", e => { const el = e.target.closest("select[data-i]"); if (el) parts[+el.dataset.i].cat = el.value; });
   bg.addEventListener("click", async e => {
     const rm = e.target.closest("[data-rm]"); if (rm) { parts.splice(+rm.dataset.rm, 1); draw(); return; }
-    if (e.target.closest("[data-add]")) { parts.push({ cat: CATS.find(c => !parts.some(x => x.cat === c)) || CATS[0], amount: 0 }); draw(parts.length - 1); return; }
+    if (e.target.closest("[data-add]")) { parts.push({ cat: CL.find(c => !parts.some(x => x.cat === c)) || CL[0], amount: 0 }); draw(parts.length - 1); return; }
     const sv = e.target.closest("#spSave, #spUndo"); if (!sv) return;
     const undo = sv.id === "spUndo";
     if (!(total > 0)) { $("spMsg").textContent = "צריך סכום כולל גדול מאפס"; return; }
     let out = undo ? [{ cat: p.category, amount: total }] : [{ cat: parts[0].cat, amount: rest() }, ...parts.slice(1).map(x => ({ cat: x.cat, amount: Math.round((+x.amount || 0) * 100) / 100 }))].filter((x, i) => !i || x.amount > 0);
     if (!undo) {
-      if (out[0].amount <= 0) { $("spMsg").textContent = "החלקים לא יכולים להיות גדולים מהסכום של הקנייה"; return; }
+      if (out[0].amount <= 0) { $("spMsg").textContent = "החלקים לא יכולים להיות גדולים מהסכום הכולל"; return; }
       if (out.length < 2) { $("spMsg").textContent = "כדי לפצל צריך לפחות שני חלקים עם סכום"; return; }
     }
     sv.disabled = true; sv.textContent = "שומר…";
@@ -11340,7 +11342,7 @@ const TOUR = [
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
   { t: "#pkDays", demo: tourAddDemo2, h: "מתי, ועוד", b: "היום, אתמול או שלשום בלחיצה, ו״📅 תאריך אחר״ פותח לוח שנה. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם. אם אותו סכום כבר נרשם באותו יום, תופיע הערה ״אולי זו כבר נכנסה?״." },
-  { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול קנייה לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר כבר בהוספה, או אחר כך בעריכה." },
+  { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם, וגם כסף שנכנס), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר כבר בהוספה, או אחר כך בעריכה." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והסכום, העסק והכרטיס מתמלאים לבד." },
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
@@ -11705,7 +11707,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114165236";
+const BUILD_ID = "20261114170416";
 let updToast = null;
 async function checkUpdate() {
   try {
