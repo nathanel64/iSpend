@@ -2297,6 +2297,23 @@ html[data-txt="xl"] { font-size: 124%; }
 .bin-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); font-size: .88rem; }
 .bin-row > span:nth-child(2) { flex: 1; min-width: 0; } .bin-row b { display: block; } .bin-row small { color: var(--muted); font-size: .75rem; }
 .mg-g { background: var(--bg); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
+.cs-g { background: var(--bg); border-radius: 16px; padding: 12px 14px; }
+.cs-top { display: flex; align-items: center; gap: 10px; }
+.cs-ck { width: 24px; height: 24px; border-radius: 7px; border: 1.5px solid var(--line); background: var(--surface); color: var(--brand-ink); display: grid; place-items: center; font-size: 13px; font-weight: 800; flex: none; cursor: pointer; padding: 0; }
+.cs-ck[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); }
+.cs-ck.part { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+.cs-nm { flex: 1; min-width: 0; } .cs-nm b { display: block; font-size: .95rem; } .cs-nm small { color: var(--muted); font-size: .76rem; }
+.cs-new { font-size: .66rem; font-weight: 700; background: var(--brand-soft); color: var(--brand); border-radius: 6px; padding: 1px 6px; margin-inline-start: 6px; vertical-align: 2px; }
+.cs-ex { color: var(--muted); font-size: .76rem; margin: 6px 34px 0 0; line-height: 1.5; }
+.cs-g .mg-tx { margin: 8px 34px 0 0; font-size: .78rem; }
+.cs-list { margin: 6px 34px 0 0; display: flex; flex-direction: column; }
+.cs-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-top: 1px solid var(--line); font-size: .82rem; cursor: pointer; }
+.cs-row .cs-ck { width: 20px; height: 20px; font-size: 11px; border-radius: 6px; }
+.cs-row bdi { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-row .a { font-variant-numeric: tabular-nums; white-space: nowrap; } .cs-row .a.in { color: var(--good); }
+.cs-row small { color: var(--muted); font-size: .72rem; flex: none; }
+.cs-go { border: 0; border-radius: 14px; background: var(--brand); color: var(--brand-ink); font: inherit; font-weight: 700; font-size: 1rem; padding: 14px; cursor: pointer; position: sticky; bottom: 0; }
+.cs-go:disabled { opacity: .5; }
 .mg-g > b { font-size: .95rem; }
 .mg-nm { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .mg-nm button { border: 0; font: inherit; background: var(--surface); border-radius: 999px; padding: 6px 11px; font-size: .8rem; box-shadow: 0 0 0 1.5px var(--brand); color: var(--ink); cursor: pointer; }
@@ -3824,7 +3841,11 @@ const ICONS = {
   wifi: "M2 9a15 15 0 0120 0 M5.5 12.5a10 10 0 0113 0 M9 16a5 5 0 016 0 M12 19.5v.01",
   tag: "M3 12V3h9l9 9-9 9z M8 8v.01",
   card: "M3 6h18v12H3z M3 10h18 M7 15h4",
-  bank: "M3 10l9-6 9 6 M5 10v8 M9.5 10v8 M14.5 10v8 M19 10v8 M3 20h18"
+  bank: "M3 10l9-6 9 6 M5 10v8 M9.5 10v8 M14.5 10v8 M19 10v8 M3 20h18",
+  dice: "M4 4h16v16H4z M8.5 8.5h.01 M15.5 8.5h.01 M12 12h.01 M8.5 15.5h.01 M15.5 15.5h.01",
+  smoke: "M3 16h14v3H3z M19 16v3 M21 16v3 M17 12c0-2 2-2 2-4s-2-2-2-4 M21 12c0-2-2-2-2-4",
+  ticket: "M3 8a2 2 0 002-2h14a2 2 0 002 2v2a2 2 0 000 4v2a2 2 0 00-2 2H5a2 2 0 00-2-2v-2a2 2 0 000-4z M14 6v12",
+  target: "M12 21a9 9 0 100-18 9 9 0 000 18z M12 16a4 4 0 100-8 4 4 0 000 8z M12 12h.01"
 };
 const HUES = [12, 24, 44, 90, 140, 165, 192, 210, 240, 285, 322, 350];
 // built-in categories
@@ -3834,7 +3855,8 @@ const CAT_ICONS = {
   "קניות לבית": ["home", 32, 55], "סופר": ["cart", 135, 45], "אוכל ושתיה": ["food", 12, 70], "טיפוח ופארם": ["drop", 300, 45],
   "אירועים": ["cake", 345, 60], "חופשות": ["plane", 192, 65], "מנוי חודשי": ["repeat", 240, 50], "הוצאות שוטפות": ["bolt", 44, 80],
   "מתנות": ["gift", 355, 60], "כושר": ["dumbbell", 165, 50], "ביטוח": ["shield", 218, 35], "חתונה": ["heart", 322, 55],
-  "הכנסה": ["income", 148, 55], "לא מסווג": ["question", 220, 10]
+  "הכנסה": ["income", 148, 55], "לא מסווג": ["question", 220, 10],
+  "הימורים": ["dice", 350, 55], "עישון": ["smoke", 28, 25], "שוברים וטעינות": ["ticket", 48, 65], "ציוד אישי": ["target", 205, 35], "רכב": ["car", 215, 55], "בריאות": ["health", 0, 55]
 };
 // new categories: picked by words in the name
 const ICON_WORDS = [
@@ -8387,6 +8409,7 @@ boot();
     <div class="set-grp" data-g="org">
       <button type="button" class="set-row" data-go="cats">${ico("tag", 330)}<span class="set-rt"><b>קטגוריות ותקרות</b><small data-s="cats"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-go="pay">${ico("card", 210)}<span class="set-rt"><b>אמצעי תשלום</b><small data-s="pay"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
+      <button type="button" class="set-row" data-act="catsort">${ico("tag", 48)}<span class="set-rt"><b>סידור קטגוריות</b><small>מה שבקניות ובהוצאות שוטפות, לקטגוריות מדויקות</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="merge">${ico("tag", 190)}<span class="set-rt"><b>אותו עסק?</b><small>שמות שונים של אותו מקום נספרים כעסק אחד</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="bin">${ico("trash", 25)}<span class="set-rt"><b>נמחקו לאחרונה</b><small>תנועות שמחקת ב-30 הימים האחרונים, ומשם מחזירים</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-go="wallet">${ico("wallet", 45)}<span class="set-rt"><b>כרטיסים מהארנק</b><small data-s="wallet"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
@@ -8456,6 +8479,7 @@ boot();
     if (r.dataset.act === "owe") { openOweList(); return; }
     if (r.dataset.act === "bin") { openBin(); return; }
     if (r.dataset.act === "merge") { openMerge(); return; }
+    if (r.dataset.act === "catsort") { openCatSort(); return; }
     if (r.dataset.act === "arrange") { showView("flow"); scrollTo(0, 0); setTimeout(() => { try { startArrange(); } catch (e) {} }, 350); return; }
     if (r.dataset.act === "xlsx") { exportXlsx(r); return; }
     if (r.dataset.act === "import") { openImport(); return; }
@@ -10770,6 +10794,94 @@ function mergeGroups() {
   });
   return out.sort((a, b) => b.c - a.c).slice(0, 20);
 }
+/* 🗂️ "סידור קטגוריות": the catch-all categories ("קניות", "הוצאות שוטפות") sorted into new, exact ones by words in the description.
+   Money back for the same thing (a friend paying back for ווינר) moves with it, so each category shows what it really cost.
+   Only the category column changes; afterwards a new "ווינר" is put in its new category by itself (same description → same category). */
+const CS_FROM = ["קניות", "הוצאות שוטפות"];
+const CS_RULES = [
+  ["הימורים", /ווינר|גמדום|פנטזי|פוקר/],
+  ["עישון", /סיגריות|ריזלות|פילטרים|וייפ|מצית|^\s*נרגילה\s*$/],
+  ["רכב", /טסט|פוליש|שטיפ|ניקוי רכב|חני|דוח|רישיון נהיגה|רישיון בינלאומי|אגרה|תדלוק|וישר/],
+  ["בריאות", /רופא|גמגום|טרם/],
+  ["שוברים וטעינות", /הטענ|טעינ|שובר|קופונים|קפסולות|חבר(?![א-ת])/],
+  ["ציוד אישי", /אקדח/]
+];
+function catSortFind() {
+  const pend = new Set(readPending().map(r => String(r[7] || "").trim()).filter(Boolean)), by = new Map();
+  (data.apple || []).forEach((v, i) => {
+    const raw = String(v[4] || "").trim(), cat = catAlias[raw] || raw, type = String(v[5] || "").trim();
+    if (!CS_FROM.includes(cat) || (type === "הכנסה" && (!cat || cat === "הכנסה" || cat === "משכורת"))) return;
+    if (pend.has(String(v[7] || "").trim()) || /^sp-/.test(String(v[7] || ""))) return;
+    const d = String(v[2] || ""), hit = CS_RULES.find(([, re]) => re.test(d)); if (!hit) return;
+    const amt = parseAmount(v[1]); if (amt === null || amt === 0) return;
+    if (!by.has(hit[0])) by.set(hit[0], []);
+    by.get(hit[0]).push({ i, d: d.trim() || "ללא תיאור", date: parseDate(v[0]), amt: Math.abs(amt), back: type !== "הוצאה", from: cat, id: String(v[7] || "") });
+  });
+  return CS_RULES.map(([c]) => ({ c, rows: (by.get(c) || []).sort((a, b) => (b.date || 0) - (a.date || 0)) })).filter(g => g.rows.length);
+}
+function openCatSort() {
+  const { bg, close } = oweSheet("catSort");
+  let groups = catSortFind(), busy = false;
+  const off = new Set(), open = new Set();
+  const key = r => r.i + "|" + r.id;
+  const net = rows => rows.reduce((a, r) => a + (r.back ? -r.amt : r.amt), 0);
+  const picked = () => groups.flatMap(g => g.rows.filter(r => !off.has(key(r))).map(r => ({ r, c: g.c })));
+  const draw = () => {
+    const sc = bg.querySelector(".jar-sh"), top = sc ? sc.scrollTop : 0, n = picked().length;
+    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="סידור קטגוריות">
+      <span class="grab" aria-hidden="true"></span>
+      <div class="hd"><div><b>סידור קטגוריות</b><br><span>${groups.length ? "תנועות מקניות ומהוצאות שוטפות שיש להן קטגוריה מדויקת יותר. מה שלא מסומן נשאר במקום." : ""}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      ${groups.length ? groups.map((g, gi) => {
+        const on = g.rows.filter(r => !off.has(key(r))), all = on.length === g.rows.length, none = !on.length;
+        const exp = g.rows.filter(r => !r.back), back = g.rows.filter(r => r.back);
+        const names = [...new Map(exp.map(r => [r.d.replace(/\s+/g, " "), 0])).keys()].slice(0, 5);
+        const from = [...new Set(g.rows.map(r => r.from))].join(" ומ");
+        return `<div class="cs-g">
+          <div class="cs-top"><button type="button" class="cs-ck${!all && !none ? " part" : ""}" data-csg="${gi}" aria-pressed="${!none}" aria-label="${esc(g.c)}">${all ? "✓" : none ? "" : "–"}</button>
+            ${catIcon(g.c, true)}<span class="cs-nm"><b>${esc(g.c)}${CATS.includes(g.c) ? "" : `<span class="cs-new">חדשה</span>`}</b><small>מ${esc(from)} · ${[exp.length ? exp.length + " הוצאות" : "", back.length ? back.length + " החזרים" : ""].filter(Boolean).join(" · ")}</small></span>
+            ${(() => { const v = Math.round(net(on.length ? on : g.rows)); return `<b class="num"${v < 0 ? ' style="color:var(--good)"' : ""}>${v < 0 ? "+" : ""}${fmtA(Math.abs(v))}</b>`; })()}</div>
+          <div class="cs-ex">${names.map(esc).join(" · ")}</div>
+          <button type="button" class="mg-tx" data-cso="${gi}">${open.has(gi) ? "הסתרת התנועות ‹" : `כל ${g.rows.length} התנועות ›`}</button>
+          ${open.has(gi) ? `<div class="cs-list">${g.rows.map(r => `<div class="cs-row" data-csr="${esc(key(r))}"><span class="cs-ck" aria-pressed="${!off.has(key(r))}">${off.has(key(r)) ? "" : "✓"}</span><bdi>${esc(r.d)}</bdi><small>${r.date ? dd(r.date) + "." + String(r.date.getFullYear()).slice(2) : ""}</small><span class="a${r.back ? " in" : ""}">${r.back ? "+" : ""}${fmtA(r.amt)}</span></div>`).join("")}</div>` : ""}
+        </div>`; }).join("") + `<button type="button" class="cs-go" data-csgo${n && !busy ? "" : " disabled"}>${busy ? "מעביר…" : `העברה של ${n} תנועות`}</button>
+        <p class="jar-note">החזרים על אותו דבר עוברים יחד עם ההוצאה, כדי שהקטגוריה תראה כמה זה עלה באמת. מהיום תנועות כאלה ייכנסו לבד לקטגוריה החדשה.</p>`
+        : `<p class="ow-empty">הכל מסודר. אין בקניות ובהוצאות שוטפות תנועות שמתאימות לקטגוריה אחרת.</p>`}
+    </div>`;
+    const n2 = bg.querySelector(".jar-sh"); if (n2) n2.scrollTop = top;
+  };
+  bg.addEventListener("click", async e => {
+    if (busy) return;
+    const gk = e.target.closest("[data-csg]");
+    if (gk) { const g = groups[+gk.dataset.csg], anyOn = g.rows.some(r => !off.has(key(r))); g.rows.forEach(r => anyOn ? off.add(key(r)) : off.delete(key(r))); draw(); return; }
+    const op = e.target.closest("[data-cso]"); if (op) { const gi = +op.dataset.cso; open.has(gi) ? open.delete(gi) : open.add(gi); draw(); return; }
+    const rw = e.target.closest("[data-csr]"); if (rw) { const k = rw.dataset.csr; off.has(k) ? off.delete(k) : off.add(k); draw(); return; }
+    if (!e.target.closest("[data-csgo]")) return;
+    const list = picked(); if (!list.length) return;
+    busy = true; draw();
+    try {
+      // the new categories first, at the end of the list (icons come from their names)
+      const add = [...new Set(list.map(x => x.c))].filter(c => !CATS.includes(c));
+      if (add.length) {
+        const all = [...CATS, ...add];
+        await writeRange("'הגדרות'!A2:C121", pad(all.map(c => [c, FIXED.has(c) ? "כן" : "", catStyle[c] ? catStyle[c].icon + "|" + catStyle[c].hue : ""]), 120, 3));
+        CATS = all; if (Array.isArray(draftCats) && !adminDirty.cats) draftCats = all.map(c => ({ name: c, fixed: FIXED.has(c), orig: c, ...(catStyle[c] || {}) }));
+      }
+      // then each row's category (column E); a few at a time
+      let done = 0, failed = 0; const q = list.slice();
+      const one = async () => { for (let x; (x = q.shift());) {
+        const v = (data.apple || [])[x.r.i]; if (!v || String(v[7] || "") !== x.r.id) { failed++; continue; }
+        try { await writeRange("'עסקאות'!E" + (x.r.i + 2) + ":E" + (x.r.i + 2), [[x.c]]); v[4] = x.c; done++; } catch (err) { failed++; }
+        if (done % 10 === 0) { const b = bg.querySelector("[data-csgo]"); if (b) b.textContent = `מעביר… ${done}/${list.length}`; }
+      } };
+      await Promise.all([one(), one(), one(), one()]);
+      busy = false; build(); render(); try { renderAdminLists(); } catch (err) {}
+      groups = catSortFind(); off.clear(); open.clear(); draw();
+      toast(failed ? `הועברו ${done} תנועות. ${failed} לא נשמרו, נסו שוב.` : `הועברו ${done} תנועות ✓`, 3000);
+    } catch (err) { busy = false; draw(); toast("לא נשמר: " + writeError(err), 3500); }
+  });
+  draw();
+}
+
 function openMerge() {
   const { bg, close } = oweSheet("mergeSheet"); const off = new Set();
   const draw = () => {
@@ -11358,7 +11470,7 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "המשכורת של כל חודש, יעד החיסכון והחודשים שמופיעים באתר." },
   { t: '#setMenu [data-go="sal"]', view: "admin", h: "יום החיוב החודשי", b: "היום בחודש שבו יורד החיוב באשראי. החודש באתר מתחיל ממנו, כך שכל הוצאה נספרת בחודש של החיוב שלה. משנים ב״משכורות ומועד החיוב״." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, גם כאלה שבוחרים בעצמכם ונותנים להם שם (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. ״סידור קטגוריות״ מעביר בבת אחת תנועות מקניות ומהוצאות שוטפות לקטגוריות מדויקות (הימורים, עישון, רכב ועוד), יחד עם ההחזרים עליהן. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, גם כאלה שבוחרים בעצמכם ונותנים להם שם (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
   { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר, ואת הסכום שלה אפשר לשנות). שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״. חשבון שמתחלקים בו כל חודש? ״🔁 כל חודש״ רושם את החוב לבד." },
@@ -11707,7 +11819,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114170416";
+const BUILD_ID = "20261114221509";
 let updToast = null;
 async function checkUpdate() {
   try {
