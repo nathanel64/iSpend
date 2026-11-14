@@ -369,6 +369,8 @@ body.arrange .auto-empty { display: block !important; }
 .sp-totin { align-items: center; } .sp-totin small { display: block; color: var(--muted); font-size: .72rem; font-weight: 400; }
 .sp-totin .money-in { display: flex; align-items: center; gap: 4px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); padding: 0 10px; height: 42px; width: 130px; }
 .sp-totin input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 800; font-size: 1.05rem; padding: 0; direction: ltr; text-align: right; }
+.pay-dir { border: 0; border-radius: 999px; padding: 6px 10px; font: inherit; font-size: .76rem; font-weight: 700; background: var(--bg); color: var(--muted); cursor: pointer; white-space: nowrap; flex: none; }
+.pay-dir.on { background: color-mix(in srgb, var(--warn) 22%, var(--surface)); color: var(--ink); }
 .rc-hist { background: var(--bg); border-radius: 14px; padding: 10px 12px; margin: 10px 0 2px; font-size: .82rem; text-align: right; }
 .rc-hist > b { font-size: .86rem; display: block; }
 .rc-hist .r { display: flex; justify-content: space-between; color: var(--muted); margin-top: 4px; } .rc-hist .r b { color: var(--ink); }
@@ -514,6 +516,7 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .edit-list { display: flex; flex-direction: column; gap: 8px; }
 .edit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
 .edit-row.pay { grid-template-columns: auto minmax(0, 1fr) auto; }
+.edit-row.pay:has(.pay-dir) { grid-template-columns: auto minmax(0, 1fr) auto auto; }
 .edit-row.pay.bank-row { grid-template-columns: auto minmax(0, 1fr) auto; }
 .pay-dot { width: 30px; height: 20px; border-radius: 5px; border: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), 0 1px 3px rgba(0,0,0,.18); position: relative; }
 .pay-dot::before { content: ""; position: absolute; inset: -12px -8px; }
@@ -6143,6 +6146,7 @@ function applySettings(values) {
   { const bj = String((values[15] || [])[21] || "").trim(); if (typeof loadBank === "function") loadBank(bj); }
   { const j = String((values[16] || [])[21] || "").trim(); if (typeof loadBin === "function") loadBin(j); }
   { const j = String((values[17] || [])[21] || "").trim(); if (typeof loadMerge === "function") loadMerge(j); }
+  { const j = String((values[18] || [])[21] || "").trim(); if (typeof loadDirect === "function") loadDirect(j); }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -6238,7 +6242,8 @@ function renderAdminLists() {
       <p class="note pay-note">חשבון הבנק: אליו נכנסות המשכורת וההעברות. אפשר לשנות לו שם, אבל לא למחוק.</p>
       <div class="pay-sub">כרטיסים ואמצעי תשלום נוספים</div><p class="note pay-note">הצבע של כל כרטיס נבחר לבד לפי החברה. לחיצה על הריבוע הצבעוני מחליפה אותו.</p>` : `<div class="edit-row pay">
       ${payDot(p, i, false)}<input type="text" id="pay-${i}" value="${esc(p)}" aria-label="אמצעי תשלום" data-i="${i}">
-      <button class="del" data-del="${i}" aria-label="מחיקת ${esc(p)}">✕</button></div>${payColorOpen === p && p.trim() ? paySwatches(p, i === 0) : ""}`).join("");
+      ${p.trim() && p !== "מזומן" ? `<button type="button" class="pay-dir ${isDirect(p.trim()) ? "on" : ""}" data-direct="${i}" aria-pressed="${isDirect(p.trim())}" title="דיירקט: יורד מהעו״ש באותו רגע">⚡ דיירקט</button>` : ""}
+      <button class="del" data-del="${i}" aria-label="מחיקת ${esc(p)}">✕</button></div>${payColorOpen === p && p.trim() ? paySwatches(p, i === 0) : ""}`).join("") + `<p class="note pay-note">⚡ דיירקט: כרטיס שהכסף יורד בו מהעו״ש מיד, ולא ביום החיוב. בעו״ש שלך הוא נספר באותו יום.</p>`;
   }
 }
 function renderSal() {
@@ -6424,7 +6429,11 @@ $("payList").addEventListener("input", e => {
   const i = +e.target.dataset.i; if (isNaN(i)) return;
   adminDirty.pay = true; draftPay[i] = e.target.value; $("payMsg").textContent = "";
 });
-$("payList").addEventListener("click", e => {
+$("payList").addEventListener("click", async e => {
+  const dr = e.target.closest("[data-direct]");
+  if (dr) { const n = (draftPay[+dr.dataset.direct] || "").trim(); if (!n) return; const on = !isDirect(n);
+    try { await setDirect(n, on); const keep = adminDirty.pay; adminDirty.pay = false; renderAdminLists(); adminDirty.pay = keep; if (typeof renderBank === "function") renderBank(); toast(on ? `${n}: יורד מהעו״ש מיד ⚡` : `${n}: יורד ביום החיוב`, 2200); }
+    catch (err) { toast("לא נשמר: " + writeError(err), 3500); } return; }
   const dot = e.target.closest("[data-color]");
   if (dot) { const p = (draftPay[+dot.dataset.color] || "").trim(); if (!p) return; const keep = adminDirty.pay; adminDirty.pay = false; payColorOpen = payColorOpen === p ? null : p; renderAdminLists(); adminDirty.pay = keep; return; }
   const sw = e.target.closest("[data-sw]");
@@ -10917,7 +10926,18 @@ function chargeOf(t) {
   if (t.gen && +d === +c) return c;
   return d >= c ? chargeOn(d.getFullYear(), d.getMonth() + 1) : c;
 }
-const isCardTx = t => !isBankAcc(t) && t.account !== "מזומן" && t.source !== "bank";
+// a direct (debit) card: the money leaves the account right away, not on the charge day.
+// Names with "direct"/"דיירקט" count as one by themselves; the payment methods screen can turn any card on or off (V20)
+let directSt = { on: [], off: [] };
+function loadDirect(j) { try { const o = j ? JSON.parse(j) : {}; directSt = { on: Array.isArray(o.on) ? o.on : [], off: Array.isArray(o.off) ? o.off : [] }; } catch (e) { directSt = { on: [], off: [] }; } }
+const isDirect = name => !!name && (directSt.on.includes(name) || (/direct|דיירקט|דירקט|דביט|debit/i.test(name) && !directSt.off.includes(name)));
+async function setDirect(name, on) {
+  const auto = /direct|דיירקט|דירקט|דביט|debit/i.test(name), o = { on: directSt.on.filter(n => n !== name), off: directSt.off.filter(n => n !== name) };
+  if (on && !auto) o.on.push(name); if (!on && auto) o.off.push(name);
+  const before = directSt; directSt = o;
+  try { await writeRange("'הגדרות'!V20", [[o.on.length || o.off.length ? JSON.stringify(o) : ""]]); } catch (e) { directSt = before; throw e; }
+}
+const isCardTx = t => !isBankAcc(t) && t.account !== "מזומן" && t.source !== "bank" && !isDirect(t.account);
 // when a row was written (ids carry the time), so what was added after the balance was typed counts, and what came before it does not
 const tsOf = t => { const r = String(t.rid || ""); let m = /^(?:m|ap)-(\d{12,14})/.exec(r); if (m) return +m[1]; m = /^ow-([0-9a-z]{6,})/.exec(r); if (m) { const v = parseInt(m[1].slice(0, 8), 36); return v > 1e12 ? v : 0; } return 0; };
 function bankFlow() {
@@ -10927,7 +10947,7 @@ function bankFlow() {
   const val = t => (t.income || t.refund ? 1 : -1) * (t.income || t.refund ? t.amount : (t.fullAmount != null ? t.fullAmount : t.amount));
   let bal = bankSt.bal;
   // the account itself: what happened since the balance was typed
-  const own = txAll.filter(t => isBankAcc(t) && !t.splitOf && after(t) && dayOf(t.date) <= now);
+  const own = txAll.filter(t => (isBankAcc(t) || isDirect(t.account)) && !t.splitOf && after(t) && dayOf(t.date) <= now);
   own.forEach(t => { bal += val(t); });
   // the cards: everything charged after the balance was typed
   const charges = new Map();
@@ -11325,7 +11345,7 @@ const TOUR = [
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
   { t: "#payCard", card: true, soft: true, e: "💳", h: "הארנק שלך", b: "כרטיס לכל אמצעי תשלום. לחיצה שולפת אותו עם הסכום המדויק, ולחיצה מחוץ לו מחזירה. ״סידור״ קובע את הסדר." },
-  { t: "#bankCard", card: true, soft: true, opt: true, e: "🏦", h: "העו״ש שלך", b: "מקלידים פעם אחת כמה יש בחשבון, והאתר ממשיך לבד: מה שיורד מהבנק, חיוב האשראי ביום החיוב והמשכורת. רואים מראש אם החשבון ייכנס למינוס." },
+  { t: "#bankCard", card: true, soft: true, opt: true, e: "🏦", h: "העו״ש שלך", b: "מקלידים פעם אחת כמה יש בחשבון, והאתר ממשיך לבד: מה שיורד מהבנק (וגם כרטיס ⚡ דיירקט, מיד), חיוב האשראי ביום החיוב והמשכורת. רואים מראש אם החשבון ייכנס למינוס." },
   { t: "#funCard", opt: true, e: "🎯", h: "אתגרים ותגים", b: "הרמה שלכם עולה עם כל תג, אתגר ויום בלי הוצאות. אתגר שבועי עם כל ימי השבוע, מה אפשר לקנות במה שחסכתם, ו-17 תגים לאסוף." },
   { t: "#flowView > .arr-open", h: "המסך שלכם", b: "המסך מתאים את עצמו אליכם: מזיזים, מסתירים ומעבירים כרטיסים בין הבית ל״חודשי״." },
   { t: "#tabAna", h: "חודשי", b: "כל הפירוט של החודש: השעון שמראה כמה הוצאתם בכל יום, והחיובים הקבועים שעוד צפויים." },
@@ -11685,7 +11705,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114154249";
+const BUILD_ID = "20261114165236";
 let updToast = null;
 async function checkUpdate() {
   try {
