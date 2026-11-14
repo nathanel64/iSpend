@@ -5396,7 +5396,7 @@ function drawCalDay() {
   if (!calSel) { box.hidden = true; return; }
   const d = parseDate(calSel), list = tx.filter(t => iso(t.date) === calSel).sort((a, b) => b.order - a.order);
   const sum = list.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
-  box.innerHTML = `<div class="day-head"><span class="dl"><b>יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}</b></span><span class="num">${list.length ? fmtX(sum) : ""}</span></div>` +
+  box.innerHTML = `<div class="day-head"><span class="dl"><b>יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}${d.getFullYear() !== today.getFullYear() ? " " + d.getFullYear() : ""}</b></span><span class="num">${list.length ? fmtX(sum) : ""}</span></div>` +
     (list.length ? `<div class="days">${list.map(t => txRowHtml(t, false)).join("")}</div>` : `<p class="inst-empty">יום שלם בלי הוצאות 🎉</p>`);
   box.hidden = false;
 }
@@ -5828,7 +5828,7 @@ function renderList(inP) {
     const d = g[0].date, sum = g.filter(t => !t.income).reduce((s, t) => s + (t.refund ? -amtOf(t) : amtOf(t)), 0);
     const vs = g.filter(t => !t.income && !FIXED.has(t.category)).reduce((s, t) => s + (t.refund ? -amtOf(t) : amtOf(t)), 0);
     const trend = avgDay > 0 && vs > 0 ? (vs > avgDay * 1.5 ? `<em class="dtr up" title="פי ${(vs / avgDay).toFixed(1)} מיום רגיל (${fmt(avgDay)})">▲ ${vs > avgDay * 3 ? "יום יקר" : "מעל הרגיל"}</em>` : vs < avgDay * .5 ? `<em class="dtr dn" title="יום רגיל: ${fmt(avgDay)}">▼ יום חסכוני</em>` : "") : "";
-    const ago = daysBetween(d, today), full = `יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}${q ? " " + d.getFullYear() : ""}`;
+    const ago = daysBetween(d, today), full = `יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}${q || d.getFullYear() !== today.getFullYear() ? " " + d.getFullYear() : ""}`;
     const label = ago === 0 ? `<b>היום</b> <small>· ${full}</small>` : ago === 1 ? `<b>אתמול</b> <small>· ${full}</small>` : full;
     return `<div class="day-grp" data-day="${iso(d)}"><div class="day-head"><span class="dl">${label}</span><span class="dsum">${trend}<span class="num">${fmtAX(sum)}</span></span></div>` +
       g.map(t => txRowHtml(t, false)).join("") + `</div>`;
@@ -6939,7 +6939,7 @@ async function saveRanks(day, keys) {
   writeRange("'הגדרות'!V6", [[JSON.stringify(next)]]).catch(() => {}).then(() => { rankSavedAt = Date.now(); });
 }
 try { txRank = JSON.parse(localStorage.getItem("txRank") || "{}") || {}; } catch (e) { txRank = {}; }
-function dragDayLabel(k) { const d = parseDate(k), ago = daysBetween(d, today); return ago === 0 ? "היום" : ago === 1 ? "אתמול" : `יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}`; }
+function dragDayLabel(k) { const d = parseDate(k), ago = daysBetween(d, today); return ago === 0 ? "היום" : ago === 1 ? "אתמול" : `יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}${d.getFullYear() !== today.getFullYear() ? " " + d.getFullYear() : ""}`; }
 const reduceMo = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 function dragStart(sw, x, y) {
   if (selMode) return;
@@ -11819,7 +11819,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114221509";
+const BUILD_ID = "20261114230820";
 let updToast = null;
 async function checkUpdate() {
   try {
