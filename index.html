@@ -2297,17 +2297,20 @@ html[data-txt="xl"] { font-size: 124%; }
 .mg-nm button.off { box-shadow: 0 0 0 1px var(--line); color: var(--muted); text-decoration: line-through; }
 .mg-go { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); }
 .mg-tx { border: 0; background: none; padding: 0; font: inherit; color: var(--brand); font-weight: 700; cursor: pointer; text-align: start; }
-.bin-row .mg-tx { display: block; margin-top: 3px; font-size: .78rem; }
+.bin-row .mg-tx { display: inline-block; margin-top: 3px; margin-inline-end: 10px; font-size: .78rem; }
 .mg-list { max-height: 62vh; overflow: auto; }
 .mg-r { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; color: var(--ink); text-align: start; cursor: pointer; }
 .mg-r > b { flex: none; }
 .mg-man { display: block; width: 100%; border: 1.5px dashed color-mix(in srgb, var(--brand) 45%, var(--line)); background: none; color: var(--brand); font: inherit; font-weight: 800; border-radius: 14px; padding: 11px; margin: 0 0 12px; cursor: pointer; }
 .mm-sel { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; min-height: 34px; align-items: center; }
 .mm-sel small { color: var(--muted); }
-.mm-sel button { border: 0; font: inherit; font-size: .82rem; background: var(--brand-soft); color: var(--brand); border-radius: 999px; padding: 6px 11px; font-weight: 700; cursor: pointer; }
-.mm-sel button.main { background: var(--brand); color: #fff; }
+.mmc { display: inline-flex; align-items: center; background: var(--brand-soft); color: var(--brand); border-radius: 999px; font-size: .82rem; font-weight: 700; }
+.mmc.main { background: var(--brand); color: #fff; }
+.mmc button { border: 0; background: none; color: inherit; font: inherit; padding: 6px 4px 6px 11px; cursor: pointer; }
+.mmc button + button { padding: 6px 11px 6px 4px; opacity: .8; }
 .mm-q { width: 100%; box-sizing: border-box; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; background: var(--surface); color: var(--ink); margin-bottom: 4px; }
 .mm-list { max-height: 44vh; }
+.mm-nl { display: block; font-size: .84rem; font-weight: 700; } .mm-nl small { color: var(--muted); font-weight: 400; } .mm-nl input { margin-top: 6px; }
 .mm-plus { color: var(--brand); font-weight: 800; font-size: 1.2rem; flex: none; }
 .mg-h { color: var(--muted); font-size: .78rem; font-weight: 700; margin: 14px 2px 8px; }
 .ow-hist { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; color: var(--muted); }
@@ -10748,7 +10751,7 @@ function openMerge() {
         <div class="mg-nm">${g.names.map(x => `<button type="button" data-tg="${gi}|${esc(x.n)}" class="${off.has(gi + "|" + x.n) ? "off" : ""}" aria-pressed="${!off.has(gi + "|" + x.n)}"><bdi>${esc(x.n)}</bdi></button>`).join("")}</div>
         <div class="mg-go"><button type="button" class="mg-tx" data-mgtx="${gi}">${g.c} תנועות · ${fmtA(Math.round(g.a))} ›</button><button type="button" data-mg="${gi}">לאחד</button></div></div>`).join("")
         : `<p class="ow-empty">לא מצאתי שמות שנראים כמו אותו עסק.</p>`}
-      ${done.size ? `<div class="mg-h">מאוחדים</div>${[...done.entries()].map(([to, lows]) => `<div class="bin-row"><span>🔗</span><span><b><bdi>${esc(to)}</bdi></b><small>${lows.length === 1 ? "עוד שם אחד נספר כאן" : lows.length + " שמות נוספים נספרים כאן"}</small><button type="button" class="mg-tx" data-untx="${esc(to)}">התנועות ›</button></span><button type="button" data-un="${esc(to)}">ביטול</button></div>`).join("")}` : ""}
+      ${done.size ? `<div class="mg-h">מאוחדים</div>${[...done.entries()].map(([to, lows]) => `<div class="bin-row"><span>🔗</span><span><b><bdi>${esc(to)}</bdi></b><small>${lows.length === 1 ? "עוד שם אחד נספר כאן" : lows.length + " שמות נוספים נספרים כאן"}</small><button type="button" class="mg-tx" data-untx="${esc(to)}">התנועות ›</button> <button type="button" class="mg-tx" data-ed="${esc(to)}">שם ושמות ›</button></span><button type="button" data-un="${esc(to)}">ביטול</button></div>`).join("")}` : ""}
       <p class="jar-note">לחיצה על שם מוציאה אותו מהאיחוד.</p>
     </div>`;
     bg._gs = gs;
@@ -10756,6 +10759,10 @@ function openMerge() {
   };
   bg.addEventListener("click", async e => {
     if (e.target.closest("[data-man]")) { openMergeManual(() => draw()); return; }
+    const ed = e.target.closest("[data-ed]");
+    if (ed) { const to = ed.dataset.ed, raw = new Map(txAll.filter(t => t.merchant).map(t => [String(t.merchant).trim().toLowerCase(), String(t.merchant).trim()]));
+      const names = [...new Set([...(raw.has(to.toLowerCase()) ? [raw.get(to.toLowerCase())] : []), ...Object.keys(mergeMap).filter(l => mergeMap[l] === to).map(l => raw.get(l) || l)])];
+      openMergeManual(() => draw(), { to, names }); return; }
     const mt = e.target.closest("[data-mgtx]"); if (mt) { const g = bg._gs[+mt.dataset.mgtx]; openMergeTx(new Set(g.names.map(x => x.n.toLowerCase())), g.to); return; }
     const ut = e.target.closest("[data-untx]"); if (ut) { const to = ut.dataset.untx; openMergeTx(new Set([to.toLowerCase(), ...Object.keys(mergeMap).filter(l => mergeMap[l] === to)]), to); return; }
     const tg = e.target.closest("[data-tg]"); if (tg) { const k = tg.dataset.tg; off.has(k) ? off.delete(k) : off.add(k); tg.classList.toggle("off", off.has(k)); tg.setAttribute("aria-pressed", !off.has(k)); return; }
@@ -10775,39 +10782,43 @@ function openMerge() {
 }
 
 /* merging by hand: search, tap the names that are one place, the first one tapped is the name shown */
-function openMergeManual(done) {
+function openMergeManual(done, preset) {
   const { bg, close } = oweSheet("mergeMan"); bg.style.zIndex = 61;
-  let q = "", sel = [];
+  // preset: an existing merged group being changed (its names, and the name it shows under)
+  let q = "", sel = preset ? preset.names.slice() : [], gname = preset ? preset.to : "";
+  const target = () => gname.trim() || sel[0] || "";
   const all = () => { const m = new Map();
     txAll.filter(t => !t.income && !t.refund && !t.gen && t.merchant).forEach(t => { const n = String(t.merchant).trim(), o = m.get(n) || { n, c: 0, a: 0, cat: t.category }; o.c++; o.a += t.amount; m.set(n, o); });
     return [...m.values()].sort((a, b) => b.c - a.c); };
   const names = all();
   const draw = () => {
     const w = q.trim().toLowerCase(), list = names.filter(x => !sel.includes(x.n) && (!w || x.n.toLowerCase().includes(w))).slice(0, 60);
-    bg.querySelector(".mm-sel").innerHTML = sel.length ? sel.map((n, i) => `<button type="button" data-unsel="${esc(n)}" class="${i ? "" : "main"}">${i ? "" : "⭐ "}<bdi>${esc(n)}</bdi> ✕</button>`).join("") : `<small>עוד לא נבחרו שמות. לוחצים על שמות מהרשימה.</small>`;
+    bg.querySelector(".mm-sel").innerHTML = sel.length ? sel.map((n, i) => `<span class="mmc ${i ? "" : "main"}"><button type="button" data-mmain="${esc(n)}" aria-label="${i ? "להציג בשם הזה" : "השם שמוצג"}">${i ? "" : "⭐ "}<bdi>${esc(n)}</bdi></button><button type="button" data-unsel="${esc(n)}" aria-label="הסרה">✕</button></span>`).join("") : `<small>עוד לא נבחרו שמות. לוחצים על שמות מהרשימה.</small>`;
     const _ml = bg.querySelector(".mm-list"), _mt = _ml.scrollTop;
     bg.querySelector(".mm-list").innerHTML = list.map(x => `<button type="button" class="bin-row mg-r" data-pick="${esc(x.n)}">${catIcon(x.cat)}<span><b><bdi>${esc(x.n)}</bdi></b><small>${x.c} תנועות · ${fmtA(Math.round(x.a))}${mergeMap[x.n.toLowerCase()] ? ` · כבר נספר כ״${esc(mergeMap[x.n.toLowerCase()])}״` : ""}</small></span><span class="mm-plus">＋</span></button>`).join("") || `<p class="ow-empty">לא נמצא שם כזה.</p>`;
     _ml.scrollTop = _mt;
-    const go = bg.querySelector("#mmGo"); go.disabled = sel.length < 2; go.textContent = sel.length < 2 ? "בוחרים לפחות שני שמות" : `לאחד ${sel.length} שמות תחת ״${sel[0]}״`;
+    const go = bg.querySelector("#mmGo"); go.disabled = sel.length < 2; go.textContent = sel.length < 2 ? "בוחרים לפחות שני שמות" : `${preset ? "לשמור" : "לאחד"} ${sel.length} שמות תחת ״${target()}״`;
   };
   bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="איחוד שמות">
     <span class="grab" aria-hidden="true"></span>
-    <div class="hd"><div><b>➕ איחוד שמות</b><br><span>בוחרים את כל השמות של אותו מקום. השם הראשון (⭐) הוא זה שיוצג.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+    <div class="hd"><div><b>➕ איחוד שמות</b><br><span>בוחרים את כל השמות ששייכים יחד. אפשר לתת לקבוצה שם משלה, ובלי שם מוצג השם עם ה-⭐ (לחיצה על שם מעבירה אליו את ה-⭐).</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
     <div class="mm-sel"></div>
+    <label class="mm-nl">שם לקבוצה <small>(לא חובה. בלי שם, מוצג השם עם ה-⭐)</small><input class="mm-q" id="mmName" maxlength="40" placeholder="למשל ״חופשה בתאילנד״" autocomplete="off" value="${esc(gname)}"></label>
     <input class="mm-q" id="mmQ" type="search" placeholder="חיפוש שם, למשל ״על האש״" autocomplete="off" aria-label="חיפוש שם">
     <div class="mm-list mg-list"></div>
     <button type="button" class="sp-save" id="mmGo" disabled>בוחרים לפחות שני שמות</button>
   </div>`;
   bg.querySelector("#mmQ").addEventListener("input", e => { q = e.target.value; draw(); });
+  bg.querySelector("#mmName").addEventListener("input", e => { gname = e.target.value; draw(); });
   bg.addEventListener("click", async e => {
     const pk = e.target.closest("[data-pick]"); if (pk) { sel.push(pk.dataset.pick); draw(); return; }
-    const us = e.target.closest("[data-unsel]"); if (us) { const n = us.dataset.unsel, i = sel.indexOf(n);
-      // tapping a chosen name: the first tap makes it the main one, tapping the main one removes it
-      if (i > 0) { sel.splice(i, 1); sel.unshift(n); } else sel.splice(i, 1); draw(); return; }
+    const mm = e.target.closest("[data-mmain]"); if (mm) { const n = mm.dataset.mmain, i = sel.indexOf(n); if (i > 0) { sel.splice(i, 1); sel.unshift(n); draw(); } return; }
+    const us = e.target.closest("[data-unsel]"); if (us) { const i = sel.indexOf(us.dataset.unsel); if (i >= 0) sel.splice(i, 1); draw(); return; }
     const go = e.target.closest("#mmGo"); if (!go || sel.length < 2) return;
-    const before = { ...mergeMap }, to = sel[0], lows = sel.map(n => n.toLowerCase());
+    const before = { ...mergeMap }, to = target(), lows = sel.map(n => n.toLowerCase());
+    if (preset) Object.keys(mergeMap).forEach(l => { if (mergeMap[l] === preset.to) delete mergeMap[l]; }); // the group as it was
     delete mergeMap[to.toLowerCase()];
-    sel.slice(1).forEach(n => { mergeMap[n.toLowerCase()] = to; });
+    sel.forEach(n => { if (n !== to) mergeMap[n.toLowerCase()] = to; });
     Object.keys(mergeMap).forEach(l => { if (lows.includes(String(mergeMap[l]).toLowerCase()) && mergeMap[l] !== to) mergeMap[l] = to; }); // names already merged into one of these follow
     sel.forEach(n => mergeNo.delete(n.toLowerCase()));
     go.disabled = true; go.textContent = "שומר…";
@@ -11292,7 +11303,7 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "המשכורת של כל חודש, יעד החיסכון והחודשים שמופיעים באתר." },
   { t: '#setMenu [data-go="sal"]', view: "admin", h: "יום החיוב החודשי", b: "היום בחודש שבו יורד החיוב באשראי. החודש באתר מתחיל ממנו, כך שכל הוצאה נספרת בחודש של החיוב שלה. משנים ב״משכורות ומועד החיוב״." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, גם כאלה שבוחרים בעצמכם (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, גם כאלה שבוחרים בעצמכם ונותנים להם שם (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
   { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר, ואת הסכום שלה אפשר לשנות). שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״. חשבון שמתחלקים בו כל חודש? ״🔁 כל חודש״ רושם את החוב לבד." },
@@ -11641,7 +11652,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114142701";
+const BUILD_ID = "20261114144017";
 let updToast = null;
 async function checkUpdate() {
   try {
