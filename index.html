@@ -5261,15 +5261,25 @@ $("fcRange").addEventListener("input", () => { fcTouched = true; drawFc(); });
 
 
 /* 4: the businesses of the month: where the money went, and how often */
+// what came back for a purchase: paybacks from "who owes me" (the amount on the payback row, as it is now)
+function backOf(t) {
+  if (!t || !t.owe) return 0; let s = 0;
+  t.owe.ppl.forEach(x => { if (!x.paid) return; const r = x.rx && txAll.find(y => y.rid === x.rx); s += r ? r.amount : oweGot(x); });
+  return Math.round(s * 100) / 100;
+}
+// what a purchase really cost you: what you paid, minus what came back for it
+const netPaid = t => Math.max(0, Math.round((t.amount - backOf(t)) * 100) / 100);
 function renderMerch(f) {
   const card = $("merchCard"), by = new Map();
-  f.spend.filter(t => !t.refund && !t.gen).forEach(t => { const k = mKey(t), o = by.get(k) || { name: mergedName(t), cat: t.category, n: 0, a: 0 }; o.n++; o.a += t.amount; by.set(k, o); });
+  f.spend.filter(t => !t.refund && !t.gen).forEach(t => { const k = mKey(t), o = by.get(k) || { name: mergedName(t), cat: t.category, n: 0, a: 0, back: 0 }; o.n++; o.a += netPaid(t); o.back += backOf(t); by.set(k, o); });
+  // money back from the place itself (a return at the store) comes off that place
+  f.spend.filter(t => t.refund && !/^ow-/.test(t.rid || "")).forEach(t => { const o = by.get(mKey(t)); if (o) { o.a = Math.max(0, o.a - t.amount); o.back += t.amount; } });
   const top = [...by.values()].sort((a, b) => b.a - a.a).slice(0, 10);
   if (top.length < 2) { card.hidden = true; return; }
   card.hidden = layout.hidden.includes("merch");
   const mx = top[0].a, often = [...by.values()].sort((a, b) => b.n - a.n)[0];
   $("merchSide").textContent = by.size + " עסקים";
-  $("merchList").innerHTML = top.map(o => { const [, hue] = iconFor(o.cat); return `<button type="button" class="mr" data-q="${esc(o.name)}" style="--h:${hue}"><span class="n">${esc(o.name)} <small>· ${o.n === 1 ? "פעם אחת" : o.n + " פעמים"}</small></span><span class="a num">${fmt(o.a)}</span><span class="b"><i style="width:${(o.a / mx * 100).toFixed(1)}%"></i></span></button>`; }).join("")
+  $("merchList").innerHTML = top.map(o => { const [, hue] = iconFor(o.cat); return `<button type="button" class="mr" data-q="${esc(o.name)}" style="--h:${hue}"><span class="n">${esc(o.name)} <small>· ${o.n === 1 ? "פעם אחת" : o.n + " פעמים"}${o.back >= 1 ? ` · הוחזרו ${fmt(o.back)}` : ""}</small></span><span class="a num">${fmt(o.a)}</span><span class="b"><i style="width:${(o.a / mx * 100).toFixed(1)}%"></i></span></button>`; }).join("")
     + (often && often.n >= 3 ? `<p class="mr-tip">🔁 הכי הרבה ביקורים: <b>${esc(often.name)}</b>, ${often.n} פעמים החודש (${fmt(often.a)})</p>` : "");
 }
 $("merchList").addEventListener("click", e => { const b = e.target.closest("[data-q]"); if (!b) return; searchQ = b.dataset.q; $("txSearch").value = searchQ; showAll = false; showView("tx"); render(); });
@@ -7735,11 +7745,11 @@ function rcHist(t) {
   const all = txAll.filter(same); if (all.length < 2) return "";
   let y = t.date.getFullYear(), m = t.date.getMonth(); if (t.date < period(y, m).start) { m--; if (m < 0) { m = 11; y--; } }
   const { start, end } = period(y, m), inM = all.filter(x => x.date >= start && x.date <= end).sort((a, b) => a.date - b.date);
-  const ord = Math.max(1, inM.indexOf(t) + 1 || inM.filter(x => x.date <= t.date).length), sumM = inM.reduce((a, x) => a + x.amount, 0);
-  const avg = all.reduce((a, x) => a + x.amount, 0) / all.length;
+  const ord = Math.max(1, inM.indexOf(t) + 1 || inM.filter(x => x.date <= t.date).length), sumM = inM.reduce((a, x) => a + netPaid(x), 0), backM = inM.reduce((a, x) => a + backOf(x), 0);
+  const avg = all.reduce((a, x) => a + netPaid(x), 0) / all.length;
   const head = inM.length > 1 ? `פעם ${ord} החודש ב${esc(nm)}` : `פעם ראשונה החודש ב${esc(nm)}`;
   return `<div class="rc-hist"><b>${head}</b>
-    ${inM.length > 1 ? `<div class="r"><span>החודש שם, ${inM.length} פעמים</span><b class="num">${fmtA(Math.round(sumM * 100) / 100)}</b></div>` : ""}
+    ${inM.length > 1 ? `<div class="r"><span>החודש שם, ${inM.length} פעמים${backM >= 1 ? ` (אחרי ${fmt(backM)} שהוחזרו)` : ""}</span><b class="num">${fmtA(Math.round(sumM * 100) / 100)}</b></div>` : ""}
     <div class="r"><span>בממוצע לביקור (${all.length})</span><b class="num">${fmt(avg)}</b></div>
     <button type="button" class="rc-all" data-rchall>כל התנועות ב${esc(nm)} ›</button></div>`;
 }
@@ -10599,7 +10609,7 @@ function openOweList() {
       ${lost.length && dataFresh() ? `<div class="ow-lost"><b>חובות של קניות שכבר לא ברשימה</b><small>הקנייה נמחקה או השתנתה, אז הם לא נספרים</small>${lost.map(it => `<div><span>${esc(it.what)} · ${dd(new Date(it.d + "T00:00"))} · ${it.ppl.map(x => esc(x.n)).join(", ")}</span><button type="button" data-lost="${esc(it.k)}">מחיקה</button></div>`).join("")}</div>` : ""}
       ${(() => { const reps = oweList.filter(it => it.rep); if (!reps.length) return "";
         return `<div class="ow-reps"><b>🔁 חובות קבועים</b>${reps.map(it => `<div><span><bdi>${esc(it.what)}</bdi> · ${esc(it.ppl.map(x => x.n).join(", "))}<small>${it.ppl.length === 1 && it.me !== false && Math.abs(it.ppl[0].a * 2 - it.total) < .02 ? "חצי" : "אותה חלוקה"} · כל חודש</small></span><button type="button" data-repoff="${esc(it.k)}">הפסקה</button></div>`).join("")}</div>`; })()}
-      ${showDone ? `<div class="ow-hist">${live.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(((x.rx && txAll.find(t => t.id === x.rx)) || {}).amount ?? oweGot(x))} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
+      ${showDone ? `<div class="ow-hist">${live.flatMap(it => it.ppl.filter(x => x.paid).map(x => `<div><span>${esc(x.n)} · ${esc(it.what)}</span><span class="num">${fmt2(((x.rx && txAll.find(t => t.rid === x.rx)) || {}).amount ?? oweGot(x))} ✓ ${dd(new Date(x.paid + "T00:00"))}</span></div>`)).join("")}</div>` : ""}
     </div>`;
   };
   bg.addEventListener("click", async e => {
@@ -11631,7 +11641,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114141559";
+const BUILD_ID = "20261114142701";
 let updToast = null;
 async function checkUpdate() {
   try {
