@@ -10677,8 +10677,12 @@ function openBin() {
 }
 
 /* 🔗 "same business?": names that look like one place, merged for the summaries (the transactions stay as they are) */
-function loadMerge(j) { try { const o = j ? JSON.parse(j) : {}; mergeMap = o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { mergeMap = {}; } }
-async function saveMerge() { const j = JSON.stringify(mergeMap); await writeRange("'הגדרות'!V19", [[Object.keys(mergeMap).length ? j : ""]]); }
+// mergeNo: names you said are NOT part of a group (greyed out before "לאחד"), so they aren't offered again
+let mergeNo = new Set();
+function loadMerge(j) { try { const o = j ? JSON.parse(j) : {}; const ok = o && typeof o === "object" && !Array.isArray(o) ? o : {};
+  mergeNo = new Set(Array.isArray(ok.__no__) ? ok.__no__ : []); delete ok.__no__; mergeMap = ok; } catch (e) { mergeMap = {}; mergeNo = new Set(); } }
+async function saveMerge() { const o = { ...mergeMap }; if (mergeNo.size) o.__no__ = [...mergeNo].slice(-300);
+  await writeRange("'הגדרות'!V19", [[Object.keys(o).length ? JSON.stringify(o) : ""]]); }
 const MG_STOP = new Set(["קניות", "קנייה", "קניה", "מנוי", "תשלום", "חיוב", "הזמנה", "ארוחה", "ארוחת", "מתנה", "החזר", "העברה", "עם", "על", "של", "לבית", "בית", "חברים", "קפה", "סופר", "בעמ", "בע״מ", "בע\"מ", "סניף", "שלי", "דיל", "אקספרס", "online", "ltd", "inc", "tlv", "il", "the", "co", "מסעדת", "מסעדה", "חנות", "רשת", "בית", "www", "com"]);
 const mgWords = name => String(name).toLowerCase().replace(/[׳'"`’]/g, "").split(/[^a-z0-9\u0590-\u05ff]+/).filter(Boolean);
 function mergeKey(name, toks) {
@@ -10693,13 +10697,13 @@ function mergeGroups() {
   const by = new Map(), all = txAll.filter(t => !t.income && !t.refund && !t.gen && t.merchant), toks = new Set();
   all.forEach(t => mgWords(t.merchant).forEach(w => toks.add(w)));
   all.forEach(t => {
-    const n = String(t.merchant).trim(), k = mergeKey(n, toks); if (!k) return;
+    const raw = String(t.merchant).trim(); if (mergeNo.has(raw.toLowerCase())) return;
+    const n = mergeMap[raw.toLowerCase()] || raw, k = mergeKey(raw, toks); if (!k) return;
     const g = by.get(k) || new Map(); const o = g.get(n) || { n, c: 0, a: 0, cat: t.category }; o.c++; o.a += t.amount; g.set(n, o); by.set(k, g);
   });
   const out = [];
   by.forEach(g => {
     const names = [...g.values()].sort((a, b) => b.c - a.c); if (names.length < 2 || names.length > 6) return; // many different names = a common word, not one place
-    const shown = new Set(names.map(x => mergeMap[x.n.toLowerCase()] || x.n)); if (shown.size < 2) return; // already one
     const br = recognizeMerchant(names[0].n, true), brand = br && !br.kind && br.name ? String(br.name).trim() : "";
     out.push({ names, to: brand || names[0].n, brand, c: names.reduce((s, x) => s + x.c, 0), a: names.reduce((s, x) => s + x.a, 0), cat: names[0].cat });
   });
@@ -10725,13 +10729,16 @@ function openMerge() {
   bg.addEventListener("click", async e => {
     const tg = e.target.closest("[data-tg]"); if (tg) { const k = tg.dataset.tg; off.has(k) ? off.delete(k) : off.add(k); draw(); return; }
     const mg = e.target.closest("[data-mg]"), un = e.target.closest("[data-un]"); if (!mg && !un) return;
-    const before = { ...mergeMap };
+    const before = { ...mergeMap }, beforeNo = new Set(mergeNo); let msg = "";
     if (mg) { const gi = +mg.dataset.mg, g = bg._gs[gi], keep = g.names.filter(x => !off.has(gi + "|" + x.n)); if (keep.length < 2) { toast("צריך לפחות שני שמות", 1800); return; }
       const to = g.brand || keep[0].n; keep.forEach(x => { if (x.n !== to) mergeMap[x.n.toLowerCase()] = to; });
+      g.names.filter(x => off.has(gi + "|" + x.n)).forEach(x => mergeNo.add(x.n.toLowerCase()));
+      msg = `אוחד ✓ ${keep.length} שמות נספרים עכשיו כ״${to}״`;
       Object.keys(mergeMap).forEach(l => { if (keep.some(x => mergeMap[l] === x.n && x.n !== to)) mergeMap[l] = to; }); }
     if (un) Object.keys(mergeMap).forEach(l => { if (mergeMap[l] === un.dataset.un) delete mergeMap[l]; });
     off.clear();
-    try { await saveMerge(); afterData(); draw(); } catch (err) { mergeMap = before; draw(); toast("לא נשמר: " + writeError(err), 3500); }
+    if (un) msg = "האיחוד בוטל";
+    try { await saveMerge(); afterData(); draw(); if (msg) toast(msg, 2400); } catch (err) { mergeMap = before; mergeNo = beforeNo; draw(); toast("לא נשמר: " + writeError(err), 3500); }
   });
   draw();
 }
@@ -11536,7 +11543,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114012349";
+const BUILD_ID = "20261114140131";
 let updToast = null;
 async function checkUpdate() {
   try {
