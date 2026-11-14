@@ -2301,6 +2301,14 @@ html[data-txt="xl"] { font-size: 124%; }
 .mg-list { max-height: 62vh; overflow: auto; }
 .mg-r { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; color: var(--ink); text-align: start; cursor: pointer; }
 .mg-r > b { flex: none; }
+.mg-man { display: block; width: 100%; border: 1.5px dashed color-mix(in srgb, var(--brand) 45%, var(--line)); background: none; color: var(--brand); font: inherit; font-weight: 800; border-radius: 14px; padding: 11px; margin: 0 0 12px; cursor: pointer; }
+.mm-sel { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; min-height: 34px; align-items: center; }
+.mm-sel small { color: var(--muted); }
+.mm-sel button { border: 0; font: inherit; font-size: .82rem; background: var(--brand-soft); color: var(--brand); border-radius: 999px; padding: 6px 11px; font-weight: 700; cursor: pointer; }
+.mm-sel button.main { background: var(--brand); color: #fff; }
+.mm-q { width: 100%; box-sizing: border-box; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; background: var(--surface); color: var(--ink); margin-bottom: 4px; }
+.mm-list { max-height: 44vh; }
+.mm-plus { color: var(--brand); font-weight: 800; font-size: 1.2rem; flex: none; }
 .mg-h { color: var(--muted); font-size: .78rem; font-weight: 700; margin: 14px 2px 8px; }
 .ow-hist { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; color: var(--muted); }
 .ow-hist div { display: flex; justify-content: space-between; gap: 8px; }
@@ -10658,6 +10666,7 @@ function openBin() {
   const { bg, close } = oweSheet("binSheet");
   const ago = at => { const d = Math.floor((Date.now() - new Date(at).getTime()) / 864e5); return d <= 0 ? "היום" : d === 1 ? "אתמול" : d < 7 ? `לפני ${d} ימים` : d < 14 ? "לפני שבוע" : `לפני ${Math.floor(d / 7)} שבועות`; };
   const draw = () => {
+    const _sc = bg.querySelector(".jar-sh"), _top = _sc ? _sc.scrollTop : 0, _ltop = (bg.querySelector(".mg-list") || {}).scrollTop || 0;
     const list = binFresh().slice().reverse();
     bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="נמחקו לאחרונה">
       <span class="grab" aria-hidden="true"></span>
@@ -10665,6 +10674,7 @@ function openBin() {
       ${list.length ? list.map(b => { const d = parseDate(b.r[0]); return `<div class="bin-row">${catIcon(b.c || b.r[4])}<span><b><bdi>${esc(b.m || b.r[2] || "ללא תיאור")}</bdi></b><small>${fmtA(+b.r[1] || 0)} · ${d ? dd(d) : esc(b.r[0])} · נמחקה ${ago(b.at)}</small></span><button type="button" data-binback="${esc(b.at)}">החזרה</button></div>`; }).join("")
         : `<p class="ow-empty">אין תנועות שנמחקו ב-30 הימים האחרונים.</p>`}
     </div>`;
+    { const n = bg.querySelector(".jar-sh"); if (n) n.scrollTop = _top; }
   };
   bg.addEventListener("click", async e => {
     const bk = e.target.closest("[data-binback]"); if (!bk) return;
@@ -10717,11 +10727,13 @@ function mergeGroups() {
 function openMerge() {
   const { bg, close } = oweSheet("mergeSheet"); const off = new Set();
   const draw = () => {
+    const _sc = bg.querySelector(".jar-sh"), _top = _sc ? _sc.scrollTop : 0, _ltop = (bg.querySelector(".mg-list") || {}).scrollTop || 0;
     const gs = mergeGroups(), done = new Map();
     Object.entries(mergeMap).forEach(([low, to]) => { if (!done.has(to)) done.set(to, []); done.get(to).push(low); });
     bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="אותו עסק">
       <span class="grab" aria-hidden="true"></span>
       <div class="hd"><div><b>🔗 אותו עסק?</b><br><span>שמות שונים שנראים כמו אותו מקום. איחוד מסדר את הסיכומים לפי עסק, בלי לשנות את התנועות עצמן.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      <button type="button" class="mg-man" data-man>➕ לבחור בעצמי שמות לאיחוד</button>
       ${gs.length ? gs.map((g, gi) => `<div class="mg-g"><b>${catIcon(g.cat)} <bdi>${esc(g.to)}</bdi></b>
         <div class="mg-nm">${g.names.map(x => `<button type="button" data-tg="${gi}|${esc(x.n)}" class="${off.has(gi + "|" + x.n) ? "off" : ""}" aria-pressed="${!off.has(gi + "|" + x.n)}"><bdi>${esc(x.n)}</bdi></button>`).join("")}</div>
         <div class="mg-go"><button type="button" class="mg-tx" data-mgtx="${gi}">${g.c} תנועות · ${fmtA(Math.round(g.a))} ›</button><button type="button" data-mg="${gi}">לאחד</button></div></div>`).join("")
@@ -10730,11 +10742,13 @@ function openMerge() {
       <p class="jar-note">לחיצה על שם מוציאה אותו מהאיחוד.</p>
     </div>`;
     bg._gs = gs;
+    { const n = bg.querySelector(".jar-sh"); if (n) n.scrollTop = _top; }
   };
   bg.addEventListener("click", async e => {
+    if (e.target.closest("[data-man]")) { openMergeManual(() => draw()); return; }
     const mt = e.target.closest("[data-mgtx]"); if (mt) { const g = bg._gs[+mt.dataset.mgtx]; openMergeTx(new Set(g.names.map(x => x.n.toLowerCase())), g.to); return; }
     const ut = e.target.closest("[data-untx]"); if (ut) { const to = ut.dataset.untx; openMergeTx(new Set([to.toLowerCase(), ...Object.keys(mergeMap).filter(l => mergeMap[l] === to)]), to); return; }
-    const tg = e.target.closest("[data-tg]"); if (tg) { const k = tg.dataset.tg; off.has(k) ? off.delete(k) : off.add(k); draw(); return; }
+    const tg = e.target.closest("[data-tg]"); if (tg) { const k = tg.dataset.tg; off.has(k) ? off.delete(k) : off.add(k); tg.classList.toggle("off", off.has(k)); tg.setAttribute("aria-pressed", !off.has(k)); return; }
     const mg = e.target.closest("[data-mg]"), un = e.target.closest("[data-un]"); if (!mg && !un) return;
     const before = { ...mergeMap }, beforeNo = new Set(mergeNo); let msg = "";
     if (mg) { const gi = +mg.dataset.mg, g = bg._gs[gi], keep = g.names.filter(x => !off.has(gi + "|" + x.n)); if (keep.length < 2) { toast("צריך לפחות שני שמות", 1800); return; }
@@ -10750,6 +10764,49 @@ function openMerge() {
   draw();
 }
 
+/* merging by hand: search, tap the names that are one place, the first one tapped is the name shown */
+function openMergeManual(done) {
+  const { bg, close } = oweSheet("mergeMan"); bg.style.zIndex = 61;
+  let q = "", sel = [];
+  const all = () => { const m = new Map();
+    txAll.filter(t => !t.income && !t.refund && !t.gen && t.merchant).forEach(t => { const n = String(t.merchant).trim(), o = m.get(n) || { n, c: 0, a: 0, cat: t.category }; o.c++; o.a += t.amount; m.set(n, o); });
+    return [...m.values()].sort((a, b) => b.c - a.c); };
+  const names = all();
+  const draw = () => {
+    const w = q.trim().toLowerCase(), list = names.filter(x => !sel.includes(x.n) && (!w || x.n.toLowerCase().includes(w))).slice(0, 60);
+    bg.querySelector(".mm-sel").innerHTML = sel.length ? sel.map((n, i) => `<button type="button" data-unsel="${esc(n)}" class="${i ? "" : "main"}">${i ? "" : "⭐ "}<bdi>${esc(n)}</bdi> ✕</button>`).join("") : `<small>עוד לא נבחרו שמות. לוחצים על שמות מהרשימה.</small>`;
+    const _ml = bg.querySelector(".mm-list"), _mt = _ml.scrollTop;
+    bg.querySelector(".mm-list").innerHTML = list.map(x => `<button type="button" class="bin-row mg-r" data-pick="${esc(x.n)}">${catIcon(x.cat)}<span><b><bdi>${esc(x.n)}</bdi></b><small>${x.c} תנועות · ${fmtA(Math.round(x.a))}${mergeMap[x.n.toLowerCase()] ? ` · כבר נספר כ״${esc(mergeMap[x.n.toLowerCase()])}״` : ""}</small></span><span class="mm-plus">＋</span></button>`).join("") || `<p class="ow-empty">לא נמצא שם כזה.</p>`;
+    _ml.scrollTop = _mt;
+    const go = bg.querySelector("#mmGo"); go.disabled = sel.length < 2; go.textContent = sel.length < 2 ? "בוחרים לפחות שני שמות" : `לאחד ${sel.length} שמות תחת ״${sel[0]}״`;
+  };
+  bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="איחוד שמות">
+    <span class="grab" aria-hidden="true"></span>
+    <div class="hd"><div><b>➕ איחוד שמות</b><br><span>בוחרים את כל השמות של אותו מקום. השם הראשון (⭐) הוא זה שיוצג.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+    <div class="mm-sel"></div>
+    <input class="mm-q" id="mmQ" type="search" placeholder="חיפוש שם, למשל ״על האש״" autocomplete="off" aria-label="חיפוש שם">
+    <div class="mm-list mg-list"></div>
+    <button type="button" class="sp-save" id="mmGo" disabled>בוחרים לפחות שני שמות</button>
+  </div>`;
+  bg.querySelector("#mmQ").addEventListener("input", e => { q = e.target.value; draw(); });
+  bg.addEventListener("click", async e => {
+    const pk = e.target.closest("[data-pick]"); if (pk) { sel.push(pk.dataset.pick); draw(); return; }
+    const us = e.target.closest("[data-unsel]"); if (us) { const n = us.dataset.unsel, i = sel.indexOf(n);
+      // tapping a chosen name: the first tap makes it the main one, tapping the main one removes it
+      if (i > 0) { sel.splice(i, 1); sel.unshift(n); } else sel.splice(i, 1); draw(); return; }
+    const go = e.target.closest("#mmGo"); if (!go || sel.length < 2) return;
+    const before = { ...mergeMap }, to = sel[0], lows = sel.map(n => n.toLowerCase());
+    delete mergeMap[to.toLowerCase()];
+    sel.slice(1).forEach(n => { mergeMap[n.toLowerCase()] = to; });
+    Object.keys(mergeMap).forEach(l => { if (lows.includes(String(mergeMap[l]).toLowerCase()) && mergeMap[l] !== to) mergeMap[l] = to; }); // names already merged into one of these follow
+    sel.forEach(n => mergeNo.delete(n.toLowerCase()));
+    go.disabled = true; go.textContent = "שומר…";
+    try { await saveMerge(); afterData(); close(); if (done) done(); toast(`אוחד ✓ ${sel.length} שמות נספרים עכשיו כ״${to}״`, 2400); }
+    catch (err) { mergeMap = before; draw(); toast("לא נשמר: " + writeError(err), 3500); }
+  });
+  draw();
+}
+
 /* the transactions behind a group of names: tap one to open it (receipt, then edit); the list stays open behind */
 let mgTxDraw = null;
 function openMergeTx(lows, title) {
@@ -10758,6 +10815,7 @@ function openMergeTx(lows, title) {
   const lift = on => { objBg().style.zIndex = on ? 70 : 44; $("sheetBg").style.zIndex = on ? 71 : ""; };
   lift(true);
   const draw = () => {
+    const _sc = bg.querySelector(".jar-sh"), _top = _sc ? _sc.scrollTop : 0, _ltop = (bg.querySelector(".mg-list") || {}).scrollTop || 0;
     if (!document.body.contains(bg)) return;
     const list = txAll.filter(t => !t.income && !t.gen && (lows.has(String(t.merchant || "").trim().toLowerCase()) || lows.has(mergedName(t).toLowerCase()))).sort((a, b) => b.date - a.date);
     bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="התנועות">
@@ -10765,6 +10823,7 @@ function openMergeTx(lows, title) {
       <div class="hd"><div><b>🔗 <bdi>${esc(title)}</bdi></b><br><span>${list.length} תנועות · ${fmtA(Math.round(list.reduce((s, t) => s + t.amount, 0)))}. לחיצה פותחת את התנועה לעריכה.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
       <div class="mg-list">${list.map(t => `<button type="button" class="bin-row mg-r" data-otx="${esc(txKey(t))}">${catIcon(t.category)}<span><b><bdi>${esc(t.merchant)}</bdi></b><small>${dd(t.date)} · ${esc(t.category)}</small></span><b class="num">${fmtA(t.amount)}</b></button>`).join("")}</div>
     </div>`;
+    { const n = bg.querySelector(".jar-sh"); if (n) n.scrollTop = _top; const l = bg.querySelector(".mg-list"); if (l) l.scrollTop = _ltop; }
   };
   bg.addEventListener("click", e => { const r = e.target.closest("[data-otx]"); if (r) openReceipt(r.dataset.otx); });
   const mo = new MutationObserver(() => { if (!document.body.contains(bg)) { lift(false); mgTxDraw = null; mo.disconnect(); } }); mo.observe(document.body, { childList: true });
@@ -11223,7 +11282,7 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "המשכורת של כל חודש, יעד החיסכון והחודשים שמופיעים באתר." },
   { t: '#setMenu [data-go="sal"]', view: "admin", h: "יום החיוב החודשי", b: "היום בחודש שבו יורד החיוב באשראי. החודש באתר מתחיל ממנו, כך שכל הוצאה נספרת בחודש של החיוב שלה. משנים ב״משכורות ומועד החיוב״." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, גם כאלה שבוחרים בעצמכם (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
   { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר, ואת הסכום שלה אפשר לשנות). שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״. חשבון שמתחלקים בו כל חודש? ״🔁 כל חודש״ רושם את החוב לבד." },
@@ -11572,7 +11631,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114140957";
+const BUILD_ID = "20261114141559";
 let updToast = null;
 async function checkUpdate() {
   try {
