@@ -2296,6 +2296,11 @@ html[data-txt="xl"] { font-size: 124%; }
 .mg-nm button { border: 0; font: inherit; background: var(--surface); border-radius: 999px; padding: 6px 11px; font-size: .8rem; box-shadow: 0 0 0 1.5px var(--brand); color: var(--ink); cursor: pointer; }
 .mg-nm button.off { box-shadow: 0 0 0 1px var(--line); color: var(--muted); text-decoration: line-through; }
 .mg-go { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); }
+.mg-tx { border: 0; background: none; padding: 0; font: inherit; color: var(--brand); font-weight: 700; cursor: pointer; text-align: start; }
+.bin-row .mg-tx { display: block; margin-top: 3px; font-size: .78rem; }
+.mg-list { max-height: 62vh; overflow: auto; }
+.mg-r { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; color: var(--ink); text-align: start; cursor: pointer; }
+.mg-r > b { flex: none; }
 .mg-h { color: var(--muted); font-size: .78rem; font-weight: 700; margin: 14px 2px 8px; }
 .ow-hist { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; color: var(--muted); }
 .ow-hist div { display: flex; justify-content: space-between; gap: 8px; }
@@ -10719,14 +10724,16 @@ function openMerge() {
       <div class="hd"><div><b>🔗 אותו עסק?</b><br><span>שמות שונים שנראים כמו אותו מקום. איחוד מסדר את הסיכומים לפי עסק, בלי לשנות את התנועות עצמן.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
       ${gs.length ? gs.map((g, gi) => `<div class="mg-g"><b>${catIcon(g.cat)} <bdi>${esc(g.to)}</bdi></b>
         <div class="mg-nm">${g.names.map(x => `<button type="button" data-tg="${gi}|${esc(x.n)}" class="${off.has(gi + "|" + x.n) ? "off" : ""}" aria-pressed="${!off.has(gi + "|" + x.n)}"><bdi>${esc(x.n)}</bdi></button>`).join("")}</div>
-        <div class="mg-go"><span>${g.c} תנועות · ${fmtA(Math.round(g.a))}</span><button type="button" data-mg="${gi}">לאחד</button></div></div>`).join("")
+        <div class="mg-go"><button type="button" class="mg-tx" data-mgtx="${gi}">${g.c} תנועות · ${fmtA(Math.round(g.a))} ›</button><button type="button" data-mg="${gi}">לאחד</button></div></div>`).join("")
         : `<p class="ow-empty">לא מצאתי שמות שנראים כמו אותו עסק.</p>`}
-      ${done.size ? `<div class="mg-h">מאוחדים</div>${[...done.entries()].map(([to, lows]) => `<div class="bin-row"><span>🔗</span><span><b><bdi>${esc(to)}</bdi></b><small>${lows.length === 1 ? "עוד שם אחד נספר כאן" : lows.length + " שמות נוספים נספרים כאן"}</small></span><button type="button" data-un="${esc(to)}">ביטול</button></div>`).join("")}` : ""}
+      ${done.size ? `<div class="mg-h">מאוחדים</div>${[...done.entries()].map(([to, lows]) => `<div class="bin-row"><span>🔗</span><span><b><bdi>${esc(to)}</bdi></b><small>${lows.length === 1 ? "עוד שם אחד נספר כאן" : lows.length + " שמות נוספים נספרים כאן"}</small><button type="button" class="mg-tx" data-untx="${esc(to)}">התנועות ›</button></span><button type="button" data-un="${esc(to)}">ביטול</button></div>`).join("")}` : ""}
       <p class="jar-note">לחיצה על שם מוציאה אותו מהאיחוד.</p>
     </div>`;
     bg._gs = gs;
   };
   bg.addEventListener("click", async e => {
+    const mt = e.target.closest("[data-mgtx]"); if (mt) { const g = bg._gs[+mt.dataset.mgtx]; openMergeTx(new Set(g.names.map(x => x.n.toLowerCase())), g.to); return; }
+    const ut = e.target.closest("[data-untx]"); if (ut) { const to = ut.dataset.untx; openMergeTx(new Set([to.toLowerCase(), ...Object.keys(mergeMap).filter(l => mergeMap[l] === to)]), to); return; }
     const tg = e.target.closest("[data-tg]"); if (tg) { const k = tg.dataset.tg; off.has(k) ? off.delete(k) : off.add(k); draw(); return; }
     const mg = e.target.closest("[data-mg]"), un = e.target.closest("[data-un]"); if (!mg && !un) return;
     const before = { ...mergeMap }, beforeNo = new Set(mergeNo); let msg = "";
@@ -10742,6 +10749,28 @@ function openMerge() {
   });
   draw();
 }
+
+/* the transactions behind a group of names: tap one to open it (receipt, then edit); the list stays open behind */
+let mgTxDraw = null;
+function openMergeTx(lows, title) {
+  const { bg, close } = oweSheet("mergeTx"); bg.style.zIndex = 61;
+  // the receipt and the edit window open above this list while it's open
+  const lift = on => { objBg().style.zIndex = on ? 70 : 44; $("sheetBg").style.zIndex = on ? 71 : ""; };
+  lift(true);
+  const draw = () => {
+    if (!document.body.contains(bg)) return;
+    const list = txAll.filter(t => !t.income && !t.gen && (lows.has(String(t.merchant || "").trim().toLowerCase()) || lows.has(mergedName(t).toLowerCase()))).sort((a, b) => b.date - a.date);
+    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="התנועות">
+      <span class="grab" aria-hidden="true"></span>
+      <div class="hd"><div><b>🔗 <bdi>${esc(title)}</bdi></b><br><span>${list.length} תנועות · ${fmtA(Math.round(list.reduce((s, t) => s + t.amount, 0)))}. לחיצה פותחת את התנועה לעריכה.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      <div class="mg-list">${list.map(t => `<button type="button" class="bin-row mg-r" data-otx="${esc(txKey(t))}">${catIcon(t.category)}<span><b><bdi>${esc(t.merchant)}</bdi></b><small>${dd(t.date)} · ${esc(t.category)}</small></span><b class="num">${fmtA(t.amount)}</b></button>`).join("")}</div>
+    </div>`;
+  };
+  bg.addEventListener("click", e => { const r = e.target.closest("[data-otx]"); if (r) openReceipt(r.dataset.otx); });
+  const mo = new MutationObserver(() => { if (!document.body.contains(bg)) { lift(false); mgTxDraw = null; mo.disconnect(); } }); mo.observe(document.body, { childList: true });
+  mgTxDraw = draw; draw();
+}
+{ const ad = afterData; afterData = function () { const r = ad.apply(this, arguments); if (mgTxDraw) setTimeout(() => mgTxDraw && mgTxDraw(), 50); return r; }; }
 
 /* the reminder: "היי דני\nמזכיר לך להעביר לי ₪100 על על האש" (several purchases: "על א, ב ו-ג") */
 function oweMsg(p) {
@@ -11194,7 +11223,7 @@ const TOUR = [
   { t: "#setMenu .set-prof", view: "admin", h: "הכרטיס שלך", b: "הסיכום שלכם, הכפתור לסיור הזה (אם תרצו לחזור עליו), וחיפוש בהגדרות." },
   { t: '#setMenu [data-g="money"]', view: "admin", h: "הכסף שלי", b: "המשכורת של כל חודש, יעד החיסכון והחודשים שמופיעים באתר." },
   { t: '#setMenu [data-go="sal"]', view: "admin", h: "יום החיוב החודשי", b: "היום בחודש שבו יורד החיוב באשראי. החודש באתר מתחיל ממנו, כך שכל הוצאה נספרת בחודש של החיוב שלה. משנים ב״משכורות ומועד החיוב״." },
-  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
+  { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
   { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר, ואת הסכום שלה אפשר לשנות). שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״. חשבון שמתחלקים בו כל חודש? ״🔁 כל חודש״ רושם את החוב לבד." },
@@ -11543,7 +11572,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114140131";
+const BUILD_ID = "20261114140957";
 let updToast = null;
 async function checkUpdate() {
   try {
