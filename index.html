@@ -2301,6 +2301,11 @@ html[data-txt="xl"] { font-size: 124%; }
 .mg-list { max-height: 62vh; overflow: auto; }
 .mg-r { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; color: var(--ink); text-align: start; cursor: pointer; }
 .mg-r > b { flex: none; }
+.mg-r .mg-ic { width: 36px; height: 36px; border-radius: 11px; background: var(--bg); display: grid; place-items: center; flex: none; }
+.mg-r .set-chev { color: var(--muted); flex: none; }
+.mg-acts { display: flex; gap: 8px; }
+.mg-acts button { flex: 1; border: 0; border-radius: 12px; padding: 10px; font: inherit; font-weight: 700; font-size: .84rem; background: var(--bg); color: var(--ink); cursor: pointer; }
+.mg-acts button[data-gun] { color: var(--bad); }
 .mg-man { display: block; width: 100%; border: 1.5px dashed color-mix(in srgb, var(--brand) 45%, var(--line)); background: none; color: var(--brand); font: inherit; font-weight: 800; border-radius: 14px; padding: 11px; margin: 0 0 12px; cursor: pointer; }
 .mm-sel { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; min-height: 34px; align-items: center; }
 .mm-sel small { color: var(--muted); }
@@ -10751,20 +10756,28 @@ function openMerge() {
         <div class="mg-nm">${g.names.map(x => `<button type="button" data-tg="${gi}|${esc(x.n)}" class="${off.has(gi + "|" + x.n) ? "off" : ""}" aria-pressed="${!off.has(gi + "|" + x.n)}"><bdi>${esc(x.n)}</bdi></button>`).join("")}</div>
         <div class="mg-go"><button type="button" class="mg-tx" data-mgtx="${gi}">${g.c} תנועות · ${fmtA(Math.round(g.a))} ›</button><button type="button" data-mg="${gi}">לאחד</button></div></div>`).join("")
         : `<p class="ow-empty">לא מצאתי שמות שנראים כמו אותו עסק.</p>`}
-      ${done.size ? `<div class="mg-h">מאוחדים</div>${[...done.entries()].map(([to, lows]) => `<div class="bin-row"><span>🔗</span><span><b><bdi>${esc(to)}</bdi></b><small>${lows.length === 1 ? "עוד שם אחד נספר כאן" : lows.length + " שמות נוספים נספרים כאן"}</small><button type="button" class="mg-tx" data-untx="${esc(to)}">התנועות ›</button> <button type="button" class="mg-tx" data-ed="${esc(to)}">שם ושמות ›</button></span><button type="button" data-un="${esc(to)}">ביטול</button></div>`).join("")}` : ""}
+      ${done.size ? `<div class="mg-h">מאוחדים</div>${[...done.entries()].map(([to, lows]) => `<button type="button" class="bin-row mg-r" data-untx="${esc(to)}"><span class="mg-ic">🔗</span><span><b><bdi>${esc(to)}</bdi></b><small>${grpSum(to)}</small></span><span class="set-chev" aria-hidden="true">‹</span></button>`).join("")}` : ""}
       <p class="jar-note">לחיצה על שם מוציאה אותו מהאיחוד.</p>
     </div>`;
     bg._gs = gs;
     { const n = bg.querySelector(".jar-sh"); if (n) n.scrollTop = _top; }
   };
+  const editGroup = to => { const raw = new Map(txAll.filter(t => t.merchant).map(t => [String(t.merchant).trim().toLowerCase(), String(t.merchant).trim()]));
+      const names = [...new Set([...(raw.has(to.toLowerCase()) ? [raw.get(to.toLowerCase())] : []), ...Object.keys(mergeMap).filter(l => mergeMap[l] === to).map(l => raw.get(l) || l)])];
+      openMergeManual(() => draw(), { to, names }); };
+  const grpSum = to => { const l = to.toLowerCase(), ts = txAll.filter(t => !t.income && !t.gen && mergedName(t).toLowerCase() === l), n = Object.values(mergeMap).filter(v => v === to).length + (ts.some(t => String(t.merchant).trim() === to) ? 1 : 0);
+    return `${n} שמות · ${ts.length} תנועות · ${fmtA(Math.round(ts.reduce((a, t) => a + netPaid(t), 0)))}`; };
   bg.addEventListener("click", async e => {
     if (e.target.closest("[data-man]")) { openMergeManual(() => draw()); return; }
-    const ed = e.target.closest("[data-ed]");
-    if (ed) { const to = ed.dataset.ed, raw = new Map(txAll.filter(t => t.merchant).map(t => [String(t.merchant).trim().toLowerCase(), String(t.merchant).trim()]));
-      const names = [...new Set([...(raw.has(to.toLowerCase()) ? [raw.get(to.toLowerCase())] : []), ...Object.keys(mergeMap).filter(l => mergeMap[l] === to).map(l => raw.get(l) || l)])];
-      openMergeManual(() => draw(), { to, names }); return; }
+    const ed = e.target.closest("[data-ed]"); if (ed) { editGroup(ed.dataset.ed); return; }
     const mt = e.target.closest("[data-mgtx]"); if (mt) { const g = bg._gs[+mt.dataset.mgtx]; openMergeTx(new Set(g.names.map(x => x.n.toLowerCase())), g.to); return; }
-    const ut = e.target.closest("[data-untx]"); if (ut) { const to = ut.dataset.untx; openMergeTx(new Set([to.toLowerCase(), ...Object.keys(mergeMap).filter(l => mergeMap[l] === to)]), to); return; }
+    const ut = e.target.closest("[data-untx]");
+    if (ut) { const to = ut.dataset.untx;
+      openMergeTx(new Set([to.toLowerCase(), ...Object.keys(mergeMap).filter(l => mergeMap[l] === to)]), to, {
+        edit: () => editGroup(to),
+        undo: async () => { const before = { ...mergeMap }; Object.keys(mergeMap).forEach(l => { if (mergeMap[l] === to) delete mergeMap[l]; });
+          try { await saveMerge(); afterData(); draw(); toast("האיחוד בוטל", 2000); } catch (err) { mergeMap = before; draw(); toast("לא נשמר: " + writeError(err), 3500); } } });
+      return; }
     const tg = e.target.closest("[data-tg]"); if (tg) { const k = tg.dataset.tg; off.has(k) ? off.delete(k) : off.add(k); tg.classList.toggle("off", off.has(k)); tg.setAttribute("aria-pressed", !off.has(k)); return; }
     const mg = e.target.closest("[data-mg]"), un = e.target.closest("[data-un]"); if (!mg && !un) return;
     const before = { ...mergeMap }, beforeNo = new Set(mergeNo); let msg = "";
@@ -10830,7 +10843,7 @@ function openMergeManual(done, preset) {
 
 /* the transactions behind a group of names: tap one to open it (receipt, then edit); the list stays open behind */
 let mgTxDraw = null;
-function openMergeTx(lows, title) {
+function openMergeTx(lows, title, acts) {
   const { bg, close } = oweSheet("mergeTx"); bg.style.zIndex = 61;
   // the receipt and the edit window open above this list while it's open
   const lift = on => { objBg().style.zIndex = on ? 70 : 44; $("sheetBg").style.zIndex = on ? 71 : ""; };
@@ -10842,11 +10855,14 @@ function openMergeTx(lows, title) {
     bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="התנועות">
       <span class="grab" aria-hidden="true"></span>
       <div class="hd"><div><b>🔗 <bdi>${esc(title)}</bdi></b><br><span>${list.length} תנועות · ${fmtA(Math.round(list.reduce((s, t) => s + t.amount, 0)))}. לחיצה פותחת את התנועה לעריכה.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      ${acts ? `<div class="mg-acts"><button type="button" data-gedit>✏️ שם ושמות</button><button type="button" data-gun>ביטול האיחוד</button></div>` : ""}
       <div class="mg-list">${list.map(t => `<button type="button" class="bin-row mg-r" data-otx="${esc(txKey(t))}">${catIcon(t.category)}<span><b><bdi>${esc(t.merchant)}</bdi></b><small>${dd(t.date)} · ${esc(t.category)}</small></span><b class="num">${fmtA(t.amount)}</b></button>`).join("")}</div>
     </div>`;
     { const n = bg.querySelector(".jar-sh"); if (n) n.scrollTop = _top; const l = bg.querySelector(".mg-list"); if (l) l.scrollTop = _ltop; }
   };
-  bg.addEventListener("click", e => { const r = e.target.closest("[data-otx]"); if (r) openReceipt(r.dataset.otx); });
+  bg.addEventListener("click", e => { const r = e.target.closest("[data-otx]"); if (r) openReceipt(r.dataset.otx);
+    if (acts && e.target.closest("[data-gedit]")) { close(); acts.edit(); }
+    if (acts && e.target.closest("[data-gun]")) { close(); acts.undo(); } });
   const mo = new MutationObserver(() => { if (!document.body.contains(bg)) { lift(false); mgTxDraw = null; mo.disconnect(); } }); mo.observe(document.body, { childList: true });
   mgTxDraw = draw; draw();
 }
@@ -11652,7 +11668,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114144017";
+const BUILD_ID = "20261114144347";
 let updToast = null;
 async function checkUpdate() {
   try {
