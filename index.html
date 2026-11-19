@@ -4035,12 +4035,12 @@ function build() {
   // a renamed category: every row, old or new, shows under its current name
   out.forEach(t => { t.category = catName(t.category); });
   // a purchase split into categories: the first part carries the others (each still counts in its own category)
-  { const byRid = new Map(out.filter(t => t.rid && !/^sp-/.test(t.rid)).map(t => [t.rid, t]));
-    out.forEach(t => { const m = /^sp-(.+)-(\d+)$/.exec(t.rid || ""); if (!m) return; const p = byRid.get(m[1]); if (!p) return; t.splitOf = p; (p.parts = p.parts || [p]).push(t); });
+  { const gk = (rid, t) => rid + "|" + (t.gen || 0), byRid = new Map(out.filter(t => t.rid && !/^sp-/.test(t.rid)).map(t => [gk(t.rid, t), t]));
+    out.forEach(t => { const m = /^sp-(.+)-(\d+)$/.exec(t.rid || ""); if (!m) return; const p = byRid.get(gk(m[1], t)); if (!p) return; t.splitOf = p; (p.parts = p.parts || [p]).push(t); });
     out.forEach(t => { if (t.parts) t.splitTotal = Math.round(t.parts.reduce((s, x) => s + x.amount, 0) * 100) / 100; }); }
   // "who owes me": the purchase counts only your part (the rest is money that comes back)
   oweLinked = new Set();
-  out.forEach(t => { if (t.income || t.refund || t.gen || t.splitOf || t.parts) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
+  out.forEach(t => { if (t.income || t.refund || t.gen || t.splitOf) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
     t.owe = it; oweLinked.add(it.k); return; const others = it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
     if (others > 0) { t.fullAmount = t.amount; t.amount = Math.max(0, Math.round((t.amount - others) * 100) / 100); } });
   txAll = out;
@@ -7727,8 +7727,8 @@ function openReceipt(k, sw) {
   const code = (id || (t.merchant + t.amount)).replace(/\D/g, "").slice(-10).padStart(10, "0");
   const raw = (t.del && t.del.raw) || [];
   const qaAgain = !!t.del && t.del.key === "apple" && !t.gen && !t.splitOf && !t.parts && !/^(ow|sp)-/.test(id) && +raw[1] > 0;
-  const qaSplit = !!t.del && t.del.key === "apple" && !t.gen && !/^ow-/.test(id) && !(+raw[8] > 1) && typeof openSplit === "function";
-  const qaOwe = !!t.del && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts && typeof openOweFor === "function";
+  const qaSplit = !!t.del && t.del.key === "apple" && (!t.gen || +raw[8] > 1) && !/^ow-/.test(id) && typeof openSplit === "function";
+  const qaOwe = !!t.del && !t.income && !t.refund && !t.gen && typeof openOweFor === "function";
   openObj(`<div class="paper both" role="dialog" aria-modal="true" aria-label="קבלה: ${esc(t.merchant)}">
     <div class="pp-head"><span class="pp-logo">iSpend</span><small>יום ${WEEKDAYS[t.date.getDay()]}, ${t.date.getDate()} ב${MONTHS[t.date.getMonth()]} ${t.date.getFullYear()}</small></div>
     <div class="rc-merch">${catIcon(t.category)}<bdi>${esc(t.merchant)}</bdi></div>${rcHist(t)}
@@ -10176,8 +10176,8 @@ new MutationObserver(() => { if ($("privPill") && !$("privPill").textContent) pr
 const SP_COL = ["#5b4cf0", "#1f9d6a", "#e85d9a", "#f2a33a", "#2f8fd6", "#9a52d6"];
 const addFresh = () => !editTx && (addKind === "exp" || addKind === "inc") && !$("sheetBg").hidden;
 function splitShown() {
-  if (addFresh()) return addKind === "inc" || !(+$("addInst").value > 1);
-  const t = editTx; return !!t && t.del && t.del.key === "apple" && !t.gen && !/^ow-/.test(t.rid || "") && !(+((t.del.raw || [])[8]) > 1);
+  if (addFresh()) return true;
+  const t = editTx; return !!t && t.del && t.del.key === "apple" && (!t.gen || +((t.del.raw || [])[8]) > 1) && !/^ow-/.test(t.rid || "");
 }
 function splitSync() {
   const on = splitShown(); $("splitBtn").hidden = !on; if (!on) return;
@@ -10190,10 +10190,12 @@ function splitSync() {
 $("splitBtn").addEventListener("click", () => { if (!editTx) { saveThen("split"); return; } const p = editTx.splitOf || editTx; closeAdd(); openSplit(p); });
 
 function openSplit(p) {
-  let total = p.splitTotal || p.amount;
+  // a purchase in payments: the whole price is split (the amounts as typed in the rows), and every payment follows the same split
+  const multi = +((p.del && p.del.raw) || [])[8] > 1, whole = x => Math.abs(parseAmount((x.del && x.del.raw || [])[1]) || x.amount);
+  let total = multi ? Math.round((p.parts || [p]).reduce((s, x) => s + whole(x), 0) * 100) / 100 : (p.splitTotal || p.amount);
   // money that came in splits too: "הכנסה", or back into spending categories (a payback for several things)
   const inc = p.income || p.refund, CL = inc ? ["הכנסה", ...CATS.filter(c => c !== "הכנסה")] : CATS;
-  let parts = (p.parts || [p]).map(x => ({ cat: x.category, amount: x.amount }));
+  let parts = (p.parts || [p]).map(x => ({ cat: x.category, amount: multi ? whole(x) : x.amount }));
   if (parts.length === 1) parts.push({ cat: CL.find(c => c !== parts[0].cat) || parts[0].cat, amount: 0 });
   const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = "splitSheet"; bg.dir = "rtl";
   const close = () => { bg.remove(); document.documentElement.classList.remove("modal-open"); };
@@ -10206,7 +10208,7 @@ function openSplit(p) {
     bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="פיצול לקטגוריות">
       <span class="grab" aria-hidden="true"></span>
       <div class="hd"><div><b>פיצול לקטגוריות</b><br><span><bdi>${esc(p.merchant)}</bdi> · ${dd(p.date)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
-      <label class="sp-tot sp-totin"><span>${inc ? "סה״כ שהתקבל" : "סה״כ הקנייה"}<small>אפשר לשנות</small></span><span class="money-in"><span aria-hidden="true">₪</span><input id="spTotal" inputmode="decimal" value="${total}" aria-label="סה״כ הקנייה"></span></label>
+      <label class="sp-tot sp-totin"><span>${inc ? "סה״כ שהתקבל" : "סה״כ הקנייה"}<small>${multi ? `כל ${p.del.raw[8]} התשלומים` : "אפשר לשנות"}</small></span><span class="money-in"><span aria-hidden="true">₪</span><input id="spTotal" inputmode="decimal" value="${total}" aria-label="סה״כ הקנייה"></span></label>
       <div class="sp-bar">${parts.map((x, i) => `<i style="width:${Math.max(0, (i ? +x.amount || 0 : r0) / total * 100)}%;background:${SP_COL[i % SP_COL.length]}"></i>`).join("")}</div>
       <div class="sp-rows">${parts.map((x, i) => `<div class="sp-row"><span class="sp-dot" style="background:${SP_COL[i % SP_COL.length]}"></span><select data-i="${i}" aria-label="קטגוריה">${opts(x.cat)}</select>
         ${i ? `<input data-i="${i}" inputmode="decimal" value="${x.amount || ""}" placeholder="0" aria-label="סכום"><button type="button" class="rm" data-rm="${i}" aria-label="הסרת החלק">✕</button>` : `<span class="rest num" title="מה שנשאר מהסכום">${fmt2(Math.max(0, r0))}</span><span></span>`}</div>`).join("")}</div>
@@ -10214,7 +10216,7 @@ function openSplit(p) {
       <p class="sp-msg" id="spMsg"></p>
       <button type="button" class="sp-save" id="spSave">שמירה</button>
       ${p.parts ? `<button type="button" class="sp-undo" id="spUndo">ביטול הפיצול (הכול חוזר לתנועה אחת)</button>` : ""}
-      <p class="jar-note">החלק הראשון הוא מה שנשאר מהסכום. כל חלק נספר בקטגוריה שלו, ובתנועות הקנייה מופיעה פעם אחת.</p>
+      <p class="jar-note">החלק הראשון הוא מה שנשאר מהסכום. כל חלק נספר בקטגוריה שלו, ובתנועות הקנייה מופיעה פעם אחת.${multi ? " כל תשלום מתחלק באותו יחס." : ""}</p>
     </div>`;
     if (focus != null) { const el = bg.querySelector(`input[data-i="${focus}"]`); if (el) { el.focus(); const v = el.value; el.value = ""; el.value = v; } }
   };
@@ -10263,7 +10265,7 @@ async function saveSplit(p, out) {
   const kids = rows.map((r, i) => re.test(String(r[7] || "").trim()) ? i : -1).filter(i => i >= 0).sort((a, b) => b - a);
   for (const i of kids) await mcp.callTool(SERVER, "update_spreadsheet", { spreadsheetId: SHEET_ID, requests: [{ deleteDimension: { range: { sheetId: 777001, dimension: "ROWS", startIndex: i + 1, endIndex: i + 2 } } }] });
   if (out.length > 1) await mcp.callTool(SERVER, "append_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A1",
-    values: out.slice(1).map((x, k) => [pr[0], String(x.amount), pr[2], pr[3], x.cat, pr[5] || "הוצאה", pr[6] || "", "sp-" + pid + "-" + (k + 1), ""]) });
+    values: out.slice(1).map((x, k) => [pr[0], String(x.amount), pr[2], pr[3], x.cat, pr[5] || "הוצאה", pr[6] || "", "sp-" + pid + "-" + (k + 1), +pr[8] > 1 ? String(pr[8]) : ""]) });
   try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
   data.apple = await read(); afterData();
 }
@@ -10492,12 +10494,12 @@ async function saveOwe() {
 }
 function oweShown() {
   if (addFresh()) return true;
-  const t = editTx; return !!t && !!t.del && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts && addKind === "exp";
+  const t = editTx && (editTx.splitOf || editTx); return !!t && !!t.del && !t.income && !t.refund && !t.gen && addKind === "exp";
 }
 function oweSync() {
   const on = oweShown(); $("oweBtn").hidden = !on; if (!on) return;
   if (!editTx) { $("oweBtnT").textContent = "מי חייב לי"; return; }
-  const it = editTx.owe; $("oweBtnT").textContent = it ? (oweLeft(it) > 0 ? `חייבים לך ${fmt2(oweLeft(it))} · עריכה` : "הכול הוחזר ✓ · עריכה") : "מי חייב לי";
+  const it = (editTx.splitOf || editTx).owe; $("oweBtnT").textContent = it ? (oweLeft(it) > 0 ? `חייבים לך ${fmt2(oweLeft(it))} · עריכה` : "הכול הוחזר ✓ · עריכה") : "מי חייב לי";
 }
 { const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); try { oweSync(); } catch (e) {} return r; };
   const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("oweBtn").hidden = true; requestAnimationFrame(() => { try { oweSync(); splitSync(); } catch (e) {} }); return r; }; }
@@ -10513,7 +10515,7 @@ function saveThen(act) {
     act === "split" ? openSplit(t) : openOweFor(t);
   }, 120);
 }
-$("oweBtn").addEventListener("click", () => { if (!editTx) { saveThen("owe"); return; } const t = editTx; closeAdd(); openOweFor(t); });
+$("oweBtn").addEventListener("click", () => { if (!editTx) { saveThen("owe"); return; } const t = editTx.splitOf || editTx; closeAdd(); openOweFor(t); });
 const oweNames = () => [...new Set(oweList.flatMap(it => it.ppl.map(x => x.n)).filter(Boolean))].slice(0, 30);
 function oweSheet(id, label) {
   const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = id; bg.dir = "rtl";
@@ -10524,7 +10526,8 @@ function oweSheet(id, label) {
 }
 /* one purchase: how many paid, who, how much each */
 function openOweFor(t) {
-  const total = t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
+  if (t.splitOf) t = t.splitOf;
+  const total = t.parts && t.splitTotal != null ? t.splitTotal : t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
   // me: am I one of the people splitting it, or do the others pay the whole thing back
   let me = old ? old.me !== false : true, rep = !!(old && old.rep);
   let ppl = old ? old.ppl.map(x => ({ ...x })) : [{ n: "", a: String(Math.round(total / 2 * 100) / 100), paid: "" }], mine = false; // the purchase always counts in full; paybacks come in as their own bank rows
@@ -10610,7 +10613,7 @@ function openOweFor(t) {
     const before = oweList.slice();
     const prev = new Map(((old && old.ppl) || []).map(x => [x.n.trim(), x]));
     oweList = oweList.filter(it => it.k !== t.oweK);
-    const item = { k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), cat: t.category, total: round(total), mine, ppl: clean };
+    const item = { k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), cat: t.parts ? t.parts.slice().sort((a, b) => b.amount - a.amount)[0].category : t.category, total: round(total), mine, ppl: clean };
     if (!me) item.me = false;
     if (sv && rep) { item.rep = true; item.rk = mKey(t); oweList.forEach(it => { if (it.rep && it.rk === item.rk) delete it.rep; }); }
     const gone = [];
@@ -10684,7 +10687,7 @@ async function oweRepRun() {
     for (let guard = 0; guard < 24; guard++) {
       const it = oweList.find(x => x.rep && txAll.some(t => isNext(x, t))); if (!it) break;
       const t = txAll.filter(t => isNext(it, t)).sort((a, b) => a.date - b.date)[0];
-      const total = r2(t.fullAmount != null ? t.fullAmount : t.amount);
+      const total = r2(t.parts && t.splitTotal != null ? t.splitTotal : t.fullAmount != null ? t.fullAmount : t.amount);
       const nu = { k: t.oweK, d: iso(t.date), what: String(t.merchant || "").slice(0, 40), cat: t.category, total, mine: false,
         ppl: it.ppl.map(x => ({ n: x.n, a: r2(it.total > 0 ? x.a / it.total * total : x.a), paid: "" })), rep: true, rk: it.rk };
       if (it.me === false) nu.me = false;
@@ -10693,7 +10696,7 @@ async function oweRepRun() {
     if (made) { await saveOwe(); afterData(); }
   } catch (e) {} finally { oweRepBusy = false; }
   function isNext(it, t) {
-    return t.oweK && !t.owe && !oweByK.has(t.oweK) && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts
+    return t.oweK && !t.owe && !oweByK.has(t.oweK) && !t.income && !t.refund && !t.gen && !t.splitOf
       && mKey(t) === it.rk && t.date > new Date(it.d + "T00:00") && iso(t.date) !== it.d;
   }
 }
@@ -11349,7 +11352,7 @@ const TOUR = [
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
   { t: "#pkDays", demo: tourAddDemo2, h: "מתי, ועוד", b: "היום, אתמול או שלשום בלחיצה, ו״📅 תאריך אחר״ פותח לוח שנה. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. זה עובד גם על כסף שחוזר כל חודש, כמו חברים שמשלמים את החלק שלהם במנוי. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם. אם אותו סכום כבר נרשם באותו יום, בהוצאה או בכסף שנכנס, תופיע הערה ״אולי זו כבר נכנסה?״." },
-  { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם, וגם כסף שנכנס), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר כבר בהוספה, או אחר כך בעריכה." },
+  { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם, וגם כסף שנכנס), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר לפצל גם קנייה בתשלומים (כל תשלום מתחלק באותו יחס), ולסמן מי חייב לי גם על קנייה מפוצלת. אפשר כבר בהוספה, או אחר כך בעריכה." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והסכום, העסק והכרטיס מתמלאים לבד." },
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
@@ -11714,7 +11717,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261119203951";
+const BUILD_ID = "20261119212101";
 let updToast = null;
 async function checkUpdate() {
   try {
