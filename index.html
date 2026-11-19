@@ -10173,9 +10173,9 @@ new MutationObserver(() => { if ($("privPill") && !$("privPill").textContent) pr
 /* ===== split a purchase into categories =====
    The first part stays the original row (its id, its Apple Pay link); the others are rows "sp-<id>-1", "-2"... */
 const SP_COL = ["#5b4cf0", "#1f9d6a", "#e85d9a", "#f2a33a", "#2f8fd6", "#9a52d6"];
-const addFresh = () => !editTx && addKind === "exp" && !$("sheetBg").hidden;
+const addFresh = () => !editTx && (addKind === "exp" || addKind === "inc") && !$("sheetBg").hidden;
 function splitShown() {
-  if (addFresh()) return !(+$("addInst").value > 1);
+  if (addFresh()) return addKind === "inc" || !(+$("addInst").value > 1);
   const t = editTx; return !!t && t.del && t.del.key === "apple" && !t.gen && !/^ow-/.test(t.rid || "") && !(+((t.del.raw || [])[8]) > 1);
 }
 function splitSync() {
@@ -11045,7 +11045,7 @@ function xSync() {
 $("xInst").addEventListener("click", () => { const f = $("addForm"), on = !f.classList.contains("x-inst"); f.classList.toggle("x-inst", on); if (!on) { $("addInst").value = "1"; $("addInst").dispatchEvent(new Event("change", { bubbles: true })); } xSync();
   if (on) setTimeout(() => { const s = $("addInst"); s.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, 40); });
 { const oa = openAdd; openAdd = function () { $("addForm").classList.remove("x-date", "x-inst"); const r = oa.apply(this, arguments); try { xSync(); } catch (e) {} return r; }; }
-{ const sk = setKind; setKind = function () { const r = sk.apply(this, arguments); try { xSync(); } catch (e) {} return r; }; }
+{ const sk = setKind; setKind = function () { const r = sk.apply(this, arguments); try { splitSync(); xSync(); } catch (e) {} return r; }; }
 { const ss = splitSync; splitSync = function () { const r = ss.apply(this, arguments); try { xSync(); } catch (e) {} return r; };
   const os = oweSync; oweSync = function () { const r = os.apply(this, arguments); try { xSync(); } catch (e) {} return r; }; }
 
@@ -11713,7 +11713,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261114235402";
+const BUILD_ID = "20261119203618";
 let updToast = null;
 async function checkUpdate() {
   try {
