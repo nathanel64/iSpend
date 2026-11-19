@@ -7726,7 +7726,7 @@ function openReceipt(k, sw) {
   const pos = t.income || t.refund, id = (t.del && t.del.raw && t.del.raw[7]) || "";
   const code = (id || (t.merchant + t.amount)).replace(/\D/g, "").slice(-10).padStart(10, "0");
   const raw = (t.del && t.del.raw) || [];
-  const qaAgain = !!t.del && t.del.key === "apple" && !t.gen && !t.splitOf && !t.parts && !t.refund && !/^(ow|sp)-/.test(id) && +raw[1] > 0;
+  const qaAgain = !!t.del && t.del.key === "apple" && !t.gen && !t.splitOf && !t.parts && !/^(ow|sp)-/.test(id) && +raw[1] > 0;
   const qaSplit = !!t.del && t.del.key === "apple" && !t.gen && !/^ow-/.test(id) && !(+raw[8] > 1) && typeof openSplit === "function";
   const qaOwe = !!t.del && !t.income && !t.refund && !t.gen && !t.splitOf && !t.parts && typeof openOweFor === "function";
   openObj(`<div class="paper both" role="dialog" aria-modal="true" aria-label="קבלה: ${esc(t.merchant)}">
@@ -7792,7 +7792,7 @@ function receiptAgain(t) {
   writePending([...readPending(), row]); data.apple = [...(data.apple || []), row];
   const [cy, cm] = curYM(); view = { y: cy, m: cm };
   if (navigator.onLine) sendingIds.add(row[7]);
-  afterData(); showSaved(row, t.income ? "inc" : "exp");
+  afterData(); showSaved(row, t.income || t.refund ? "inc" : "exp");
   if (navigator.onLine) sendRow(row); else toast("אין חיבור. נשמר בטלפון ויישלח לבד כשהאינטרנט יחזור ☁");
 }
 
@@ -7841,7 +7841,7 @@ $("addForm").addEventListener("submit", async e => {
   if (editTx && (editTx.del.key === "apple" || editTx.del.key === "bank")) {
     // no waiting: the change shows at once, the window closes, and it is written in the background (with "ביטול" for a few seconds)
     const t = editTx, cat = $("addCat").value, card = $("addCard").value, kind = addKind, inst = +$("addInst").value;
-    if (autoShown()) setAutoFor(t.merchant, $("addAuto").checked, { name: desc, amount, cat, card, date });
+    if (autoShown()) setAutoFor(t.merchant, $("addAuto").checked, { name: desc, amount, cat, card, date, inc: addKind === "inc" });
     fastEdit(t, amount, desc, date, cat, card, kind, inst);
     openTx = null; confirmTx = null; if (mine()) closeAdd(); afterData();
     return;
@@ -7860,7 +7860,7 @@ $("addForm").addEventListener("submit", async e => {
   }
   const nInst = addKind === "exp" ? +$("addInst").value : 1;
   const row = [date, amount, desc, $("addCard").value, $("addCat").value, addKind === "inc" ? "הכנסה" : "הוצאה", "ידני", "m-" + Date.now(), nInst > 1 ? nInst : ""];
-  if (autoShown() && $("addAuto").checked) setAutoFor(null, true, { name: desc, amount, cat: row[4], card: row[3], date });
+  if (autoShown() && $("addAuto").checked) setAutoFor(null, true, { name: desc, amount, cat: row[4], card: row[3], date, inc: addKind === "inc" });
   const btn = $("addSave"); btn.disabled = true; btn.textContent = "שומר…"; $("addMsg").textContent = "";
   // no connection: keep it on the phone and send it when the connection is back
   const keepLocal = () => {
@@ -9223,7 +9223,8 @@ let keepMonth = false, homeTap = false;
 const pickOne = (kick, title, items) => { $("askBtns").classList.add("chips"); return askDialog({ kick, title, text: "", buttons: [...items.map(c => ({ label: esc(c), value: c, cls: "ghost chip" })), { label: "ביטול", value: null, cls: "plain" }] }).finally(() => $("askBtns").classList.remove("chips")); };
 async function selApply(field) {
   const ts = selTxs(); if (!ts.length || !mcp) return;
-  const val = await pickOne(ts.length + " תנועות", field === "cat" ? "לאיזו קטגוריה להעביר?" : "לאיזה אמצעי תשלום?", field === "cat" ? CATS : PAY);
+  const allIn = ts.every(t => t.income || t.refund), CL = allIn && !CATS.includes("הכנסה") ? ["הכנסה", ...CATS] : CATS;
+  const val = await pickOne(ts.length + " תנועות", field === "cat" ? "לאיזו קטגוריה להעביר?" : "לאיזה אמצעי תשלום?", field === "cat" ? CL : PAY);
   if (!val) return;
   const bar = $("selTxt"); let done = 0, failed = 0;
   for (const t of ts) {
@@ -9774,11 +9775,11 @@ $("askAns").addEventListener("click", e => {
   const box = $("dupWarn"); let skip = new Set(), timer = null;
   const amt = () => Math.round((parseFloat(String($("addAmount").value).replace(/[,\s₪]/g, "")) || 0) * 100) / 100;
   const run = () => {
-    box.hidden = true; if (editTx || addKind !== "exp" || $("sheetBg").hidden) return;
+    box.hidden = true; if (editTx || $("sheetBg").hidden) return; const inc = addKind === "inc";
     const a = amt(), dv = $("addDate").value; if (!(a > 0) || !dv) return;
     const key = a + "|" + dv; if (skip.has(key)) return;
     const d0 = parseDate(dv); if (!d0) return;
-    const hit = txAll.find(t => !t.income && !t.refund && !t.gen && Math.abs((t.fullAmount || t.amount) - a) < 0.005 && Math.abs(Math.round((t.date - d0) / 864e5)) <= 1);
+    const hit = txAll.find(t => !!(t.income || t.refund) === inc && !t.gen && Math.abs((t.fullAmount || t.amount) - a) < 0.005 && Math.abs(Math.round((t.date - d0) / 864e5)) <= 1);
     if (!hit) return;
     const diff = Math.round((hit.date - d0) / 864e5), when = diff === 0 ? (dv === iso(today) ? "היום" : "באותו יום") : `ב-${hit.date.getDate()}.${hit.date.getMonth() + 1}`;
     $("dupTxt").innerHTML = `${when} כבר נרשמו ${fmtA(a)} ב<bdi>${esc(hit.merchant)}</bdi>${hit.source === "applepay" ? " · נכנס לבד מ-<bdi>Apple Pay</bdi>" : ""}`;
@@ -9941,7 +9942,7 @@ function loadAuto(j) {
 }
 const saveAuto = () => writeRange("'הגדרות'!V14", [[JSON.stringify({ rec: autoCfg.rec, done: autoCfg.done.slice(-300) })]]);
 // the switch shows for a single expense in a fixed category (a subscription, insurance, rent...)
-function autoShown() { return addKind === "exp" && FIXED.has($("addCat").value) && +$("addInst").value === 1 && (!editTx || editTx.del.key === "apple"); }
+function autoShown() { return (addKind === "exp" || addKind === "inc") && FIXED.has($("addCat").value) && (addKind === "inc" || +$("addInst").value === 1) && (!editTx || editTx.del.key === "apple"); }
 // a purchase in payments: every payment enters by itself on the billing day, so the switch shows on (and fixed)
 const instAuto = () => addKind === "exp" && +$("addInst").value > 1;
 function autoSync(first) {
@@ -9963,8 +9964,8 @@ function setAutoFor(oldName, on, v) {
   if (!on && !had) return;
   if (on) {
     const d = parseDate(v.date) || today, from = ymStr(mIdxOf(d));
-    if (had) Object.assign(had, { name: v.name, amount: v.amount, cat: v.cat, card: v.card });
-    else autoCfg.rec.push({ id: Date.now().toString(36), name: v.name, amount: v.amount, cat: v.cat, card: v.card, from });
+    if (had) Object.assign(had, { name: v.name, amount: v.amount, cat: v.cat, card: v.card, inc: !!v.inc });
+    else autoCfg.rec.push({ id: Date.now().toString(36), name: v.name, amount: v.amount, cat: v.cat, card: v.card, inc: !!v.inc, from });
     if (!had) setTimeout(() => toast(`מעכשיו "${v.name}" תיכנס לבד ב-${startDay} בכל חודש`, 4200), 1900);
   } else { autoCfg.rec = autoCfg.rec.filter(r => r !== had); setTimeout(() => toast(`"${had.name}" לא תיכנס יותר לבד`, 3200), 600); }
   saveAuto().catch(() => toast("ההגדרה של ההוספה האוטומטית לא נשמרה. נסו שוב.", 4200));
@@ -9980,7 +9981,7 @@ async function runAuto() {
     for (let k = Math.max(from + 1, cur - 2); k <= cur; k++) {
       const id = "auto-f-" + r.id + "-" + ymStr(k);
       if (have.has(id) || done.has(id)) continue;
-      rows.push([iso(period(Math.floor(k / 12), k % 12).start), r.amount, r.name, r.card || "", r.cat, "הוצאה", "ידני", id, ""]); names.push(r.name);
+      rows.push([iso(period(Math.floor(k / 12), k % 12).start), r.amount, r.name, r.card || "", r.cat, r.inc ? "הכנסה" : "הוצאה", "ידני", id, ""]); names.push(r.name);
     }
   });
   instPlans.forEach(p => {
@@ -11347,7 +11348,7 @@ const TOUR = [
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "הוצאות שחוזרות על עצמן? לחיצה אחת ממלאת את כל הפרטים מהפעם הקודמת." },
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
-  { t: "#pkDays", demo: tourAddDemo2, h: "מתי, ועוד", b: "היום, אתמול או שלשום בלחיצה, ו״📅 תאריך אחר״ פותח לוח שנה. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם. אם אותו סכום כבר נרשם באותו יום, תופיע הערה ״אולי זו כבר נכנסה?״." },
+  { t: "#pkDays", demo: tourAddDemo2, h: "מתי, ועוד", b: "היום, אתמול או שלשום בלחיצה, ו״📅 תאריך אחר״ פותח לוח שנה. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. זה עובד גם על כסף שחוזר כל חודש, כמו חברים שמשלמים את החלק שלהם במנוי. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם. אם אותו סכום כבר נרשם באותו יום, בהוצאה או בכסף שנכנס, תופיע הערה ״אולי זו כבר נכנסה?״." },
   { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם, וגם כסף שנכנס), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר כבר בהוספה, או אחר כך בעריכה." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והסכום, העסק והכרטיס מתמלאים לבד." },
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
@@ -11713,7 +11714,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261119203618";
+const BUILD_ID = "20261119203951";
 let updToast = null;
 async function checkUpdate() {
   try {
