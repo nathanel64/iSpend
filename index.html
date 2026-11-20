@@ -579,6 +579,8 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .cat-legend button { all: unset; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 10px; }
 .cat-legend button:hover, .cat-legend button:focus-visible { background: var(--bg); }
 .cat-legend .chev { color: var(--muted); font-size: .9rem; }
+.cat-legend .cl-back { font-size: .74rem; font-weight: 700; color: var(--muted); margin: 8px 6px 0; }
+.cat-legend b.good { color: var(--good); }
 .search { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 12px; padding: 0 12px; }
 .search svg { width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
 .search input { border: 0; background: none; padding: 10px 0; width: 100%; outline: none; }
@@ -6627,8 +6629,11 @@ function renderDonut(months) {
   const m = new Map();
   months.forEach(x => x.f.spend.forEach(t => m.set(t.category, (m.get(t.category) || 0) + (t.refund ? -t.amount : t.amount))));
   let rows = [...m.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]);
+  // categories where more came back than went out (a profit) or it evened out: no slice, but still listed
+  const back = [...m.entries()].filter(e => !(e[1] > 0)).sort((a, b) => b[1] - a[1]);
+  const backRows = () => back.length ? `<div class="cl-back">יצא ברווח או מאוזן</div>` + back.map(([name, v]) => `<button type="button" data-cat="${esc(name)}" aria-label="כל התנועות של ${esc(name)}">${catIcon(name, true)}<span class="n">${esc(name)}</span><b class="num${v < -0.5 ? " good" : ""}">${v < -0.5 ? ltr("+" + fmt(-v)) : fmt(0)}</b><span class="p">${v < -0.5 ? "רווח" : "מאוזן"}</span><span class="chev" aria-hidden="true">‹</span></button>`).join("") : "";
   const total = rows.reduce((s, r) => s + r[1], 0);
-  if (!total) { box.innerHTML = ""; $("catLegend").innerHTML = `<div class="empty">אין הוצאות בשנה הזו.</div>`; return; }
+  if (!total) { box.innerHTML = ""; $("catLegend").innerHTML = back.length ? backRows() : `<div class="empty">אין הוצאות בשנה הזו.</div>`; return; }
   donutOther = [];
   const S = 200, cxy = S / 2, R1 = 92, R0 = 60;
   let a0 = -Math.PI / 2, g = "";
@@ -6650,7 +6655,7 @@ function renderDonut(months) {
   box.innerHTML = `<svg viewBox="0 0 ${S} ${S}" style="min-width:0;max-width:200px" role="img" aria-label="הוצאות לפי קטגוריה">${g}</svg>`;
   bindTips(box);
   chartAlt(box, "הוצאות לפי קטגוריה, סך הכול " + fmt(total));
-  $("catLegend").innerHTML = rows.map(([name, v, c]) => `<button type="button" data-cat="${esc(name)}" aria-label="כל ההוצאות של ${esc(name)}">${catIcon(name, true)}<span class="n">${esc(name)}</span><b class="num">${fmt(v)}</b><span class="p num">${Math.round(v / total * 100)}%</span><span class="chev" aria-hidden="true">‹</span></button>`).join("");
+  $("catLegend").innerHTML = rows.map(([name, v, c]) => `<button type="button" data-cat="${esc(name)}" aria-label="כל ההוצאות של ${esc(name)}">${catIcon(name, true)}<span class="n">${esc(name)}</span><b class="num">${fmt(v)}</b><span class="p num">${Math.round(v / total * 100)}%</span><span class="chev" aria-hidden="true">‹</span></button>`).join("") + backRows();
 }
 
 /* ---------- month vs month ---------- */
@@ -11731,7 +11736,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261120094448";
+const BUILD_ID = "20261121002412";
 let updToast = null;
 async function checkUpdate() {
   try {
