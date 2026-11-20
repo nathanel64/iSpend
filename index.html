@@ -10187,7 +10187,7 @@ function splitSync() {
 ["input", "change"].forEach(ev => $("addForm").addEventListener(ev, () => requestAnimationFrame(splitSync)));
 { const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); splitSync(); return r; };
   const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("splitBtn").hidden = true; return r; }; }
-$("splitBtn").addEventListener("click", () => { if (!editTx) { saveThen("split"); return; } const p = editTx.splitOf || editTx; closeAdd(); openSplit(p); });
+$("splitBtn").addEventListener("click", () => { if (!editTx) { saveThen("split"); return; } editThen("split"); });
 
 function openSplit(p) {
   // a purchase in payments: the whole price is split (the amounts as typed in the rows), and every payment follows the same split
@@ -10515,7 +10515,21 @@ function saveThen(act) {
     act === "split" ? openSplit(t) : openOweFor(t);
   }, 120);
 }
-$("oweBtn").addEventListener("click", () => { if (!editTx) { saveThen("owe"); return; } const t = editTx.splitOf || editTx; closeAdd(); openOweFor(t); });
+/* while editing: what was typed in the form (a new description or category) is saved first, then the window opens on the saved row */
+const editSnap = () => ["addAmount", "addDesc", "addDate", "addCat", "addCard", "addInst"].map(id => ($(id) || {}).value).concat(addKind).join("\u0001");
+let editSnap0 = null;
+{ const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); editSnap0 = editSnap(); return r; }; }
+function editThen(act) {
+  const was = editTx, open = t => act === "split" ? openSplit(t.splitOf || t) : openOweFor(t);
+  if (editSnap() === editSnap0) { closeAdd(); open(was); return; }
+  $("addForm").requestSubmit();
+  setTimeout(() => {
+    if (!$("sheetBg").hidden) return; // not saved (a missing amount, say): the form stays open with its message
+    const t = (was.rid && (txAll.find(x => x.rid === was.rid && (x.gen || 0) === (was.gen || 0)) || txAll.find(x => x.rid === was.rid))) || was;
+    open(t);
+  }, 150);
+}
+$("oweBtn").addEventListener("click", () => { if (!editTx) { saveThen("owe"); return; } editThen("owe"); });
 const oweNames = () => [...new Set(oweList.flatMap(it => it.ppl.map(x => x.n)).filter(Boolean))].slice(0, 30);
 function oweSheet(id, label) {
   const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = id; bg.dir = "rtl";
@@ -11717,7 +11731,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261119212101";
+const BUILD_ID = "20261120094448";
 let updToast = null;
 async function checkUpdate() {
   try {
