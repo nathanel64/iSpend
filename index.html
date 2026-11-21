@@ -261,6 +261,8 @@ body.tx-select #fab { display: none; }
 
 .dsum { display: inline-flex; align-items: baseline; gap: 8px; }
 .dsum .num.in { color: var(--good); font-weight: 600; }
+#catSheetSum b.in, #catSheetList .day-head .num.in { color: var(--good); }
+.day-head .num.in { direction: ltr; unicode-bidi: isolate; }
 .dtr { font-style: normal; font-size: .68rem; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
 .dtr.up { color: var(--bad); background: var(--bad-soft); } .dtr.dn { color: var(--good); background: var(--good-soft); }
 .flt-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; border: 0; background: var(--surface); color: var(--ink); border-radius: 10px; padding: 6px 10px; margin-inline-end: -6px; font: 600 .8rem var(--font-body); cursor: pointer; }
@@ -6829,14 +6831,14 @@ function renderCatSheet() {
   const total = list.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
   $("catSheetTitle").innerHTML = (catSheet.label === "אחר" ? glyph("tag", 220, 10) : catIcon(catSheet.label)) + `<span>${esc(catSheet.label)} · ${catSheet.months ? catSheet.months.map(k => MONTHS[k % 12]).join(" מול ") : yearSel}</span>`;
   $("catSheetSum").hidden = !!catSheet.info;
-  $("catSheetSum").innerHTML = `<span>סה״כ <b>${fmtX(total)}</b></span><span><b>${list.length}</b> תנועות</span>` +
+  $("catSheetSum").innerHTML = `<span>סה״כ ${total < -0.004 ? `<b class="in">${ltr("+" + fmtX(-total))}</b> · רווח` : `<b>${fmtX(total)}</b>`}</span><span><b>${list.length}</b> תנועות</span>` +
     (catSheet.label === "אחר" ? `<span>${esc(catSheet.names.join(", "))}</span>` : "");
   if (!list.length) { $("catSheetList").innerHTML = `<div class="empty">אין הוצאות בקטגוריה הזו ${catSheet.months ? "בחודשים האלה" : "השנה"}.</div>`; return; }
   const groups = new Map();
   list.forEach(t => { const k = t.date.getFullYear() * 12 + t.date.getMonth(); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); });
   $("catSheetList").innerHTML = [...groups.values()].map(g => {
     const d = g[0].date, sum = g.reduce((s, t) => s + (t.refund ? -t.amount : t.amount), 0);
-    return `<div><div class="day-head"><span>${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="num">${fmtAX(sum)}</span></div>${g.map(t => txRowHtml(t, true)).join("")}</div>`;
+    return `<div><div class="day-head"><span>${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="num${sum < -0.004 ? " in" : ""}">${sum < -0.004 ? ltr("+" + fmtA(-sum)) : fmtAX(sum)}</span></div>${g.map(t => txRowHtml(t, true)).join("")}</div>`;
   }).join("");
 }
 $("catLegend").addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (b) openCatSheet(b.dataset.cat); });
@@ -11773,7 +11775,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261121235412";
+const BUILD_ID = "20261122000300";
 let updToast = null;
 async function checkUpdate() {
   try {
