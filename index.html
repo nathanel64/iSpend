@@ -239,6 +239,9 @@ body.tx-select #fab { display: none; }
 .set-none { text-align: center; color: var(--muted); font-size: .86rem; margin: 14px 0 0; }
 #setMenu .q-off { display: none !important; }
 
+.draft-note { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 0; padding: 7px 8px 7px 12px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); font-size: .82rem; font-weight: 600; }
+.draft-note[hidden] { display: none; }
+.draft-note button { border: 0; background: none; color: inherit; width: 26px; height: 26px; border-radius: 50%; font-size: .8rem; cursor: pointer; }
 .add-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .add-acts .btn[hidden] { display: none; } .add-acts:has(#addMore[hidden]) { grid-template-columns: 1fr; }
 .chart-hint { margin: 2px 0 0; text-align: center; font-size: .72rem; color: var(--muted); }
 /* 7: jump chips on the monthly screen, 8: the month in three lines */
@@ -257,6 +260,7 @@ body.tx-select #fab { display: none; }
 .ana-sum .up b.v { color: var(--bad); } .ana-sum .dn b.v { color: var(--good); }
 
 .dsum { display: inline-flex; align-items: baseline; gap: 8px; }
+.dsum .num.in { color: var(--good); font-weight: 600; }
 .dtr { font-style: normal; font-size: .68rem; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
 .dtr.up { color: var(--bad); background: var(--bad-soft); } .dtr.dn { color: var(--good); background: var(--good-soft); }
 .flt-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; border: 0; background: var(--surface); color: var(--ink); border-radius: 10px; padding: 6px 10px; margin-inline-end: -6px; font: 600 .8rem var(--font-body); cursor: pointer; }
@@ -357,7 +361,7 @@ body.arrange .auto-empty { display: block !important; }
 .cat-row .cp { font-weight: 700; font-size: .9rem; font-variant-numeric: tabular-nums; }
 .cat-row .cp.no { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .cat-row .cx { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 92px; flex: none; }
-.cat-row .cx b { font-size: .92rem; font-variant-numeric: tabular-nums; } .cat-row .cx b.z { color: var(--muted); font-weight: 400; }
+.cat-row .cx b { font-size: .92rem; font-variant-numeric: tabular-nums; } .cat-row .cx b.z { color: var(--muted); font-weight: 400; } .cat-row .cx b.in { color: var(--good); }
 .cat-row .cx small { color: var(--muted); font-size: .72rem; }
 .cat-row .cx em { display: block; width: 84px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .cat-row .cx em i { display: block; height: 100%; border-radius: 3px; }
@@ -579,6 +583,7 @@ input[type="number"] { border: 1px solid var(--line); background: var(--bg); bor
 .cat-legend button { all: unset; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 10px; }
 .cat-legend button:hover, .cat-legend button:focus-visible { background: var(--bg); }
 .cat-legend .chev { color: var(--muted); font-size: .9rem; }
+.cmp-side .v.in { color: var(--good); font-weight: 600; }
 .cat-legend .cl-back { font-size: .74rem; font-weight: 700; color: var(--muted); margin: 8px 6px 0; }
 .cat-legend b.good { color: var(--good); }
 .search { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 12px; padding: 0 12px; }
@@ -5685,7 +5690,7 @@ function renderCats(f) {
   const m = new Map();
   list.forEach(t => m.set(t.category, (m.get(t.category) || 0) + (t.refund ? -t.amount : t.amount)));
   // a category can be negative: more came back for it than was paid this month. It still shows, after the rest.
-  const rows = [...m.entries()].filter(e => Math.abs(e[1]) >= 0.005).sort((a, b) => (b[1] > 0) - (a[1] > 0) || Math.abs(b[1]) - Math.abs(a[1]));
+  const rows = [...m.entries()].map(e => [e[0], Math.abs(e[1]) < 0.005 ? 0 : e[1]]).sort((a, b) => (b[1] > 0) - (a[1] > 0) || Math.abs(b[1]) - Math.abs(a[1]));
   if (capEdit) CATS.filter(c => c !== "הכנסה" && (catMode === "fixed" ? FIXED.has(c) : !FIXED.has(c)) && !m.has(c)).forEach(c => rows.push([c, 0]));
   const total = rows.reduce((s, r) => s + Math.abs(r[1]), 0) || 1;
   const max = rows.length ? Math.max(1, ...rows.map(r => Math.abs(r[1]))) : 1;
@@ -5709,7 +5714,7 @@ function renderCats(f) {
   $("cats").innerHTML = rows.length ? rows.map(([c, v], i) => {
     const size = Math.round(66 + Math.sqrt(Math.abs(v) / max) * 84);
     const [icon, hue, sat] = iconFor(c);
-    const cap = capFor(c), pct = cap ? Math.max(0, v / cap * 100) : 0, capCls = (cap ? "capped" + (pct >= 100 ? " over" : pct >= 80 ? " warn" : "") : "") + (capEdit ? " editing" : "") + (v === 0 ? " ghost" : "");
+    const cap = capFor(c), pct = cap ? Math.max(0, v / cap * 100) : 0, capCls = (cap ? "capped" + (pct >= 100 ? " over" : pct >= 80 ? " warn" : "") : "") + (capEdit ? " editing" : "") + (!m.has(c) ? " ghost" : "");
     return `<button class="bub ${size > 120 ? "lg" : ""} ${popIn ? "pop" : ""} ${capCls}" data-cat="${esc(c)}" aria-pressed="${filterCat === c}" style="--h:${hue};--s:${sat}%;--pct:${Math.min(pct, 100).toFixed(1)};width:${size}px;height:${size}px;animation-delay:${Math.min(i, 10) * 55}ms" title="${esc(c)}${v > 0 ? " · " + Math.round(v / total * 100) + "%" : " · קיבלת בחזרה יותר ממה ששילמת"}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[icon] || ICONS.tag}"/></svg>
       ${size >= 80 ? `<span class="bn">${esc(c)}</span>` : ""}<span class="bv num">${fmt(v)}</span>${capEdit && !cap ? `<span class="cap-add">+ תקרה</span>` : cap && size >= 80 ? `<span class="cap-of num">${pct >= 100 ? "עבר את " : "מתוך "}${fmt(cap)}</span>` : size >= 96 && v > 0 ? delta(c, v) : ""}</button>`;
@@ -5815,7 +5820,7 @@ function renderList(inP) {
     const trend = avgDay > 0 && vs > 0 ? (vs > avgDay * 1.5 ? `<em class="dtr up" title="פי ${(vs / avgDay).toFixed(1)} מיום רגיל (${fmt(avgDay)})">▲ ${vs > avgDay * 3 ? "יום יקר" : "מעל הרגיל"}</em>` : vs < avgDay * .5 ? `<em class="dtr dn" title="יום רגיל: ${fmt(avgDay)}">▼ יום חסכוני</em>` : "") : "";
     const ago = daysBetween(d, today), full = `יום ${WEEKDAYS[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}${q || d.getFullYear() !== today.getFullYear() ? " " + d.getFullYear() : ""}`;
     const label = ago === 0 ? `<b>היום</b> <small>· ${full}</small>` : ago === 1 ? `<b>אתמול</b> <small>· ${full}</small>` : full;
-    return `<div class="day-grp" data-day="${iso(d)}"><div class="day-head"><span class="dl">${label}</span><span class="dsum">${trend}<span class="num">${fmtAX(sum)}</span></span></div>` +
+    return `<div class="day-grp" data-day="${iso(d)}"><div class="day-head"><span class="dl">${label}</span><span class="dsum">${trend}<span class="num${sum < -0.004 ? " in" : ""}">${sum < -0.004 ? ltr("+" + fmtA(-sum)) : fmtAX(sum)}</span></span></div>` +
       g.map(t => txRowHtml(t, false)).join("") + `</div>`;
   }).join("") + (shown.length < list.length ? `<button class="more" id="showMore">הצג את כל ${list.length} התנועות</button>` : "");
   splitMerge = false;
@@ -6675,14 +6680,14 @@ function renderCompare() {
   const [ya, ma, yb, mb] = [Math.floor(cmpA / 12), cmpA % 12, Math.floor(cmpB / 12), cmpB % 12];
   const nA = MONTHS[ma], nB = MONTHS[mb] + (yb !== ya ? " " + yb : "");
   const A = catTotals(ya, ma), B = catTotals(yb, mb);
-  const cats = [...new Set([...A.keys(), ...B.keys()])].map(c => [c, Math.max(0, A.get(c) || 0), Math.max(0, B.get(c) || 0)])
-    .filter(r => r[1] > 0 || r[2] > 0).sort((x, y) => Math.abs(y[1] - y[2]) - Math.abs(x[1] - x[2]));
+  const cats = [...new Set([...A.keys(), ...B.keys()])].map(c => [c, A.get(c) || 0, B.get(c) || 0, A.has(c), B.has(c)])
+    .sort((x, y) => Math.abs(y[1] - y[2]) - Math.abs(x[1] - x[2]));
   const tA = cats.reduce((s, r) => s + r[1], 0), tB = cats.reduce((s, r) => s + r[2], 0);
   const max = Math.max(1, ...cats.map(r => Math.max(r[1], r[2])));
-  const side = (cls, v, scale) => `<span class="cmp-side ${cls}"><span class="bar" style="width:${v > 0 ? Math.max(2, v / scale * 100).toFixed(1) : 0}%"></span><span class="v">${v > 0 ? fmt(v) : "—"}</span></span>`;
+  const side = (cls, v, scale, has = true) => `<span class="cmp-side ${cls}"><span class="bar" style="width:${v > 0 ? Math.max(2, v / scale * 100).toFixed(1) : 0}%"></span><span class="v${v < -0.5 ? " in" : ""}">${v >= 0.5 ? fmt(v) : v < -0.5 ? ltr("+" + fmt(-v)) : has ? fmt(0) : "—"}</span></span>`;
   const diffTag = (a, b) => { const d = b - a; if (Math.abs(d) < 1) return `<span class="d">שווה</span>`; return `<span class="d ${d > 0 ? "up" : "down"}">${ltr((d > 0 ? "+" : "−") + fmt(Math.abs(d)))}</span>`; };
   let html = `<div class="cmp-row total">${side("a", tA, Math.max(tA, tB))}<span class="cmp-lbl"><span>סך הכול</span>${diffTag(tA, tB)}</span>${side("b", tB, Math.max(tA, tB))}</div>`;
-  html += cats.map(([c, a, b]) => `<button type="button" class="cmp-row" data-cmp="${esc(c)}">${side("a", a, max)}<span class="cmp-lbl">${catIcon(c, true)}<span>${esc(c)}</span>${diffTag(a, b)}</span>${side("b", b, max)}</button>`).join("");
+  html += cats.map(([c, a, b, ha, hb]) => `<button type="button" class="cmp-row" data-cmp="${esc(c)}">${side("a", a, max, ha)}<span class="cmp-lbl">${catIcon(c, true)}<span>${esc(c)}</span>${diffTag(a, b)}</span>${side("b", b, max, hb)}</button>`).join("");
   $("cmpRows").innerHTML = html;
   // one sentence on what made the difference
   const d = tB - tA, top = cats[0];
@@ -7482,7 +7487,7 @@ async function saveEdit(t, amount, desc, date, cat, card, kind) {
   if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && cat !== t.category) await learnCat(t.rawMerchant, cat);
   view = { y: d.getFullYear(), m: d.getMonth() }; if (d.getDate() < startDay) shift(-1);
 }
-$("fab").onclick = () => openAdd();
+$("fab").onclick = () => { openAdd(); try { draftRestore(null); } catch (e) {} };
 $("closeAdd").onclick = () => closeAdd();
 $("sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") closeAdd(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("capBg").hidden) closeCap(); if (e.key === "Escape" && !$("sheetBg").hidden) closeAdd(); if (e.key === "Escape" && !$("salBg").hidden) salLater(); if (e.key === "Escape" && !$("mvBg").hidden) closeMove(); });
@@ -8550,8 +8555,8 @@ boot();
       $("catRows").innerHTML = draftCats.map((c, i) => {
         if (!c.name.trim()) return "";
         const [icon, hue, sat] = draftIcon(c), cap = c.cap != null ? c.cap : capsDef()[c.orig || c.name];
-        const v = Math.max(0, tot.get(c.orig || c.name) || 0), col = v > cap ? "var(--bad)" : v > cap * .8 ? "var(--warn)" : "var(--good)";
-        const cx = `<span class="cx"><b class="num ${v ? "" : "z"}">${v ? fmtA(v) : "—"}</b>${cap > 0 ? `<em><i style="width:${Math.min(100, v / cap * 100).toFixed(1)}%;background:${col}"></i></em><small>מתוך ${fmt(cap)}</small>` : `<small>החודש</small>`}</span>`;
+        const raw = tot.get(c.orig || c.name) || 0, v = Math.max(0, raw), col = v > cap ? "var(--bad)" : v > cap * .8 ? "var(--warn)" : "var(--good)";
+        const cx = `<span class="cx"><b class="num ${raw < -0.5 ? "in" : v ? "" : "z"}">${raw < -0.5 ? ltr("+" + fmtA(-raw)) : v ? fmtA(v) : "—"}</b>${cap > 0 ? `<em><i style="width:${Math.min(100, v / cap * 100).toFixed(1)}%;background:${col}"></i></em><small>מתוך ${fmt(cap)}</small>` : `<small>החודש</small>`}</span>`;
         return `<button type="button" class="cat-row" data-ce="${i}">${glyph(icon, hue, sat)}<span class="nm">${esc(c.name)}${c.fixed ? `<span class="fx-tag">קבועה</span>` : ""}</span>${cx}<span class="set-chev" aria-hidden="true">‹</span></button>`;
       }).join("");
       try { renderCapTotal(); } catch (e) {}
@@ -9794,7 +9799,7 @@ $("askAns").addEventListener("click", e => {
   $("addAmount").addEventListener("input", soon); $("addDate").addEventListener("change", soon);
   $("addForm").addEventListener("click", e => { if (!e.target.closest("#dupWarn")) soon(); });
   $("dupNew").onclick = () => { skip.add(box.dataset.k); box.hidden = true; };
-  $("dupSame").onclick = () => { box.hidden = true; closeAdd(); };
+  $("dupSame").onclick = () => { box.hidden = true; closeAdd(); draftClear(); };
   const oa = openAdd; openAdd = function () { skip = new Set(); box.hidden = true; const r = oa.apply(this, arguments); soon(); return r; };
   const oe = openEdit; openEdit = function () { box.hidden = true; return oe.apply(this, arguments); };
 })();
@@ -10510,6 +10515,33 @@ function oweSync() {
   const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("oweBtn").hidden = true; requestAnimationFrame(() => { try { oweSync(); splitSync(); } catch (e) {} }); return r; }; }
 ["input", "change"].forEach(ev => $("addForm").addEventListener(ev, () => requestAnimationFrame(oweSync)));
 { const sk = setKind; setKind = function () { const r = sk.apply(this, arguments); requestAnimationFrame(() => { try { oweSync(); splitSync(); } catch (e) {} }); return r; }; }
+/* closed by accident (a tap outside, a swipe down, ✕): what was typed is kept for a day and comes back the next time
+   the + is pressed (or the same transaction is opened again), with a small line to drop it. Saving clears it. */
+const DRAFT_K = "addDraft";
+let draftSaving = false;
+function draftRead() { try { const d = JSON.parse(localStorage.getItem(DRAFT_K) || "null"); return d && Date.now() - d.at < 24 * 3600 * 1000 ? d : null; } catch (e) { return null; } }
+function draftClear() { try { localStorage.removeItem(DRAFT_K); } catch (e) {} const n = $("draftNote"); if (n) n.hidden = true; }
+function draftKeep() {
+  if ($("sheetBg").hidden) return;
+  if (draftSaving) { draftSaving = false; draftClear(); return; }
+  const d = { at: Date.now(), rid: editTx ? editTx.rid || null : null, gen: editTx ? editTx.gen || 0 : 0, kind: addKind,
+    amount: $("addAmount").value, desc: $("addDesc").value, cat: $("addCat").value, card: $("addCard").value, date: $("addDate").value, inst: $("addInst").value };
+  const typed = editTx ? (editTx.rid && editSnap() !== editSnap0) : (d.amount.trim() || d.desc.trim());
+  try { if (typed) localStorage.setItem(DRAFT_K, JSON.stringify(d)); } catch (e) {}
+}
+function draftRestore(t) {
+  const d = draftRead(); if (!d) return;
+  if (t ? !(d.rid && d.rid === t.rid && (d.gen || 0) === (t.gen || 0)) : d.rid) return;
+  if (!t && d.kind !== addKind) setKind(d.kind);
+  const set = (id, v, ev) => { const el = $(id); if (!el || v == null) return; el.value = v; el.dispatchEvent(new Event(ev, { bubbles: true })); };
+  set("addAmount", d.amount, "input"); set("addDesc", d.desc, "input"); set("addDate", d.date, "change"); set("addCard", d.card, "change"); set("addInst", d.inst, "change");
+  if (d.cat) { set("addCat", d.cat, "change"); catTouched = true; }
+  let n = $("draftNote");
+  if (!n) { n = document.createElement("p"); n.id = "draftNote"; n.className = "draft-note"; n.innerHTML = `<span>המשכתי ממה שהתחלת</span><button type="button" aria-label="להתחיל מחדש">✕</button>`;
+    $("addTitle").closest("h3").after(n);
+    n.querySelector("button").addEventListener("click", () => { const e = editTx; draftClear(); if (e) openEdit(e); else openAdd(); }); }
+  n.hidden = false;
+}
 /* in a new entry: save it as usual, then open the window for it */
 function saveThen(act) {
   const t0 = Date.now(); $("addForm").requestSubmit();
@@ -10535,6 +10567,11 @@ function editThen(act) {
   }, 150);
 }
 $("oweBtn").addEventListener("click", () => { if (!editTx) { saveThen("owe"); return; } editThen("owe"); });
+{ const ca = closeAdd; closeAdd = function () { try { draftKeep(); } catch (e) {} return ca.apply(this, arguments); };
+  const oa = openAdd; openAdd = function () { const n = $("draftNote"); if (n) n.hidden = true; return oa.apply(this, arguments); };
+  const oe = openEdit; openEdit = function (t) { const n = $("draftNote"); if (n) n.hidden = true; const r = oe.apply(this, arguments); try { draftRestore(t); } catch (e) {} return r; };
+  $("addForm").addEventListener("submit", () => { draftSaving = true; }, true);
+  ["input", "change"].forEach(ev => $("addForm").addEventListener(ev, e => { if (e.isTrusted) draftSaving = false; })); }
 const oweNames = () => [...new Set(oweList.flatMap(it => it.ppl.map(x => x.n)).filter(Boolean))].slice(0, 30);
 function oweSheet(id, label) {
   const bg = document.createElement("div"); bg.className = "jar-bg"; bg.id = id; bg.dir = "rtl";
@@ -11366,7 +11403,7 @@ const TOUR = [
   { t: "#todayBox", opt: true, e: "🫙", h: "הצנצנת של היום", b: "כל בוקר הצנצנת מתמלאת במה שאפשר להוציא היום, וכל הוצאה מוציאה ממנה מטבעות. מה שנשאר מתחלק על הימים הבאים. לחיצה פותחת אותה, ובתוכה התנועות של היום: לחיצה על אחת פותחת אותה לעריכה." },
   { t: "#slipBtn", opt: true, h: "התלוש של החודש", b: "כל מה שנכנס ויצא לפי קטגוריות, כמו תלוש. אפשר לשתף אותו כתמונה." },
   { t: "#fab", h: "הוספת הוצאה", b: "כאן מוסיפים הוצאה או הכנסה. לחיצה רגילה פותחת חלון, ולחיצה ארוכה מקליטה בקול." },
-  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. כמה קבלות? ה-+ שליד הסכום מחבר אותן. ״המשך״ עובר לפרטים." },
+  { t: "#addForm .kind", demo: tourAddDemo, h: "הוצאה או כסף שנכנס", b: "בוחרים אם זו הוצאה או הכנסה ומקלידים סכום. כמה קבלות? ה-+ שליד הסכום מחבר אותן. ״המשך״ עובר לפרטים. נסגר בטעות? מה שהקלדתם יחזור בפעם הבאה שתלחצו +." },
   { t: "#quickChips", demo: tourAddDemo, opt: true, h: "מהאחרונים", b: "הוצאות שחוזרות על עצמן? לחיצה אחת ממלאת את כל הפרטים מהפעם הקודמת." },
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
@@ -11736,7 +11773,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261121002412";
+const BUILD_ID = "20261121235412";
 let updToast = null;
 async function checkUpdate() {
   try {
