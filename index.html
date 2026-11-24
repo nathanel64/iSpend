@@ -2296,6 +2296,11 @@ html[data-txt="xl"] { font-size: 124%; }
 .ow-ph .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; } .ow-ph .nm small { color: var(--muted); font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ow-ph > b { font-size: 1.05rem; }
 .ow-acts { display: flex; gap: 8px; }
+.ow-amt-b { border: 0; background: none; color: inherit; font: inherit; font-weight: 700; padding: 4px 2px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.ow-amt-b i { font-style: normal; font-size: .78rem; color: var(--muted); }
+.ow-amt { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 0 10px; font-size: .86rem; color: var(--muted); }
+.ow-amt-in { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); border: 2px solid var(--brand); border-radius: 12px; padding: 6px 10px; color: var(--ink); font-weight: 700; }
+.ow-amt-in input { width: 6.5em; border: 0; background: none; font: inherit; font-size: 16px; color: inherit; text-align: left; direction: ltr; outline: none; padding: 0; }
 .ow-acts a, .ow-acts button { flex: 1; text-align: center; border: 0; border-radius: 12px; padding: 9px 10px; font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; text-decoration: none; }
 .ow-acts a { background: #25d366; color: #fff; } .ow-acts button { background: color-mix(in srgb, var(--good) 14%, var(--surface)); color: var(--good); }
 .ow-rep { margin-top: 12px; }
@@ -10692,7 +10697,7 @@ function openOweFor(t) {
 /* everyone who owes you, by person: what for, a reminder on WhatsApp, and "got it" */
 function openOweList() {
   const { bg, close } = oweSheet("oweList");
-  let showDone = false, gotFor = null;
+  let showDone = false, gotFor = null, amtFor = null;
   const draw = () => {
     const by = new Map();
     const live = oweLive(), lost = oweList.filter(it => !oweLinked.has(it.k));
@@ -10705,7 +10710,8 @@ function openOweList() {
       <div class="hd"><div><b>👥 מי חייב לי</b><br><span>${open.length ? `${open.length} ${open.length === 1 ? "אדם" : "אנשים"}` : "אף אחד, הכול הוחזר"}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
       ${open.length ? `<div class="sp-tot"><span>סה״כ מגיע לך</span><b class="good">${fmt2(tot)}</b></div>` : `<p class="ow-empty">כדי להוסיף: פותחים קנייה ששילמת גם על אחרים, ולוחצים <b>👥 מי חייב לי</b>.</p>`}
       <div class="ow-people">${open.map(p => `<div class="ow-p">
-        <div class="ow-ph"><span class="av" style="background:${col(p.n)}">${esc(p.n.slice(0, 1))}</span><span class="nm"><b>${esc(p.n)}</b><small>${p.open.map(o => `${esc(o.it.what)} ${fmt2(o.x.a)}`).join(" · ")}</small></span><b class="num">${fmt2(p.sum)}</b></div>
+        <div class="ow-ph"><span class="av" style="background:${col(p.n)}">${esc(p.n.slice(0, 1))}</span><span class="nm"><b>${esc(p.n)}</b><small>${p.open.map(o => `${esc(o.it.what)} ${fmt2(o.x.a)}`).join(" · ")}</small></span>${amtFor === p.n ? "" : `<button type="button" class="ow-amt-b num" data-amt="${esc(p.n)}" aria-label="סכום אחר שקיבלת">${fmt2(p.sum)}<i aria-hidden="true">✎</i></button>`}</div>
+        ${amtFor === p.n ? `<label class="ow-amt"><span>כמה קיבלת מ${esc(p.n)}?</span><span class="ow-amt-in"><input type="text" inputmode="decimal" id="owAmt" value="${p.sum}" aria-label="סכום שקיבלת">₪</span></label>` : ""}
         <div class="ow-acts"><a class="ow-wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(oweMsg(p))}">תזכורת בוואטסאפ</a><button type="button" data-got="${esc(p.n)}">קיבלתי ✓</button></div>
       </div>`).join("")}</div>
       ${done.length || people.some(p => p.done.length) ? `<button type="button" class="pl-skip" id="owDone">${showDone ? "הסתרת מה שהוחזר" : "מה שכבר הוחזר"}</button>` : ""}
@@ -10724,11 +10730,19 @@ function openOweList() {
     if (lo) { const before = oweList.slice(); oweList = oweList.filter(it => it.k !== lo.dataset.lost); lo.disabled = true;
       try { await saveOwe(); afterData(); draw(); toast("נמחק", 1600); } catch (err) { oweList = before; oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("המחיקה לא הצליחה: " + writeError(err), 3500); } return; }
     // "got it": just confirm (a different amount is fixed later on the payback row itself)
+    const am = e.target.closest("[data-amt]");
+    if (am) { amtFor = am.dataset.amt; draw(); const i = $("owAmt"); if (i) { i.focus(); i.select(); } return; }
     const g = e.target.closest("[data-got]"); if (!g) return;
     const n = g.dataset.got, before = JSON.stringify(oweList);
     // what came back goes to their purchases in order; any difference (more or less) sits on the last one
     const mineOpen = []; oweLive().forEach(it => it.ppl.forEach(x => { if (x.n.trim() === n && !x.paid) mineOpen.push({ it, x }); }));
-    mineOpen.forEach(o => { o.x.paid = iso(today); oweRefundAdd(o.it, o.x); });
+    let left = null;
+    if (amtFor === n && $("owAmt")) { const v = parseAmount($("owAmt").value); if (v === null || v < 0) { toast("מה הסכום שקיבלת?", 2200); return; } left = Math.round(v * 100) / 100; }
+    mineOpen.forEach((o, i) => {
+      if (left !== null) { const a = i === mineOpen.length - 1 ? left : Math.min(o.x.a, left); left = Math.round((left - a) * 100) / 100; o.x.got = a; }
+      o.x.paid = iso(today); if (oweGot(o.x) > 0) oweRefundAdd(o.it, o.x);
+    });
+    amtFor = null;
     g.disabled = true; g.textContent = "שומר…";
     try { await saveOwe(); afterData(); draw(); if (!oweLive().some(it => oweLeft(it) > 0) && typeof funConfetti === "function") funConfetti(); }
     catch (err) { oweList = JSON.parse(before); oweByK = new Map(oweList.map(it => [it.k, it])); draw(); toast("השמירה לא הצליחה: " + writeError(err), 3500); }
@@ -11429,7 +11443,7 @@ const TOUR = [
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, גם כאלה שבוחרים בעצמכם ונותנים להם שם (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
-  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר, ואת הסכום שלה אפשר לשנות). שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״. חשבון שמתחלקים בו כל חודש? ״🔁 כל חודש״ רושם את החוב לבד." },
+  { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר). החזיר סכום אחר? לוחצים על הסכום ✎ ומקלידים כמה קיבלתם. שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״. חשבון שמתחלקים בו כל חודש? ״🔁 כל חודש״ רושם את החוב לבד." },
   { t: '#setMenu [data-act="arrange"]', view: "admin", opt: true, h: "התאמת מסך הבית 🧩", b: "משנים את סדר הכרטיסים במסך הבית, ומסתירים את מה שלא צריך." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
   { t: '#setMenu [data-act="xlsx"]', view: "admin", h: "הורדה לאקסל", b: "כל התנועות והסיכומים בקובץ אקסל אחד, לשמירה או לשיתוף." },
@@ -11775,7 +11789,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261122000300";
+const BUILD_ID = "20261124230347";
 let updToast = null;
 async function checkUpdate() {
   try {
