@@ -9796,14 +9796,19 @@ $("askAns").addEventListener("click", e => {
     const a = amt(), dv = $("addDate").value; if (!(a > 0) || !dv) return;
     const key = a + "|" + dv; if (skip.has(key)) return;
     const d0 = parseDate(dv); if (!d0) return;
-    const hit = txAll.find(t => !!(t.income || t.refund) === inc && !t.gen && Math.abs((t.fullAmount || t.amount) - a) < 0.005 && Math.abs(Math.round((t.date - d0) / 864e5)) <= 1);
+    // one typed by hand with another name (39.90 Apple Music, 39.90 iCloud) is a different thing; one that came in by itself
+    // (Apple Pay, the bank) has the shop's own name, so it is still a match whatever was typed
+    const nm = v => String(v || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ""), dn = nm($("addDesc").value);
+    const sameName = t => { const h = nm(t.merchant); return !dn || !h || h.includes(dn) || dn.includes(h); };
+    const hit = txAll.find(t => !!(t.income || t.refund) === inc && !t.gen && Math.abs((t.fullAmount || t.amount) - a) < 0.005 && Math.abs(Math.round((t.date - d0) / 864e5)) <= 1
+      && (t.source !== "manual" || sameName(t)));
     if (!hit) return;
     const diff = Math.round((hit.date - d0) / 864e5), when = diff === 0 ? (dv === iso(today) ? "היום" : "באותו יום") : `ב-${hit.date.getDate()}.${hit.date.getMonth() + 1}`;
     $("dupTxt").innerHTML = `${when} כבר נרשמו ${fmtA(a)} ב<bdi>${esc(hit.merchant)}</bdi>${hit.source === "applepay" ? " · נכנס לבד מ-<bdi>Apple Pay</bdi>" : ""}`;
     box.dataset.k = key; box.hidden = false;
   };
   const soon = () => { clearTimeout(timer); timer = setTimeout(run, 120); };
-  $("addAmount").addEventListener("input", soon); $("addDate").addEventListener("change", soon);
+  $("addAmount").addEventListener("input", soon); $("addDate").addEventListener("change", soon); $("addDesc").addEventListener("input", soon);
   $("addForm").addEventListener("click", e => { if (!e.target.closest("#dupWarn")) soon(); });
   $("dupNew").onclick = () => { skip.add(box.dataset.k); box.hidden = true; };
   $("dupSame").onclick = () => { box.hidden = true; closeAdd(); draftClear(); };
@@ -11789,7 +11794,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261124230347";
+const BUILD_ID = "20261126211658";
 let updToast = null;
 async function checkUpdate() {
   try {
