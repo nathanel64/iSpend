@@ -2277,7 +2277,14 @@ html[data-txt="xl"] { font-size: 124%; }
 .ow-who { display: flex; background: var(--bg); border-radius: 14px; padding: 4px; gap: 4px; }
 .sp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .sp-save.sp-alt { background: var(--brand-soft); color: var(--brand); }
 .ow-note { margin: 2px 0 10px; padding: 8px 12px; border-radius: 12px; background: var(--good-soft); color: var(--good); font-weight: 600; font-size: .84rem; }
-.ow-on { margin: 0 0 10px; display: flex; flex-direction: column; gap: 6px; } .ow-on > span { font-size: .8rem; color: var(--muted); } .ow-on small { font-size: .74rem; color: var(--muted); }
+.ow-on { margin: 0 0 12px; display: flex; flex-direction: column; background: var(--bg); border-radius: 16px; padding: 6px; }
+.ow-on-k { font-size: .78rem; font-weight: 700; color: var(--muted); padding: 6px 10px 4px; }
+.ow-opt { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; border-radius: 12px; padding: 10px; font: inherit; color: inherit; text-align: start; cursor: pointer; }
+.ow-opt[aria-checked="true"] { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.ow-opt i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--muted) 55%, transparent); flex: none; box-sizing: border-box; }
+.ow-opt[aria-checked="true"] i { border: 6px solid var(--brand); }
+.ow-opt > span { flex: 1; min-width: 0; display: flex; flex-direction: column; } .ow-opt > span b { font-size: .92rem; } .ow-opt small { font-size: .74rem; color: var(--muted); }
+.ow-opt > b.num { font-size: .95rem; }
 .ow-who button { flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-weight: 700; font-size: .88rem; padding: 9px 6px; border-radius: 11px; cursor: pointer; }
 .ow-who button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 .ow-got { display: flex; align-items: center; gap: 8px; margin: -2px 0 2px; padding: 6px 10px; background: color-mix(in srgb, var(--good) 10%, var(--surface)); border-radius: 12px; font-size: .84rem; color: var(--good); font-weight: 700; }
@@ -10627,11 +10634,12 @@ function openOweFor(t, note) {
     const myPart = round(total - others());
     bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="מי חייב לי">
       <span class="grab" aria-hidden="true"></span>
-      <div class="hd"><div><b>👥 מי חייב לי</b><br><span><bdi>${esc(t.merchant)}</bdi> · ${dd(t.date)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
-      ${note ? `<div class="ow-note">${note}</div>` : ""}
-      ${parts ? `<div class="ow-on"><span>על מה חייבים לך?</span><div class="fl-chips"><button type="button" data-on="" aria-pressed="${!on}">כל הקנייה ${fmt2(whole)}</button>${parts.map(x => `<button type="button" data-on="${esc(x.cat)}" aria-pressed="${on === x.cat}">${esc(x.cat)} ${fmt2(x.a)}</button>`).join("")}</div>
-        <small>${on ? `ההחזר ייכנס ל${esc(on)}` : "ההחזר יתחלק בין הקטגוריות לפי הפיצול"}</small></div>` : ""}
-      <div class="sp-tot"><span>${on ? "החלק הזה" : "סה״כ שילמת"}</span><b>${fmt2(total)}</b></div>
+      <div class="hd"><div><b>👥 מי חייב לי</b><br><span><bdi>${esc(t.merchant)}</bdi> · ${dd(t.date)}${parts ? ` · ${note ? "הפיצול נשמר ✓" : "מפוצלת ✂️"}` : ""}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
+      ${parts ? `<div class="ow-on" role="radiogroup" aria-label="על מה חייבים לך">
+        <div class="ow-on-k">על מה חייבים לך?</div>
+        <button type="button" class="ow-opt" data-on="" role="radio" aria-checked="${!on}"><i aria-hidden="true"></i><span><b>כל הקנייה</b><small>ההחזר יתחלק: ${parts.map(x => `${esc(x.cat)} ${fmtA(x.a)}`).join(" · ")}</small></span><b class="num">${fmt2(whole)}</b></button>
+        ${parts.map(x => `<button type="button" class="ow-opt" data-on="${esc(x.cat)}" role="radio" aria-checked="${on === x.cat}"><i aria-hidden="true"></i><span><b>רק ${esc(x.cat)}</b><small>ההחזר ייכנס ל${esc(x.cat)}</small></span><b class="num">${fmt2(x.a)}</b></button>`).join("")}
+      </div>` : `<div class="sp-tot"><span>סה״כ שילמת</span><b>${fmt2(total)}</b></div>`}
       <div class="ow-who" role="group" aria-label="מי משלם"><button type="button" data-me="1" class="${me ? "on" : ""}" aria-pressed="${me}">גם אני משתתף</button><button type="button" data-me="0" class="${me ? "" : "on"}" aria-pressed="${!me}">הכול עליהם</button></div>
       ${(() => { const n = heads(), ev = isEven(), lab = me ? "כמה אנשים, כולל אותי" : "בין כמה אנשים";
         return `<div class="ow-even"><div class="ow-eq"><b>לחלק שווה</b><small>${lab}</small></div>
@@ -11821,7 +11829,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261128093058";
+const BUILD_ID = "20261128093418";
 let updToast = null;
 async function checkUpdate() {
   try {
