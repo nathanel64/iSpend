@@ -2275,38 +2275,7 @@ html[data-txt="xl"] { font-size: 124%; }
 .ow-mine b { font-size: 1.15rem; } .ow-mine b.bad { color: var(--bad); }
 .ow-mine small { display: block; color: var(--muted); font-size: .74rem; } .ow-mine small.up { color: var(--good); font-weight: 700; }
 .ow-who { display: flex; background: var(--bg); border-radius: 14px; padding: 4px; gap: 4px; }
-
-/* ✈️ trips */
-.tr-k { font-size: .78rem; font-weight: 700; color: var(--muted); margin: 14px 2px 6px; }
-.tr-list, .tr-txs { background: var(--bg); border-radius: 16px; overflow: hidden; }
-.tr-row, .tr-tx { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; color: inherit; font: inherit; text-align: start; padding: 11px 12px; cursor: pointer; }
-.tr-row + .tr-row, .tr-tx + .tr-tx { border-top: 1px solid var(--line); }
-.tr-e, .tr-tx .e { font-size: 1.3rem; width: 30px; text-align: center; flex: none; }
-.tr-n, .tr-tx .n { flex: 1; min-width: 0; display: flex; flex-direction: column; } .tr-n small, .tr-tx small { color: var(--muted); font-size: .74rem; }
-.tr-tx .n b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: .9rem; } .tr-tx b.in { color: var(--good); }
-.tr-f { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; } .tr-f > span { font-size: .8rem; color: var(--muted); font-weight: 600; } .tr-f small { font-size: .74rem; color: var(--muted); }
-.tr-f input[type=text], .tr-f input[type=date] { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 16px; color: var(--ink); width: 100%; box-sizing: border-box; min-width: 0; }
-.tr-top { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 0 6px; } .tr-top b { font-size: 2rem; font-family: var(--font-display); } .tr-top span { color: var(--muted); }
-.tr-sub { display: flex; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--muted); margin-top: 6px; } .tr-sub b.good, .trip-card b.good { color: var(--good); } .tr-sub b.bad, .trip-card b.bad { color: var(--bad); }
-.tr-days { display: flex; align-items: flex-end; gap: 4px; height: 64px; }
-.tr-days i { flex: 1; border-radius: 5px; background: color-mix(in srgb, var(--brand) 35%, transparent); } .tr-days i.now { background: var(--brand); } .tr-days i.z { background: var(--line); }
-.tr-gs { display: flex; flex-direction: column; }
-.tr-g { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--line); } .tr-g:first-child { border-top: 0; }
-.tr-g > span:first-child { font-size: 1.15rem; width: 26px; text-align: center; } .tr-g .n { flex: 1; display: flex; flex-direction: column; gap: 4px; } .tr-g .n b { font-size: .9rem; }
-.tr-g em { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; } .tr-g em i { display: block; height: 100%; background: var(--brand); border-radius: 3px; }
-.tr-note { font-size: .74rem; color: var(--muted); margin: 6px 2px 0; }
-.tr-maybe { margin-top: 14px; background: var(--brand-soft); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
-.tr-maybe > b { color: var(--brand); } .tr-maybe > small { color: var(--muted); font-size: .74rem; margin-bottom: 4px; }
-.tr-mrow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--brand) 15%, transparent); }
-.tr-mrow .n { flex: 1; min-width: 0; display: flex; flex-direction: column; } .tr-mrow .n b { font-weight: 600; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tr-mrow small { color: var(--muted); font-size: .72rem; }
-.tr-mrow button { border: 0; background: var(--brand); color: #fff; border-radius: 999px; padding: 6px 12px; font: 700 .78rem var(--font-body); cursor: pointer; flex: none; }
-.tr-all { border: 0; background: none; color: var(--brand); font: 700 .86rem var(--font-body); padding: 8px; cursor: pointer; }
-.trip-card { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: start; border: 0; background: var(--surface); color: inherit; font: inherit; border-radius: 20px; padding: 14px 16px; cursor: pointer; box-shadow: 0 1px 0 var(--line); }
-.trip-card[hidden] { display: none; }
-.trip-card .tc-h { display: flex; justify-content: space-between; align-items: baseline; } .trip-card .tc-h b { font-size: 1.02rem; } .trip-card .tc-h small { color: var(--muted); font-size: .76rem; }
-.trip-card .tc-s { display: flex; justify-content: space-between; gap: 8px; font-size: .86rem; }
-.trip-card .tc-g { display: flex; gap: 6px; flex-wrap: wrap; } .trip-card .tc-g span { background: var(--bg); border-radius: 999px; padding: 4px 10px; font-size: .76rem; }
-.sp-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; } .sp-save.sp-alt { background: var(--brand-soft); color: var(--brand); }
+.sp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .sp-save.sp-alt { background: var(--brand-soft); color: var(--brand); }
 .ow-note { margin: 2px 0 10px; padding: 8px 12px; border-radius: 12px; background: var(--good-soft); color: var(--good); font-weight: 600; font-size: .84rem; }
 .ow-on { margin: 0 0 12px; display: flex; flex-direction: column; background: var(--bg); border-radius: 16px; padding: 6px; }
 .ow-on-k { font-size: .78rem; font-weight: 700; color: var(--muted); padding: 6px 10px 4px; }
@@ -4099,7 +4068,6 @@ function build() {
     t.owe = it; oweLinked.add(it.k); if (t.merchant) it.what = String(t.merchant).slice(0, 40); return; const others = it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
     if (others > 0) { t.fullAmount = t.amount; t.amount = Math.max(0, Math.round((t.amount - others) * 100) / 100); } });
   txAll = out;
-  try { (tripsList || []).forEach(tr => { if (oweByK.has("trip:" + tr.id)) oweLinked.add("trip:" + tr.id); }); } catch (e) {}
   tx = hiddenMonths.size ? out.filter(t => !hiddenMonths.has(mIdxOf(t.date))) : out;
 }
 
@@ -6210,7 +6178,6 @@ function applySettings(values) {
   { const j = String((values[16] || [])[21] || "").trim(); if (typeof loadBin === "function") loadBin(j); }
   { const j = String((values[17] || [])[21] || "").trim(); if (typeof loadMerge === "function") loadMerge(j); }
   { const j = String((values[18] || [])[21] || "").trim(); if (typeof loadDirect === "function") loadDirect(j); }
-  { const j = String((values[19] || [])[21] || "").trim(); if (typeof loadTrips === "function") loadTrips(j); }
   { const fj = String((values[7] || [])[21] || "").trim(); if (fj && typeof loadFun === "function") loadFun(fj); }
   { const th = String((values[1] || [])[21] || "").trim(); if (/^(auto|light|dark)$/.test(th) && th !== themePref) { themePref = th; applyTheme(th); try { localStorage.setItem("theme", th); } catch (e) {} } }
   // self-heal: an old rename can leave an alias whose name is a current method again (renamed away and back).
@@ -7819,7 +7786,6 @@ function openReceipt(k, sw) {
     if (qaAgain) q.push(`<button type="button" data-qa="again"><span>↻</span>שוב היום</button>`);
     if (qaSplit) q.push(`<button type="button" data-qa="split"><span>✂️</span>${(t.splitOf || t).parts ? "הפיצול" : "פיצול"}</button>`);
     if (qaOwe) q.push(`<button type="button" data-qa="owe"><span>👥</span>מי חייב לי</button>`);
-    if (typeof tripsList !== "undefined" && tripsList.length && !t.income && !/^ow-/.test(id)) { const inT = tripsList.filter(tr => tripTx(tr).some(x => tripKey(x) === tripKey(t))); q.push(`<button type="button" data-qa="trip"><span>${inT.length ? esc(inT[0].emoji || "✈️") : "✈️"}</span>${inT.length ? esc(inT[0].name).slice(0, 14) : "לטיול"}</button>`); }
     return q.length ? `<div class="rc-qa">${q.join("")}</div>` : ""; })()}
   <div class="obj-btns"><button type="button" class="ob-main" data-oedit>עריכה</button><button type="button" class="ob-del" data-odel>מחיקה</button><button type="button" data-oclose>סגירה</button></div>`);
   const w = $("objWrap");
@@ -7828,7 +7794,6 @@ function openReceipt(k, sw) {
     const a = b.dataset.qa; closeObj();
     if (a === "split") openSplit(t.splitOf || t);
     else if (a === "owe") openOweFor(t);
-    else if (a === "trip") tripPick(t);
     else receiptAgain(t);
   });
   w.querySelector("[data-oedit]").onclick = () => { closeObj(); if (isPendingTx(t)) { toast("אפשר לערוך אחרי שההוצאה תישלח. אפשר למחוק ולהוסיף מחדש."); return; } openEdit(t); };
@@ -8469,7 +8434,6 @@ boot();
     <div class="set-grp" data-g="org">
       <button type="button" class="set-row" data-go="cats">${ico("tag", 330)}<span class="set-rt"><b>קטגוריות ותקרות</b><small data-s="cats"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-go="pay">${ico("card", 210)}<span class="set-rt"><b>אמצעי תשלום</b><small data-s="pay"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
-      <button type="button" class="set-row" data-act="trips">${ico("tag", 200)}<span class="set-rt"><b>טיולים ואירועים</b><small>כמה עלה כל טיול, חתונה או ערב</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="merge">${ico("tag", 190)}<span class="set-rt"><b>אותו עסק?</b><small>שמות שונים של אותו מקום נספרים כעסק אחד</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-act="bin">${ico("trash", 25)}<span class="set-rt"><b>נמחקו לאחרונה</b><small>תנועות שמחקת ב-30 הימים האחרונים, ומשם מחזירים</small></span><span class="set-chev" aria-hidden="true">‹</span></button>
       <button type="button" class="set-row" data-go="wallet">${ico("wallet", 45)}<span class="set-rt"><b>כרטיסים מהארנק</b><small data-s="wallet"></small></span><span class="set-chev" aria-hidden="true">‹</span></button>
@@ -8539,7 +8503,6 @@ boot();
     if (r.dataset.act === "owe") { openOweList(); return; }
     if (r.dataset.act === "bin") { openBin(); return; }
     if (r.dataset.act === "merge") { openMerge(); return; }
-    if (r.dataset.act === "trips") { openTrips(); return; }
     if (r.dataset.act === "arrange") { showView("flow"); scrollTo(0, 0); setTimeout(() => { try { startArrange(); } catch (e) {} }, 350); return; }
     if (r.dataset.act === "xlsx") { exportXlsx(r); return; }
     if (r.dataset.act === "import") { openImport(); return; }
@@ -10986,304 +10949,6 @@ function mergeGroups() {
   return out.sort((a, b) => b.c - a.c).slice(0, 20);
 }
 
-/* ✈️ trips and events: a name, dates (or "until I end it"), an optional budget and the people who came along.
-   A trip is only a view over transactions that already exist: categories and months stay exactly as they are.
-   What is in it: every variable expense in its dates (or only what was marked), plus what was added by hand (paid before,
-   like the flight), minus what was taken out. Money back in its dates lowers its cost. Inside the trip each expense
-   falls into one of seven groups, guessed from its name and category and changeable per expense. Kept in settings V21. */
-let tripsList = [];
-const TRIP_G = [["fly", "✈️", "טיסות"], ["sleep", "🏨", "לינה"], ["food", "🍜", "אוכל"], ["ride", "🚕", "תחבורה"], ["fun", "🎟️", "אטרקציות"], ["shop", "🛍️", "קניות"], ["other", "💊", "אחר"]];
-const TRIP_E = ["✈️", "🏝️", "🏔️", "🎉", "💍", "🏕️", "🎂", "🚗"];
-let tripsRaw = null;
-function loadTrips(j) { tripsRaw = j; try { const a = j ? JSON.parse(j) : []; tripsList = Array.isArray(a) ? a.filter(x => x && x.id) : []; } catch (e) { tripsList = []; } }
-async function saveTrips() { await writeRange("'הגדרות'!V21", [[JSON.stringify(tripsList)]]); }
-/* rows typed in the old daily sheets have no id: they are known by where they sit, their day, amount and name */
-const tripKey = t => { t = (t && t.splitOf) || t; if (!t) return ""; if (t.rid) return t.rid; if (!t.date) return "";
-  return "k:" + [t.del ? t.del.key : "x", iso(t.date), t.gen === 1 ? (t.total || t.amount) : t.amount, String(t.rawMerchant || t.merchant || "").trim()].join("|"); };
-const tripEnd = tr => tr.to || iso(today);
-const tripActive = tr => !tr.done && tr.from <= iso(today) && (!tr.to || tr.to >= iso(today));
-/* the one on now: a short trip with an end date wins over a long open one (a trip abroad in the middle of a wedding year) */
-const tripNow = () => tripsList.filter(tripActive).sort((a, b) => (a.to ? 0 : 1) - (b.to ? 0 : 1) || b.from.localeCompare(a.from))[0];
-const tripSoon = tr => !tr.done && tr.from > iso(today);
-function tripGuess(t) {
-  const s = (String(t.merchant || "") + " " + String(t.rawMerchant || "")).toLowerCase(), c = t.category || "";
-  if (/מזומן|מט["״]?ח|cash|atm|כספומט|המרת/.test(s)) return "other";
-  if (/טיס|flight|airline|airways|אל על|elal|el al|ryanair|wizz|easyjet|aegean|turkish|lufthansa|ארקיע|ישראייר|air /.test(s)) return "fly";
-  if (/מלון|hotel|airbnb|booking|hostel|אכסני|resort|צימר|לינה|villa|inn\b/.test(s)) return "sleep";
-  if (/מונית|taxi|grab|uber|bolt|gett|רכבת|train|metro|bus|אוטובוס|השכרת|rent a car|car rental|דלק|fuel|ferry|מעבורת|parking|חני|טוסטוס|scooter/.test(s) || /תחבורה|רכב/.test(c)) return "ride";
-  if (/כרטיס|ticket|סיור|tour|פארק|park|מוזיאון|museum|show|הופעה|אטרקצי|spa|ספא|עיסוי|massage|צלילה|diving/.test(s)) return "fun";
-  if (/duty|דיוטי|shop|קניון|mall|מתנ/.test(s) || /שופינג|קניות|מתנות/.test(c)) return "shop";
-  if (/מסעדה|restaurant|trattoria|ristorante|pizzeria|osteria|bistro|gelat|cafe|קפה|food|אוכל|eleven|seven|market|מאפ|bar\b|בר |פיצה|המבורגר/.test(s) || /אוכל|סופר|קיוסק|בילוי/.test(c)) return "food";
-  return "other";
-}
-const tripGroup = (tr, t) => (tr.sub && tr.sub[tripKey(t) + (t.splitOf ? "#" + t.category : "")]) || tripGuess(t);
-/* the header comment above said "everything in its dates": by the owner's choice only what is marked counts, and money back
-   never lowers it (the point is what the trip cost the two of us; money back still lowers the month as always) */
-/* what counts: a purchase in payments counts once, at its full price, by its first payment */
-function tripTx(tr) {
-  const inc = new Set(tr.inc || []), exc = new Set(tr.exc || []), to = tripEnd(tr);
-  return txAll.filter(t => {
-    if (t.income || t.refund || (t.gen && t.gen !== 1)) return false;
-    const k = tripKey(t); if (!k || exc.has(k)) return false;
-    if (inc.has(k)) return true;
-    if (tr.mode !== "dates") return false;
-    const d = iso(t.date); if (d < tr.from || d > to) return false;
-    return !FIXED.has(t.category);
-  });
-}
-const tripAmt = t => t.gen === 1 ? (t.total || t.amount) : t.amount;
-function tripSum(tr) {
-  const list = tripTx(tr), groups = new Map(TRIP_G.map(g => [g[0], 0]));
-  let total = 0; list.forEach(t => { const a = tripAmt(t); total += a; const g = tripGroup(tr, t); groups.set(g, (groups.get(g) || 0) + a); });
-  const days = Math.max(1, Math.round((parseDate(tripEnd(tr)) - parseDate(tr.from)) / 864e5) + 1);
-  const gone = Math.min(days, Math.max(1, Math.round((today - parseDate(tr.from)) / 864e5) + 1));
-  return { list, total: Math.round(total * 100) / 100, groups, days, gone };
-}
-/* paid before: in the four months before it, holidays, flights, hotels, travel insurance, foreign money */
-function tripMaybe(tr) {
-  const inn = new Set(tripTx(tr).map(tripKey)), exc = new Set(tr.exc || []), from = parseDate(tr.from), lo = new Date(from.getFullYear(), from.getMonth() - 4, from.getDate());
-  return txAll.filter(t => !t.income && !t.refund && !t.splitOf && (!t.gen || t.gen === 1) && t.date >= lo && iso(t.date) < tr.from
-    && !inn.has(tripKey(t)) && !exc.has(tripKey(t)) && !tripsList.some(o => o !== tr && (o.inc || []).includes(tripKey(t)))
-    && (/חופש|טיול/.test(t.category || "") || /טיס|flight|airline|מלון|hotel|airbnb|booking|ביטוח נסיעות|travel insurance|מט["״]?ח|מזומן ל|השכרת רכב/i.test(String(t.merchant || "") + " " + String(t.rawMerchant || ""))))
-    .sort((a, b) => b.date - a.date).slice(0, 8);
-}
-const TRIP_LONG_RX = /חתונ|אולם|גן אירועים|צלם|צילום|שמל|חליפ|טבעת|תכשיט|פרח|הזמנ|איפור|תסרוק|דיג.?יי|dj|להקה|רב |עיצוב|קייטר/i;
-function tripCand(tr) {
-  const inn = new Set(tripTx(tr).map(tripKey)), exc = new Set(tr.exc || []), to = tripEnd(tr), s = tripSum(tr);
-  const cats = new Set(s.list.map(t => t.category));
-  return txAll.filter(t => !t.income && !t.refund && !t.splitOf && (!t.gen || t.gen === 1) && !FIXED.has(t.category)
-    && iso(t.date) >= tr.from && iso(t.date) <= to && !inn.has(tripKey(t)) && !exc.has(tripKey(t))
-    && (s.days <= 31 || cats.has(t.category) || TRIP_LONG_RX.test(String(t.merchant || "") + " " + String(t.rawMerchant || "") + " " + t.category)))
-    .sort((a, b) => a.date - b.date);
-}
-const tripRange = tr => tr.to ? `<bdi dir="ltr">${tripFmtD(tr.from)}–${tripFmtD(tr.to)}</bdi>` : `מ-<bdi dir="ltr">${tripFmtD(tr.from)}</bdi>`;
-const tripFmtD = s => { const d = parseDate(s); return d.getDate() + "." + (d.getMonth() + 1) + (d.getFullYear() !== today.getFullYear() ? "." + String(d.getFullYear()).slice(2) : ""); };
-async function tripSet(tr, k, on) {
-  tr.inc = (tr.inc || []).filter(x => x !== k); tr.exc = (tr.exc || []).filter(x => x !== k);
-  const auto = tripTx(Object.assign({}, tr, { inc: [], exc: [] })).some(t => tripKey(t) === k);
-  if (on && !auto) tr.inc.push(k); if (!on && auto) tr.exc.push(k);
-  await saveTrips(); afterData();
-}
-/* ---- the list */
-async function tripPick(t) {
-  const k = tripKey(t), inT = tripsList.filter(tr => tripTx(tr).some(x => tripKey(x) === k));
-  if (inT.length) { const tr = inT[0]; const ok = await askDialog({ kick: tr.emoji || "✈️", title: `״${t.merchant}״ ב״${tr.name}״`, text: "התנועה נספרת בטיול הזה.", x: true, buttons: [{ label: "פתיחת הטיול", value: "open" }, { label: "להוציא מהטיול", value: "out", cls: "ghost" }] });
-    if (ok === "open") openTrip(tr); else if (ok === "out") { try { await tripSet(tr, k, false); toast("הוצא מהטיול", 1600); } catch (e) { toast("לא נשמר: " + writeError(e)); } } return; }
-  const all = tripsList.slice().sort((a, b) => b.from.localeCompare(a.from)).slice(0, 6);
-  const v = await askDialog({ kick: "✈️ לטיול", title: "לאיזה טיול?", text: "״" + esc(t.merchant || "") + "״ ייספר בטיול. בחשבון הרגיל שום דבר לא משתנה.", x: true, buttons: all.map((tr, i) => ({ label: esc((tr.emoji || "✈️") + " " + tr.name), sub: tripRange(tr), value: String(i), cls: "ghost" })) });
-  if (v == null) return; const tr = all[+v];
-  try { await tripSet(tr, k, true); toast(`נוסף ל״${tr.name}״ ✓`, 1800); } catch (e) { toast("לא נשמר: " + writeError(e)); }
-}
-function openTrips() {
-  const { bg, close } = oweSheet("tripsSheet");
-  const draw = () => {
-    const now = tripsList.filter(t => tripActive(t) || tripSoon(t)), past = tripsList.filter(t => !tripActive(t) && !tripSoon(t)).sort((a, b) => b.from.localeCompare(a.from));
-    const row = tr => { const s = tripSum(tr); return `<button type="button" class="tr-row" data-trip="${esc(tr.id)}"><span class="tr-e">${esc(tr.emoji || "✈️")}</span><span class="tr-n"><b>${esc(tr.name)}</b><small>${tripRange(tr)}${tr.to ? "" : " · עדיין בדרך"}${tripActive(tr) ? " · עכשיו" : tripSoon(tr) ? " · בקרוב" : ""}</small></span><b class="num">${fmt(s.total)}</b><span class="chev" aria-hidden="true">‹</span></button>`; };
-    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="טיולים ואירועים">
-      <span class="grab" aria-hidden="true"></span>
-      <div class="hd"><div><b>✈️ טיולים ואירועים</b><br><span>כמה עלה כל טיול, חתונה או ערב. לא משנה כלום בחשבון הרגיל.</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
-      ${now.length ? `<div class="tr-k">עכשיו ובקרוב</div><div class="tr-list">${now.map(row).join("")}</div>` : ""}
-      ${past.length ? `<div class="tr-k">היו</div><div class="tr-list">${past.map(row).join("")}</div>` : ""}
-      ${!tripsList.length ? `<p class="ow-empty">עוד אין כאן כלום. אפשר ליצור גם טיול שכבר היה: לפי התאריכים הוא אוסף לבד את ההוצאות.</p>` : ""}
-      <button type="button" class="sp-save" id="trNew">+ טיול או אירוע חדש</button>
-    </div>`;
-  };
-  bg.addEventListener("click", e => {
-    if (e.target.closest("#trNew")) { close(); openTripEdit(null); return; }
-    const r = e.target.closest("[data-trip]"); if (r) { const tr = tripsList.find(x => x.id === r.dataset.trip); if (tr) { close(); openTrip(tr); } }
-  });
-  draw();
-}
-/* ---- new / edit */
-function openTripEdit(tr) {
-  const { bg, close } = oweSheet("tripEdit");
-  const st = tr ? JSON.parse(JSON.stringify(tr)) : { id: "tr" + Date.now().toString(36), name: "", emoji: "✈️", from: iso(today), to: "", mode: "mark", budget: null, ppl: [], inc: [], exc: [], sub: {} };
-  const draw = () => {
-    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="${tr ? "עריכת טיול" : "טיול או אירוע חדש"}">
-      <span class="grab" aria-hidden="true"></span>
-      <div class="hd"><div><b>${tr ? "עריכה" : "✈️ טיול או אירוע חדש"}</b></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
-      <label class="tr-f"><span>שם</span><input type="text" id="trName" maxlength="40" placeholder="למשל: תאילנד עם סיטאר" value="${esc(st.name)}"></label>
-      <div class="tr-f"><span>סמל</span><div class="fl-chips">${TRIP_E.map(e => `<button type="button" data-emo="${e}" aria-pressed="${st.emoji === e}">${e}</button>`).join("")}</div></div>
-      <div class="tr-f"><span>מתי</span><div class="fl-two"><input type="date" id="trFrom" value="${esc(st.from)}" aria-label="מתאריך"><input type="date" id="trTo" value="${esc(st.to)}" aria-label="עד תאריך"></div><small>בלי תאריך סיום: עד שתלחצו ״סיום״.</small></div>
-      <div class="tr-f"><span>מה נכנס</span><div class="fl-chips"><button type="button" data-mode="mark" aria-pressed="${st.mode !== "dates"}">רק מה שאסמן</button><button type="button" data-mode="dates" aria-pressed="${st.mode === "dates"}">כל ההוצאות בתאריכים</button></div>
-        <small>${st.mode !== "dates" ? "מסמנים בדף הטיול, בחלון ההוספה או בקבלה של כל תנועה." : "חוץ מקבועות כמו שכר דירה ומנויים. אפשר להוציא או להוסיף תנועה בכל רגע."}</small></div>
-      <label class="tr-f"><span>תקציב (לא חובה)</span><input type="text" inputmode="decimal" id="trBudget" placeholder="₪" value="${st.budget ? st.budget : ""}"></label>
-      <label class="tr-f"><span>מי בא איתי (לא חובה, בשביל החלוקה בסוף)</span><input type="text" id="trPpl" placeholder="שמות, עם פסיק ביניהם" value="${esc((st.ppl || []).join(", "))}"></label>
-      <p class="ow-msg" id="trMsg" role="status"></p>
-      <button type="button" class="sp-save" id="trSave">${tr ? "שמירה" : "יוצאים לדרך"}</button>
-      ${tr ? `<button type="button" class="sp-undo" id="trDel">מחיקת הטיול</button>` : ""}
-    </div>`;
-  };
-  const read = () => { st.name = $("trName").value.trim(); st.from = $("trFrom").value; st.to = $("trTo").value; const b = parseAmount($("trBudget").value); st.budget = b && b > 0 ? b : null; st.ppl = $("trPpl").value.split(/[,،]/).map(x => x.trim()).filter(Boolean); };
-  bg.addEventListener("click", async e => {
-    const em = e.target.closest("[data-emo]"); if (em) { read(); st.emoji = em.dataset.emo; draw(); return; }
-    const md = e.target.closest("[data-mode]"); if (md) { read(); st.mode = md.dataset.mode; draw(); return; }
-    if (e.target.closest("#trDel")) {
-      if (await askDialog({ kick: "מחיקה", title: `למחוק את ״${st.name}״?`, text: "רק הטיול נמחק. התנועות עצמן נשארות.", x: true, buttons: [{ label: "מחיקה", value: "del", cls: "danger" }, { label: "ביטול", value: null, cls: "ghost" }] }) !== "del") return;
-      tripsList = tripsList.filter(x => x.id !== st.id); try { await saveTrips(); } catch (err) { toast("לא נשמר: " + writeError(err)); return; } close(); afterData(); toast("הטיול נמחק", 1800); return; }
-    if (!e.target.closest("#trSave")) return;
-    read();
-    if (!st.name) { $("trMsg").textContent = "איך לקרוא לו?"; return; }
-    if (!st.from) { $("trMsg").textContent = "מתי הוא מתחיל?"; return; }
-    if (st.to && st.to < st.from) { $("trMsg").textContent = "תאריך הסיום לפני ההתחלה"; return; }
-    if (st.to) st.done = st.to < iso(today) ? true : false;
-    delete st.rough;
-    const before = tripsList.slice(); const i = tripsList.findIndex(x => x.id === st.id);
-    if (i >= 0) tripsList[i] = st; else tripsList.push(st);
-    const btn = $("trSave"); btn.disabled = true; btn.textContent = "שומר…";
-    try { await saveTrips(); close(); afterData(); openTrip(st); }
-    catch (err) { tripsList = before; btn.disabled = false; btn.textContent = "שמירה"; $("trMsg").textContent = "לא נשמר: " + writeError(err); }
-  });
-  draw();
-}
-/* ---- one trip */
-function openTrip(tr) {
-  const { bg, close } = oweSheet("tripSheet");
-  let showAll = false, showCand = false;
-  const draw = () => {
-    tr = tripsList.find(x => x.id === tr.id) || tr;
-    const s = tripSum(tr), maybe = tripMaybe(tr), cand = tripCand(tr), active = tripActive(tr), left = tr.budget ? tr.budget - s.total : null;
-    const perDay = s.total / s.gone, daysLeft = Math.max(0, s.days - s.gone);
-    const byDay = s.days <= 31 && !tr.rough ? Array.from({ length: s.days }, (_, i) => { const d = iso(new Date(parseDate(tr.from).getFullYear(), parseDate(tr.from).getMonth(), parseDate(tr.from).getDate() + i)); return s.list.filter(t => iso(t.date) === d).reduce((a, t) => a + tripAmt(t), 0); }) : null;
-    const mx = byDay ? Math.max(1, ...byDay) : 1;
-    const gs = TRIP_G.map(([k, e, n]) => [k, e, n, s.groups.get(k) || 0]).filter(g => Math.abs(g[3]) >= 0.5).sort((a, b) => b[3] - a[3]);
-    const list = s.list.slice().sort((a, b) => b.date - a.date);
-    bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="${esc(tr.name)}">
-      <span class="grab" aria-hidden="true"></span>
-      <div class="hd"><div><b>${esc(tr.emoji || "✈️")} ${esc(tr.name)}</b><br><span>${tripRange(tr)}${active ? ` · יום ${s.gone} מתוך ${tr.to ? s.days : "?"}` : tripSoon(tr) ? " · עוד לא התחיל" : ""}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
-      <div class="tr-top"><b class="num">${fmt(s.total)}</b>${tr.budget ? `<span>מתוך ${fmt(tr.budget)}</span>` : ""}</div>
-      ${tr.budget ? `<div class="meter"><i class="${s.total > tr.budget ? "over" : s.total > tr.budget * .85 ? "mid" : ""}" style="width:${Math.min(100, Math.max(0, s.total / tr.budget * 100)).toFixed(1)}%"></i></div>` : ""}
-      <div class="tr-sub"><span>${tr.rough ? "התאריכים כרגע לפי חודש. אפשר לדייק ב״עריכה״" : `${fmt(perDay)} ליום${active ? " עד עכשיו" : ""}`}</span>${left != null ? (active && tr.to && daysLeft > 0 ? `<b class="${left >= 0 ? "good" : "bad"}">${left >= 0 ? `נשארו ${fmt(left / daysLeft)} ליום` : `חריגה של ${fmt(-left)}`}</b>` : `<b class="${left >= 0 ? "good" : "bad"}">${left >= 0 ? `${active || tripSoon(tr) ? "נשארו" : "חסכת"} ${fmt(left)}` : `חריגה של ${fmt(-left)}`}</b>`) : ""}</div>
-      ${byDay && s.list.length ? `<div class="tr-k">לפי יום</div><div class="tr-days" dir="ltr">${byDay.map((v, i) => `<i style="height:${Math.max(4, v / mx * 100).toFixed(0)}%" class="${v <= 0 ? "z" : i === s.gone - 1 && active ? "now" : ""}"></i>`).join("")}</div>` : ""}
-      ${gs.length ? `<div class="tr-k">על מה</div><div class="tr-gs">${gs.map(([k, e, n, v]) => `<div class="tr-g"><span>${e}</span><span class="n"><b>${n}</b><em><i style="width:${s.total > 0 ? Math.max(2, Math.min(100, v / s.total * 100)).toFixed(0) : 0}%"></i></em></span><b class="num">${v < 0 ? ltr("+" + fmt(-v)) : fmt(v)}</b></div>`).join("")}</div><p class="tr-note">החלוקה הזו רק בתוך הטיול. בחשבון הרגיל הכל נשאר בקטגוריות שלך.</p>` : ""}
-      ${maybe.length ? `<div class="tr-maybe"><b>🔎 אולי שולמו לפני הטיול?</b><small>חופשות, טיסות, מלונות, ביטוח נסיעות ומט״ח מהחודשים שלפני</small>
-        ${maybe.map(t => `<div class="tr-mrow"><span class="n"><b><bdi>${esc(t.merchant)}</bdi></b><small>${dd(t.date)}</small></span><b class="num">${fmt(tripAmt(t))}</b><button type="button" data-tadd="${esc(tripKey(t))}">+ לטיול</button></div>`).join("")}
-        ${maybe.length > 1 ? `<button type="button" class="tr-all" data-taddall>להוסיף את כולם (${fmt(maybe.reduce((a, t) => a + tripAmt(t), 0))})</button>` : ""}</div>` : ""}
-      ${cand.length ? `<div class="tr-maybe"><b>☑️ מה מהתאריכים שייך לטיול?</b><small>${s.days > 31 ? "מה שנראה קשור, מהתאריכים שלו" : "הוצאות משתנות מ-" + tripFmtD(tr.from) + " עד " + tripFmtD(tripEnd(tr))}. נכנס רק מה שמסמנים.</small>
-        ${(showCand ? cand : cand.slice(0, 8)).map(t => `<div class="tr-mrow"><span class="n"><b><bdi>${esc(t.merchant || "ללא תיאור")}</bdi></b><small>${dd(t.date)} · ${esc(t.category)}</small></span><b class="num">${fmt(tripAmt(t))}</b><button type="button" data-tadd="${esc(tripKey(t))}">+ לטיול</button></div>`).join("")}
-        ${cand.length > 8 && !showCand ? `<button type="button" class="tr-all" data-tcmore>עוד ${cand.length - 8} ›</button>` : ""}
-        ${cand.length > 1 ? `<button type="button" class="tr-all" data-taddcand>להוסיף את כולם (${fmt(cand.reduce((a, t) => a + tripAmt(t), 0))})</button>` : ""}</div>` : ""}
-      ${list.length ? `<div class="tr-k">${list.length} תנועות</div><div class="tr-txs">${(showAll ? list : list.slice(0, 6)).map(t => { const g = TRIP_G.find(x => x[0] === tripGroup(tr, t)); return `<button type="button" class="tr-tx" data-ttx="${esc(txKey(t))}"><span class="e">${g[1]}</span><span class="n"><b><bdi>${esc(t.merchant || "ללא תיאור")}</bdi></b><small>${dd(t.date)} · ${g[2]}${t.gen === 1 ? " · כל התשלומים" : ""}</small></span><b class="num${t.refund ? " in" : ""}">${t.refund ? ltr("+" + fmt(-tripAmt(t))) : fmt(tripAmt(t))}</b></button>`; }).join("")}</div>
-        ${list.length > 6 && !showAll ? `<button type="button" class="sal-more" data-tmore>כל ${list.length} התנועות ›</button>` : ""}` : `<p class="ow-empty">${tripSoon(tr) ? "עוד לא התחיל. מה ששילמת מראש אפשר להוסיף מהקבלה של התנועה." : "עוד אין כאן תנועות."}</p>`}
-      <div class="sp-pair">${s.total > 0 ? `<button type="button" class="sp-save sp-alt" data-tsplit>👥 ${tr.ppl && tr.ppl.length ? "לחלק עם " + esc(tr.ppl.slice(0, 2).join(" ו")) : "לחלק עם החברים"}</button>` : ""}<button type="button" class="sp-save sp-alt" data-tedit>עריכה</button></div>
-      ${active && !tr.to ? `<button type="button" class="sp-save" data-tend>סיום הטיול</button>` : ""}
-    </div>`;
-  };
-  bg.addEventListener("click", async e => {
-    if (e.target.closest("[data-tmore]")) { showAll = true; draw(); return; }
-    if (e.target.closest("[data-tcmore]")) { showCand = true; draw(); return; }
-    if (e.target.closest("[data-taddcand]")) { const ks = tripCand(tr).map(tripKey); tr.inc = [...new Set([...(tr.inc || []), ...ks])]; try { await saveTrips(); afterData(); } catch (err) { toast("לא נשמר: " + writeError(err)); } draw(); return; }
-    if (e.target.closest("[data-tedit]")) { close(); openTripEdit(tr); return; }
-    if (e.target.closest("[data-tend]")) { tr.to = iso(today); tr.done = true; try { await saveTrips(); } catch (err) { toast("לא נשמר: " + writeError(err)); return; } afterData(); draw(); toast(`״${tr.name}״ הסתיים: ${fmt(tripSum(tr).total)} ✓`, 2600); return; }
-    const ad = e.target.closest("[data-tadd]"); if (ad) { ad.disabled = true; try { await tripSet(tr, ad.dataset.tadd, true); } catch (err) { toast("לא נשמר: " + writeError(err)); } draw(); return; }
-    if (e.target.closest("[data-taddall]")) { const ks = tripMaybe(tr).map(tripKey); tr.inc = [...new Set([...(tr.inc || []), ...ks])]; tr.exc = (tr.exc || []).filter(x => !ks.includes(x)); try { await saveTrips(); afterData(); } catch (err) { toast("לא נשמר: " + writeError(err)); } draw(); return; }
-    if (e.target.closest("[data-tsplit]")) {
-      const s = tripSum(tr), big = [...s.list].sort((a, b) => tripAmt(b) - tripAmt(a))[0];
-      const fake = { oweK: "trip:" + tr.id, merchant: (tr.emoji || "✈️") + " " + tr.name, date: parseDate(tr.from), amount: s.total, category: (big && big.category) || "חופשות", owe: oweByK.get("trip:" + tr.id), del: null, rid: "" };
-      close(); openOweFor(fake);
-      // the people of the trip are already in, until names were typed
-      setTimeout(() => { const ns = [...document.querySelectorAll("#oweSheet .ow-n")]; if (!fake.owe && tr.ppl && tr.ppl.length && ns.length === 1 && !ns[0].value) { ns[0].value = tr.ppl[0]; ns[0].dispatchEvent(new Event("input", { bubbles: true })); } }, 60);
-      return; }
-    const tx = e.target.closest("[data-ttx]"); if (tx) { const t = txByKey(tx.dataset.ttx); if (t) openTripTx(tr, t, draw); }
-  });
-  draw();
-}
-/* one expense inside a trip: its group there, or out of the trip */
-function openTripTx(tr, t, redraw) {
-  const { bg, close } = oweSheet("tripTx"), sk = tripKey(t) + (t.splitOf ? "#" + t.category : ""), cur = tripGroup(tr, t);
-  bg.innerHTML = `<div class="jar-sh" role="dialog" aria-modal="true" aria-label="${esc(t.merchant)}">
-    <span class="grab" aria-hidden="true"></span>
-    <div class="hd"><div><b><bdi>${esc(t.merchant || "ללא תיאור")}</bdi> · ${fmt(Math.abs(tripAmt(t)))}</b><br><span>${dd(t.date)} · בחשבון הרגיל: ${esc(t.category)}</span></div><button type="button" class="x" aria-label="סגירה">✕</button></div>
-    <div class="tr-k">בטיול זה נחשב</div>
-    <div class="fl-chips">${TRIP_G.map(([k, e, n]) => `<button type="button" data-tg="${k}" aria-pressed="${cur === k}">${e} ${n}</button>`).join("")}</div>
-    <p class="tr-note">${tr.sub && tr.sub[sk] ? "בחרת ידנית." : "ניחוש לפי השם והקטגוריה."} שינוי כאן לא משנה את הקטגוריה הרגילה.</p>
-    <button type="button" class="sp-undo" data-tout>להוציא מהטיול</button>
-  </div>`;
-  bg.addEventListener("click", async e => {
-    const g = e.target.closest("[data-tg]");
-    if (g) { tr.sub = Object.assign({}, tr.sub); if (g.dataset.tg === tripGuess(t)) delete tr.sub[sk]; else tr.sub[sk] = g.dataset.tg;
-      try { await saveTrips(); } catch (err) { toast("לא נשמר: " + writeError(err)); return; } close(); redraw(); return; }
-    if (e.target.closest("[data-tout]")) { try { await tripSet(tr, tripKey(t), false); } catch (err) { toast("לא נשמר: " + writeError(err)); return; } close(); redraw(); toast("הוצא מהטיול", 1600); }
-  });
-}
-/* ---- on the home screen: the trip that is on now */
-function renderTripCard() {
-  let c = $("tripCard");
-  const tr = tripNow();
-  if (!tr) { if (c) c.hidden = true; return; }
-  if (!c) { c = document.createElement("button"); c.type = "button"; c.id = "tripCard"; c.className = "trip-card"; $("todayBox").after(c); c.addEventListener("click", () => { const x = tripNow(); if (x) openTrip(x); }); }
-  const s = tripSum(tr), daysLeft = Math.max(0, s.days - s.gone), left = tr.budget ? tr.budget - s.total : null;
-  const top = TRIP_G.map(([k, e, n]) => [e, n, s.groups.get(k) || 0]).filter(g => g[2] > 0.5).sort((a, b) => b[2] - a[2]).slice(0, 3);
-  c.hidden = false;
-  c.innerHTML = `<span class="tc-h"><b>${esc(tr.emoji || "✈️")} ${esc(tr.name)}</b><small>${tr.to ? `יום ${s.gone} מתוך ${s.days}` : `יום ${s.gone}`}</small></span>
-    <span class="tc-s"><span>הוצאת <b class="num">${fmt(s.total)}</b>${tr.budget ? ` מתוך ${fmt(tr.budget)}` : ""}</span>${left != null && tr.to && daysLeft > 0 ? `<b class="${left >= 0 ? "good" : "bad"}">${left >= 0 ? `${fmt(left / daysLeft)} ליום נשאר` : `חריגה של ${fmt(-left)}`}</b>` : ""}</span>
-    ${tr.budget ? `<span class="meter"><i class="${s.total > tr.budget ? "over" : s.total > tr.budget * .85 ? "mid" : ""}" style="width:${Math.min(100, Math.max(0, s.total / tr.budget * 100)).toFixed(1)}%"></i></span>` : ""}
-    ${top.length > 1 ? `<span class="tc-g">${top.map(([e, n, v]) => `<span>${e} ${n} ${fmt(v)}</span>`).join("")}</span>` : ""}`;
-}
-/* ---- in the add window: belongs to the trip that is on (or coming up) */
-let tripAddOn = null;
-function tripAddSync() {
-  let r = $("tripRow");
-  const tr = tripNow() || tripsList.filter(tripSoon).sort((a, b) => a.from.localeCompare(b.from))[0];
-  const show = !!tr && !$("sheetBg").hidden && addKind === "exp" && !editTx;
-  if (!r) { r = document.createElement("label"); r.id = "tripRow"; r.className = "ce-tg auto-tg dt"; r.innerHTML = `<span><b id="tripRowT"></b><small id="tripRowS"></small></span><input type="checkbox" id="tripAdd"><span class="ce-sw" aria-hidden="true"></span>`; $("autoRow").before(r);
-    $("tripAdd").addEventListener("change", () => { tripAddOn = $("tripAdd").checked; }); }
-  r.hidden = !show; if (!show) return;
-  if (tripAddOn === null || r.dataset.trip !== tr.id) { tripAddOn = tripActive(tr) && !!tr.to && (parseDate(tr.to) - parseDate(tr.from)) / 864e5 <= 30; r.dataset.trip = tr.id; }
-  $("tripAdd").checked = !!tripAddOn;
-  $("tripRowT").textContent = `${tr.emoji || "✈️"} שייך ל״${tr.name}״`;
-  $("tripRowS").textContent = tripActive(tr) ? "נכנס לסיכום הטיול" : `מתחיל ב-${tripFmtD(tr.from)}: למשל טיסה או מלון ששילמת מראש`;
-}
-{ const oa = openAdd; openAdd = function () { tripAddOn = null; const r = oa.apply(this, arguments); requestAnimationFrame(() => { try { tripAddSync(); } catch (e) {} }); return r; };
-  const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); try { tripAddSync(); } catch (e) {} return r; };
-  const sk = setKind; setKind = function () { const r = sk.apply(this, arguments); requestAnimationFrame(() => { try { tripAddSync(); } catch (e) {} }); return r; };
-  // after saving a new expense: put it in (or out of) the trip as the switch says
-  let pendingTrip = null;
-  $("addForm").addEventListener("submit", () => {
-    const r = $("tripRow"); if (!r || r.hidden || editTx) { pendingTrip = null; return; }
-    pendingTrip = { id: r.dataset.trip, on: $("tripAdd").checked, ids: new Set((data.apple || []).map(x => String(x[7] || ""))) };
-  }, true);
-  const ad = afterData; afterData = function () { const res = ad.apply(this, arguments);
-    if (pendingTrip && $("sheetBg").hidden) { const p = pendingTrip; pendingTrip = null;
-      const fresh = (data.apple || []).map(x => String(x[7] || "")).filter(id => id && !p.ids.has(id) && !/^sp-/.test(id));
-      const tr = tripsList.find(x => x.id === p.id);
-      if (tr && fresh.length) { Promise.all(fresh.map(k => tripSet(tr, k, p.on))).catch(() => {}); } }
-    try { tripSeed(); renderTripCard(); } catch (e) {}
-    return res; }; }
-let tripSeeded = false;
-/* the first seed missed rows with no id (the old daily sheets): fill the four once more, only where nothing was marked yet */
-function tripRepair() {
-  let ch = false;
-  const one = t => !t.income && !t.refund && !t.splitOf && (!t.gen || t.gen === 1);
-  tripsList.forEach(tr => {
-    if (tr.fixed || (tr.inc || []).length) return;
-    let keys = [];
-    if (tr.rough) { const a = tr.from, b = tr.to; keys = txAll.filter(t => one(t) && /חופש|טיול/.test(t.category || "") && iso(t.date) >= a && iso(t.date) <= b).map(tripKey); }
-    else if (tr.id === "trwed26") keys = txAll.filter(t => one(t) && iso(t.date) >= tr.from && /חתונ/.test((t.category || "") + " " + (t.merchant || ""))).map(tripKey);
-    else return;
-    tr.fixed = true; ch = true; tr.inc = [...new Set(keys.filter(Boolean))];
-  });
-  if (ch) saveTrips().then(() => { try { renderTripCard(); } catch (e) {} }).catch(() => {});
-}
-function tripSeed() {
-  if (tripSeeded || !txAll.length) return;
-  if (tripsRaw !== "") { tripSeeded = true; tripRepair(); return; } tripSeeded = true;
-  const hol = t => !t.income && !t.refund && !t.splitOf && (!t.gen || t.gen === 1) && /חופש|טיול/.test(t.category || "");
-  const inM = (t, y, m) => t.date.getFullYear() === y && t.date.getMonth() === m;
-  const plan = [["רומא", "🏛️", 2026, 0], ["רומניה", "🏔️", 2026, 4], ["תאילנד", "🏝️", 2026, 7]];
-  const hits = plan.map(([, , y, m]) => txAll.filter(t => hol(t) && inM(t, y, m)));
-  if (hits.filter(h => h.length).length < 2) return;
-  const p2 = n => String(n).padStart(2, "0"), mk = (y, m, d) => y + "-" + p2(m + 1) + "-" + p2(d);
-  const out = plan.map(([name, emoji, y, m], i) => { const h = hits[i].slice().sort((a, b) => a.date - b.date);
-    // the exact days are not known: the whole month, so its list shows everything to mark (the dates can be narrowed in עריכה)
-    const from = mk(y, m, 1), to = mk(y, m, new Date(y, m + 1, 0).getDate());
-    return { id: "tr" + (y * 100 + m) + i, name, emoji, from, to, done: true, rough: true, mode: "mark", budget: null, ppl: [], inc: h.map(tripKey).filter(Boolean), exc: [], sub: {} }; });
-  const wed = txAll.filter(t => !t.income && !t.refund && !t.splitOf && (!t.gen || t.gen === 1) && iso(t.date) >= "2026-07-01" && /חתונ/.test((t.category || "") + " " + (t.merchant || "")));
-  out.push({ id: "trwed26", name: "החתונה", emoji: "💍", from: "2026-07-01", to: "", mode: "mark", budget: null, ppl: [], inc: wed.map(tripKey).filter(Boolean), exc: [], sub: {} });
-  tripsList = out; tripsRaw = "seeded";
-  saveTrips().then(() => { try { renderTripCard(); } catch (e) {} }).catch(() => { tripsList = []; tripsRaw = ""; tripSeeded = false; });
-}
-
 function openMerge() {
   const { bg, close } = oweSheet("mergeSheet"); const off = new Set();
   const draw = () => {
@@ -11875,7 +11540,6 @@ const TOUR = [
   { t: '#setMenu [data-g="org"]', view: "admin", h: "סידור", b: "קטגוריות (ליד כל אחת: כמה יצא עליה החודש), תקרה חודשית לכל קטגוריה, ואמצעי התשלום שלכם עם צבע לכל כרטיס. ובסוף כל חודש: ✦ תוכנית מה-AI שמציעה תקרה לכל קטגוריה. ההצעה נשמרת, אפשר לשנות אותה ולהחיל מתי שרוצים. יש שם גם ״אותו עסק?״ לאיחוד שמות של אותו מקום, גם כאלה שבוחרים בעצמכם ונותנים להם שם (ומשם גם לתנועות עצמן, לעריכה), ו״נמחקו לאחרונה״ להחזרת תנועות שנמחקו." },
   { t: '#setMenu [data-g="links"]', view: "admin", opt: true, enter: tourMarkPay, h: "חיבורים", b: "כדי שתשלומי <b>Apple Pay</b> ייכנסו לבד, צריך להגדיר אותו <b>פעם אחת</b> (דקה, עם סרטון הדרכה). כאן גם סיווג עסקים חכם וייבוא מקבצי הבנק." },
   { t: '#setMenu [data-act="look"]', view: "admin", opt: true, h: "צבע וגודל טקסט 🎨", b: "בוחרים צבע ראשי לאתר, וטקסט רגיל, גדול או ענק. נשמר במכשיר הזה." },
-  { t: '#setMenu [data-act="trips"]', view: "admin", opt: true, h: "טיולים ואירועים ✈️", b: "כמה עלה טיול, חתונה או ערב, בלי לשנות כלום בחשבון הרגיל. נכנס רק מה שמסמנים: בדף הטיול (רשימת ההוצאות מהתאריכים שלו, וגם טיסות ומלונות ששולמו לפני), במתג ״שייך ל…״ בחלון ההוספה, או בכפתור ✈️ בקבלה. בפנים רואים לפי יום ועל מה (טיסות, לינה, אוכל…), תקציב ו״👥 לחלק עם החברים״. טיול שקורה עכשיו מופיע כרטיס במסך הבית." },
   { t: '#setMenu [data-act="owe"]', view: "admin", opt: true, h: "מי חייב לי 👥", b: "כל מי שחייב לכם במקום אחד: על מה וכמה, תזכורת בוואטסאפ בלחיצה, ו״קיבלתי ✓״ כשהחזיר (נוספת תנועת החזר). על קנייה מפוצלת בוחרים אם חייבים לכם על כולה (ההחזר מתחלק לפי הפיצול) או על חלק אחד. החזיר סכום אחר? לוחצים על הסכום ✎ ומקלידים כמה קיבלתם. שילמתם על מישהו את הכול? בוחרים ״הכול עליהם״. חשבון שמתחלקים בו כל חודש? ״🔁 כל חודש״ רושם את החוב לבד." },
   { t: '#setMenu [data-act="arrange"]', view: "admin", opt: true, h: "התאמת מסך הבית 🧩", b: "משנים את סדר הכרטיסים במסך הבית, ומסתירים את מה שלא צריך." },
   { t: '#setMenu [data-act="privacy"]', view: "admin", opt: true, h: "מצב פרטיות 🙈", b: "מטשטש את כל הסכומים באתר, כשמראים את הטלפון למישהו או מצלמים מסך. לחיצה נוספת מחזירה." },
@@ -12222,7 +11886,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261128134138";
+const BUILD_ID = "20261128104116";
 let updToast = null;
 async function checkUpdate() {
   try {
