@@ -10997,7 +10997,9 @@ const TRIP_E = ["✈️", "🏝️", "🏔️", "🎉", "💍", "🏕️", "🎂
 let tripsRaw = null;
 function loadTrips(j) { tripsRaw = j; try { const a = j ? JSON.parse(j) : []; tripsList = Array.isArray(a) ? a.filter(x => x && x.id) : []; } catch (e) { tripsList = []; } }
 async function saveTrips() { await writeRange("'הגדרות'!V21", [[JSON.stringify(tripsList)]]); }
-const tripKey = t => ((t && t.splitOf) || t || {}).rid || "";
+/* rows typed in the old daily sheets have no id: they are known by where they sit, their day, amount and name */
+const tripKey = t => { t = (t && t.splitOf) || t; if (!t) return ""; if (t.rid) return t.rid; if (!t.date) return "";
+  return "k:" + [t.del ? t.del.key : "x", iso(t.date), t.gen === 1 ? (t.total || t.amount) : t.amount, String(t.rawMerchant || t.merchant || "").trim()].join("|"); };
 const tripEnd = tr => tr.to || iso(today);
 const tripActive = tr => !tr.done && tr.from <= iso(today) && (!tr.to || tr.to >= iso(today));
 /* the one on now: a short trip with an end date wins over a long open one (a trip abroad in the middle of a wedding year) */
@@ -11249,8 +11251,23 @@ function tripAddSync() {
     try { tripSeed(); renderTripCard(); } catch (e) {}
     return res; }; }
 let tripSeeded = false;
+/* the first seed missed rows with no id (the old daily sheets): fill the four once more, only where nothing was marked yet */
+function tripRepair() {
+  let ch = false;
+  const one = t => !t.income && !t.refund && !t.splitOf && (!t.gen || t.gen === 1);
+  tripsList.forEach(tr => {
+    if (tr.fixed || (tr.inc || []).length) return;
+    let keys = [];
+    if (tr.rough) { const a = tr.from, b = tr.to; keys = txAll.filter(t => one(t) && /חופש|טיול/.test(t.category || "") && iso(t.date) >= a && iso(t.date) <= b).map(tripKey); }
+    else if (tr.id === "trwed26") keys = txAll.filter(t => one(t) && iso(t.date) >= tr.from && /חתונ/.test((t.category || "") + " " + (t.merchant || ""))).map(tripKey);
+    else return;
+    tr.fixed = true; ch = true; tr.inc = [...new Set(keys.filter(Boolean))];
+  });
+  if (ch) saveTrips().then(() => { try { renderTripCard(); } catch (e) {} }).catch(() => {});
+}
 function tripSeed() {
-  if (tripSeeded || tripsRaw !== "" || !txAll.length) return; tripSeeded = true;
+  if (tripSeeded || !txAll.length) return;
+  if (tripsRaw !== "") { tripSeeded = true; tripRepair(); return; } tripSeeded = true;
   const hol = t => !t.income && !t.refund && !t.splitOf && (!t.gen || t.gen === 1) && /חופש|טיול/.test(t.category || "");
   const inM = (t, y, m) => t.date.getFullYear() === y && t.date.getMonth() === m;
   const plan = [["רומא", "🏛️", 2026, 0], ["רומניה", "🏔️", 2026, 4], ["תאילנד", "🏝️", 2026, 7]];
@@ -12205,7 +12222,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261128124802";
+const BUILD_ID = "20261128134138";
 let updToast = null;
 async function checkUpdate() {
   try {
