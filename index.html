@@ -4065,7 +4065,7 @@ function build() {
   // "who owes me": the purchase counts only your part (the rest is money that comes back)
   oweLinked = new Set();
   out.forEach(t => { if (t.income || t.refund || t.gen || t.splitOf) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
-    t.owe = it; oweLinked.add(it.k); return; const others = it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
+    t.owe = it; oweLinked.add(it.k); if (t.merchant) it.what = String(t.merchant).slice(0, 40); return; const others = it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
     if (others > 0) { t.fullAmount = t.amount; t.amount = Math.max(0, Math.round((t.amount - others) * 100) / 100); } });
   txAll = out;
   tx = hiddenMonths.size ? out.filter(t => !hiddenMonths.has(mIdxOf(t.date))) : out;
@@ -7471,10 +7471,7 @@ function fastEdit(t, amount, desc, date, cat, card, kind, inst) {
     await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: w.range, values: [w.values] });
     try { arr[idx] = await readRowOf(t); } catch (e) {}
     if (t.del.key === "apple") try { await syncSplitGroup(t); } catch (e) {}
-    // the price changed and friends owe part of it (nobody has paid back yet): their shares follow the new price
-    try { const it = t.owe, nt = Math.round((+amount || 0) * 100) / 100;
-      if (it && !it.on && nt > 0 && it.total > 0 && Math.abs(nt - it.total) > 0.005 && !it.ppl.some(x => x.paid)) {
-        const k = nt / it.total; it.ppl.forEach(x => { x.a = Math.round(x.a * k * 100) / 100; }); it.total = nt; await saveOwe(); } } catch (e) {}
+    try { await oweFollowPrice(t, amount); } catch (e) {}
     if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && cat !== t.category) await learnCat(t.rawMerchant, cat);
     afterData(); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
   })();
@@ -7491,9 +7488,16 @@ function fastEdit(t, amount, desc, date, cat, card, kind, inst) {
       const oldVals = t.del.key === "apple" ? Array.from({ length: 10 }, (_, i) => before[i] ?? "") : Array.from({ length: 5 }, (_, i) => before[i] ?? "");
       await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: w.range, values: [oldVals] });
       try { arr[idx] = await readRowOf(t); } catch (e) {}
+      if (t.del.key === "apple") { try { await syncSplitGroup(t); } catch (e) {} try { await oweFollowPrice(t, before[1]); } catch (e) {} }
       afterData(); toast("השינוי בוטל", 1800); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
     } catch (e) { /* the save itself failed: the row is already back */ }
   });
+}
+/* the price changed and friends owe part of it (nobody has paid back yet): their shares follow the new price */
+async function oweFollowPrice(t, amount) {
+  const it = t && t.owe, nt = Math.round((+amount || 0) * 100) / 100;
+  if (!it || it.on || !(nt > 0) || !(it.total > 0) || Math.abs(nt - it.total) <= 0.005 || it.ppl.some(x => x.paid)) return;
+  const k = nt / it.total; it.ppl.forEach(x => { x.a = Math.round(x.a * k * 100) / 100; }); it.total = nt; await saveOwe();
 }
 async function saveEdit(t, amount, desc, date, cat, card, kind) {
   const d = parseDate(date);
@@ -10858,9 +10862,13 @@ async function deleteSplitParts(pid) {
   return gone.reverse();
 }
 { const od = deleteTx; deleteTx = async function (k, btn) {
-    const t = txByKey(k), keep = t && t.del && t.del.key === "apple" && !t.gen ? { r: t.del.raw.slice(0, 10).map(v => v == null ? "" : String(v)), at: new Date().toISOString(), m: String(t.merchant || "").slice(0, 40), c: t.category } : null;
+    const t = txByKey(k), keep = t && t.del && t.del.key === "apple" ? { r: t.del.raw.slice(0, 10).map(v => v == null ? "" : String(v)), at: new Date().toISOString(), m: String(t.merchant || "").slice(0, 40), c: t.category } : null;
     const whole = t && t.parts && !t.splitOf && t.rid;
     const ok = await od.apply(this, arguments);
+    if (ok && t && /^ow-/.test(t.rid || "") && typeof saveOwe === "function") {
+      let hit = null; oweList.forEach(it => it.ppl.forEach(x => { if (x.rx === t.rid) hit = { it, x }; }));
+      if (hit) { if (keep) keep.owe = { k: hit.it.k, n: hit.x.n, paid: hit.x.paid, got: hit.x.got };
+        hit.x.paid = ""; delete hit.x.rx; delete hit.x.got; try { await saveOwe(); afterData(); } catch (e) {} } }
     if (ok && whole) { try { const gone = await deleteSplitParts(t.rid); if (keep && gone.length) keep.parts = gone; afterData(); } catch (e) {} }
     if (ok && keep) { binList.push(keep); saveBin().catch(() => {}); }
     return ok;
@@ -10889,6 +10897,8 @@ function openBin() {
     writePending([...readPending(), row, ...parts]); data.apple = [...(data.apple || []), row, ...parts];
     if (navigator.onLine) [row, ...parts].forEach(r => sendingIds.add(r[7]));
     binList = binList.filter(x => x !== b); saveBin().catch(() => {});
+    if (b.owe && typeof saveOwe === "function") { const it = oweList.find(i => i.k === b.owe.k), x = it && it.ppl.find(p => p.n === b.owe.n && !p.paid);
+      if (x) { x.paid = b.owe.paid || iso(today); x.rx = row[7]; if (b.owe.got != null) x.got = b.owe.got; saveOwe().catch(() => {}); } }
     afterData(); if (navigator.onLine) [row, ...parts].forEach(r => sendRow(r));
     draw(); toast(`״${b.m || row[2]}״ חזרה לרשימה ✓`, 2200);
   });
@@ -11866,7 +11876,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261128094606";
+const BUILD_ID = "20261128095900";
 let updToast = null;
 async function checkUpdate() {
   try {
