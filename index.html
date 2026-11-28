@@ -4064,7 +4064,7 @@ function build() {
     out.forEach(t => { if (t.parts) t.splitTotal = Math.round(t.parts.reduce((s, x) => s + x.amount, 0) * 100) / 100; }); }
   // "who owes me": the purchase counts only your part (the rest is money that comes back)
   oweLinked = new Set();
-  out.forEach(t => { if (t.income || t.refund || t.gen || t.splitOf) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
+  out.forEach(t => { if (t.income || t.refund || (t.gen && t.gen !== 1) || t.splitOf) return; t.oweK = oweKeyOf(t); const it = oweByK.get(t.oweK); if (!it) return;
     t.owe = it; oweLinked.add(it.k); if (t.merchant) it.what = String(t.merchant).slice(0, 40); return; const others = it.ppl.filter(x => !x.paid).reduce((s, x) => s + (+x.a || 0), 0);
     if (others > 0) { t.fullAmount = t.amount; t.amount = Math.max(0, Math.round((t.amount - others) * 100) / 100); } });
   txAll = out;
@@ -7495,7 +7495,7 @@ function fastEdit(t, amount, desc, date, cat, card, kind, inst) {
 }
 /* the price changed and friends owe part of it (nobody has paid back yet): their shares follow the new price */
 async function oweFollowPrice(t, amount) {
-  const it = t && t.owe, nt = Math.round((+amount || 0) * 100) / 100;
+  const h = t && oweHost(t), it = h && h.owe, nt = Math.round((+amount || 0) * 100) / 100;
   if (!it || it.on || !(nt > 0) || !(it.total > 0) || Math.abs(nt - it.total) <= 0.005 || it.ppl.some(x => x.paid)) return;
   const k = nt / it.total; it.ppl.forEach(x => { x.a = Math.round(x.a * k * 100) / 100; }); it.total = nt; await saveOwe();
 }
@@ -7765,9 +7765,9 @@ function openReceipt(k, sw) {
   const pos = t.income || t.refund, id = (t.del && t.del.raw && t.del.raw[7]) || "";
   const code = (id || (t.merchant + t.amount)).replace(/\D/g, "").slice(-10).padStart(10, "0");
   const raw = (t.del && t.del.raw) || [];
-  const qaAgain = !!t.del && t.del.key === "apple" && !t.gen && !t.splitOf && !t.parts && !/^(ow|sp)-/.test(id) && +raw[1] > 0;
+  const qaAgain = !!t.del && t.del.key === "apple" && !t.gen && !/^ow-/.test(id) && (/^sp-/.test(id) ? !!t.splitOf : true) && +raw[1] > 0;
   const qaSplit = !!t.del && t.del.key === "apple" && (!t.gen || +raw[8] > 1) && !/^ow-/.test(id) && typeof openSplit === "function";
-  const qaOwe = !!t.del && !t.income && !t.refund && !t.gen && typeof openOweFor === "function";
+  const qaOwe = !!t.del && !t.income && !t.refund && typeof openOweFor === "function";
   openObj(`<div class="paper both" role="dialog" aria-modal="true" aria-label="קבלה: ${esc(t.merchant)}">
     <div class="pp-head"><span class="pp-logo">iSpend</span><small>יום ${WEEKDAYS[t.date.getDay()]}, ${t.date.getDate()} ב${MONTHS[t.date.getMonth()]} ${t.date.getFullYear()}</small></div>
     <div class="rc-merch">${catIcon(t.category)}<bdi>${esc(t.merchant)}</bdi></div>${rcHist(t)}
@@ -7827,12 +7827,15 @@ function showMerchant(nm) {
 
 // the receipt's "again today": the same purchase once more, dated today (like adding it by hand)
 function receiptAgain(t) {
-  const r = t.del.raw, row = [iso(today), r[1], r[2], r[3], r[4], r[5] || (t.income ? "הכנסה" : "הוצאה"), "ידני", "m-" + Date.now(), ""];
-  writePending([...readPending(), row]); data.apple = [...(data.apple || []), row];
+  if (t.splitOf) t = t.splitOf;
+  const r = t.del.raw, id = "m-" + Date.now(), row = [iso(today), r[1], r[2], r[3], r[4], r[5] || (t.income ? "הכנסה" : "הוצאה"), "ידני", id, ""];
+  // a split purchase comes back split the same way
+  const parts = (t.parts || []).slice(1).map((x, i) => { const q = x.del.raw; return [iso(today), q[1], r[2], r[3], q[4], r[5] || (t.income ? "הכנסה" : "הוצאה"), "ידני", "sp-" + id + "-" + (i + 1), ""]; });
+  writePending([...readPending(), row, ...parts]); data.apple = [...(data.apple || []), row, ...parts];
   const [cy, cm] = curYM(); view = { y: cy, m: cm };
-  if (navigator.onLine) sendingIds.add(row[7]);
+  if (navigator.onLine) [row, ...parts].forEach(x => sendingIds.add(x[7]));
   afterData(); showSaved(row, t.income || t.refund ? "inc" : "exp");
-  if (navigator.onLine) sendRow(row); else toast("אין חיבור. נשמר בטלפון ויישלח לבד כשהאינטרנט יחזור ☁");
+  if (navigator.onLine) [row, ...parts].forEach(x => sendRow(x)); else toast("אין חיבור. נשמר בטלפון ויישלח לבד כשהאינטרנט יחזור ☁");
 }
 
 $("slipOpen").addEventListener("click", openPayslip);
@@ -10551,12 +10554,12 @@ async function saveOwe() {
 }
 function oweShown() {
   if (addFresh()) return true;
-  const t = editTx && (editTx.splitOf || editTx); return !!t && !!t.del && !t.income && !t.refund && !t.gen && addKind === "exp";
+  const t = editTx && oweHost(editTx); return !!t && !!t.del && !t.income && !t.refund && addKind === "exp";
 }
 function oweSync() {
   const on = oweShown(); $("oweBtn").hidden = !on; if (!on) return;
   if (!editTx) { $("oweBtnT").textContent = "מי חייב לי"; return; }
-  const it = (editTx.splitOf || editTx).owe; $("oweBtnT").textContent = it ? (oweLeft(it) > 0 ? `חייבים לך ${fmt2(oweLeft(it))} · עריכה` : "הכול הוחזר ✓ · עריכה") : "מי חייב לי";
+  const it = oweHost(editTx).owe; $("oweBtnT").textContent = it ? (oweLeft(it) > 0 ? `חייבים לך ${fmt2(oweLeft(it))} · עריכה` : "הכול הוחזר ✓ · עריכה") : "מי חייב לי";
 }
 { const oe = openEdit; openEdit = function () { const r = oe.apply(this, arguments); try { oweSync(); } catch (e) {} return r; };
   const oa = openAdd; openAdd = function () { const r = oa.apply(this, arguments); $("oweBtn").hidden = true; requestAnimationFrame(() => { try { oweSync(); splitSync(); } catch (e) {} }); return r; }; }
@@ -10628,11 +10631,18 @@ function oweSheet(id, label) {
   return { bg, close };
 }
 /* one purchase: how many paid, who, how much each */
+/* the transaction that carries the debt: the whole of a split purchase, and the first payment of a purchase in payments */
+function oweHost(t) {
+  if (t && t.splitOf) t = t.splitOf;
+  if (t && t.gen && t.gen !== 1) t = txAll.find(x => x.rid === t.rid && x.gen === 1 && !x.splitOf) || t;
+  return t;
+}
 function openOweFor(t, note) {
-  if (t.splitOf) t = t.splitOf;
-  const whole = t.parts && t.splitTotal != null ? t.splitTotal : t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
+  t = oweHost(t);
+  // in payments: the debt is on the whole price, not on one payment
+  const whole = t.gen ? (t.parts ? t.parts.reduce((s, x) => s + (x.total || x.amount), 0) : t.total) : t.parts && t.splitTotal != null ? t.splitTotal : t.fullAmount != null ? t.fullAmount : t.amount, old = t.owe;
   // a split purchase: the debt can be on all of it (what comes back is split the same way) or on one part only
-  const parts = t.parts && t.parts.length > 1 ? t.parts.map(x => ({ cat: x.category, a: Math.round(x.amount * 100) / 100 })) : null;
+  const parts = t.parts && t.parts.length > 1 ? t.parts.map(x => ({ cat: x.category, a: Math.round((t.gen ? x.total || x.amount : x.amount) * 100) / 100 })) : null;
   let on = old && old.on && parts && parts.some(x => x.cat === old.on) ? old.on : null;
   let total = on ? parts.find(x => x.cat === on).a : whole;
   // me: am I one of the people splitting it, or do the others pay the whole thing back
@@ -11511,7 +11521,7 @@ const TOUR = [
   { t: "#addForm .field:has(#addDesc)", demo: tourAddDemo2, h: "תיאור, והקטגוריה לבד", b: "כותבים מה קניתם או איפה, והקטגוריה נבחרת לבד. שמות שכבר רשמתם מוצעים תוך כדי הקלדה." },
   { t: "#pk", demo: tourAddDemo2, h: "בלחיצה, בלי רשימות", b: "קטגוריה, כרטיס ותאריך בלחיצה אחת. השורה למטה מסכמת בדיוק מה יישמר." },
   { t: "#pkDays", demo: tourAddDemo2, h: "מתי, ועוד", b: "היום, אתמול או שלשום בלחיצה, ו״📅 תאריך אחר״ פותח לוח שנה. בהוצאה קבועה, כמו מנוי או ביטוח, אפשר להדליק ״הוספה אוטומטית״, והיא תיכנס ביום הראשון של כל חודש חדש. זה עובד גם על כסף שחוזר כל חודש, כמו חברים שמשלמים את החלק שלהם במנוי. השמירה מיידית, ויש ״ביטול״ לכמה שניות אם טעיתם. אם אותו סכום כבר נרשם באותו יום, בהוצאה או בכסף שנכנס, תופיע הערה ״אולי זו כבר נכנסה?״." },
-  { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם, וגם כסף שנכנס), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר לפצל גם קנייה בתשלומים (כל תשלום מתחלק באותו יחס), ולסמן מי חייב לי גם על קנייה מפוצלת. אפשר כבר בהוספה, או אחר כך בעריכה." },
+  { t: "#xMore", demo: tourAddDemo2, opt: true, h: "תשלומים, פיצול ומי חייב לי", b: "בשורה ״עוד״: 💳 קנייה בתשלומים, ✂️ פיצול לכמה קטגוריות (למשל ₪100 סופר ו-₪50 פארם, וגם כסף שנכנס), ו-👥 מי חייב לי כששילמתם גם על חברים. אפשר לפצל גם קנייה בתשלומים (כל תשלום מתחלק באותו יחס), ולסמן מי חייב לי גם על קנייה מפוצלת או בתשלומים (על המחיר המלא). אפשר כבר בהוספה, או אחר כך בעריכה." },
   { t: "#micBtn", demo: tourAddDemo, h: "הוספה בקול 🎙️", b: "אומרים במשפט אחד: ״45 שקל שווארמה במקס״, והסכום, העסק והכרטיס מתמלאים לבד." },
   { t: "#scanBtn", opt: true, demo: tourAddDemo, h: "צילום קבלה 📷", b: "מצלמים קבלה, והעסק, הסכום, התאריך והקטגוריה מתמלאים לבד. בודקים ושומרים." },
   { t: "#cats", card: true, h: "לאן הלך הכסף", b: "עיגול לכל קטגוריה, לפי כמה הוצאתם עליה. לחיצה פותחת את כל התנועות שלה." },
@@ -11876,7 +11886,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261128095900";
+const BUILD_ID = "20261128104116";
 let updToast = null;
 async function checkUpdate() {
   try {
