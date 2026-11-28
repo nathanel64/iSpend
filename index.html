@@ -5792,11 +5792,13 @@ function parseQuery(q) {
   return out;
 }
 function matchQuery(t, sq) {
-  if (sq.min != null && t.amount < sq.min) return false;
-  if (sq.max != null && t.amount > sq.max) return false;
+  // a split purchase is found by any of its parts, and by its whole price
+  const amt = t.parts && t.splitTotal != null ? t.splitTotal : t.amount;
+  if (sq.min != null && amt < sq.min) return false;
+  if (sq.max != null && amt > sq.max) return false;
   if (sq.month != null && t.date.getMonth() !== sq.month) return false;
   if (sq.year != null && t.date.getFullYear() !== sq.year) return false;
-  const hay = [t.merchant, t.rawMerchant, mergedName(t), t.category, t.account, accOf(t), String(t.amount)].map(x => String(x || "").toLowerCase()).join(" | ");
+  const hay = [t.merchant, t.rawMerchant, mergedName(t), t.category, t.account, accOf(t), String(t.amount), String(amt), ...(t.parts || []).flatMap(x => [x.category, String(x.amount)])].map(x => String(x || "").toLowerCase()).join(" | ");
   return sq.words.every(w => hay.includes(w));
 }
 function renderList(inP) {
@@ -7054,6 +7056,7 @@ async function moveTxDate(t, to) {
     if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) { toast("הגיליון השתנה. רעננו ונסו שוב."); return false; }
     await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range, values });
     arrOf(t.del.key)[t.del.index] = await readRowOf(t);
+    if (t.del.key === "apple") try { await syncSplitGroup(t); } catch (e) {}
     afterData(); toast("הועבר ל" + dragDayLabel(to) + " ✓", 2200);
     try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
     return true;
@@ -7467,6 +7470,11 @@ function fastEdit(t, amount, desc, date, cat, card, kind, inst) {
     if (JSON.stringify(now) !== JSON.stringify(trimRow(t.del.raw))) throw { code: "changed" };
     await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range: w.range, values: [w.values] });
     try { arr[idx] = await readRowOf(t); } catch (e) {}
+    if (t.del.key === "apple") try { await syncSplitGroup(t); } catch (e) {}
+    // the price changed and friends owe part of it (nobody has paid back yet): their shares follow the new price
+    try { const it = t.owe, nt = Math.round((+amount || 0) * 100) / 100;
+      if (it && !it.on && nt > 0 && it.total > 0 && Math.abs(nt - it.total) > 0.005 && !it.ppl.some(x => x.paid)) {
+        const k = nt / it.total; it.ppl.forEach(x => { x.a = Math.round(x.a * k * 100) / 100; }); it.total = nt; await saveOwe(); } } catch (e) {}
     if (t.rawMerchant && (t.source === "applepay" || t.del.key === "bank") && kind !== "inc" && cat !== t.category) await learnCat(t.rawMerchant, cat);
     afterData(); try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
   })();
@@ -9265,6 +9273,7 @@ async function selApply(field) {
       else range = "'הוצאות יומיות'!" + (field === "cat" ? "F" : "H") + t.del.row;
       await mcp.callTool(SERVER, "update_values", { spreadsheetId: t.del.file, range, values: [[val]] });
       arrOf(t.del.key)[t.del.index] = await readRowOf(t); done++;
+      if (field !== "cat" && t.del.key === "apple") try { await syncSplitGroup(t); } catch (e) {}
     } catch (e) { failed++; }
   }
   try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
@@ -10823,9 +10832,36 @@ async function saveBin() {
   while (j.length > 45000 && list.length) { list = list.slice(1); j = JSON.stringify(list); }
   binList = list; await writeRange("'הגדרות'!V18", [[list.length ? j : ""]]);
 }
+/* a split purchase is one row plus its parts ("sp-<id>-1", …): the date, description and card of all of them stay the same,
+   and deleting the purchase takes its parts with it */
+const splitIds = t => { const g = t && (t.splitOf || t); const pid = g && g.rid && !/^sp-/.test(g.rid) ? g.rid : (/^sp-(.+)-\d+$/.exec((t && t.rid) || "") || [])[1];
+  if (!pid) return null; const re = new RegExp("^sp-" + pid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "-\\d+$"); return { pid, is: id => id === pid || re.test(id), part: id => re.test(id) }; };
+async function syncSplitGroup(t) {
+  const g = splitIds(t); if (!g || !(t.parts || t.splitOf)) return;
+  const arr = data.apple || [], pend = new Set(readPending().map(r => String(r[7] || "").trim()));
+  const src = arr.find(r => String(r[7] || "").trim() === (t.rid || "")); if (!src) return;
+  const jobs = [];
+  arr.forEach((r, i) => { const id = String(r[7] || "").trim(); if (id === t.rid || !g.is(id) || pend.has(id)) return;
+    if (r[0] === src[0] && r[2] === src[2] && r[3] === src[3]) return;
+    r[0] = src[0]; r[2] = src[2]; r[3] = src[3];
+    jobs.push(writeRange("'עסקאות'!A" + (i + 2) + ":D" + (i + 2), [[r[0], r[1], r[2], r[3]]])); });
+  if (jobs.length) { await Promise.all(jobs); afterData(); }
+}
+async function deleteSplitParts(pid) {
+  const g = splitIds({ rid: pid }); if (!g) return [];
+  const pend = readPending(); if (pend.some(r => g.part(String(r[7] || "").trim()))) writePending(pend.filter(r => !g.part(String(r[7] || "").trim())));
+  try { await mcp.invalidate(SERVER, "get_values"); } catch (e) {}
+  const rows = ((await mcp.callTool(SERVER, "get_values", { spreadsheetId: SHEET_ID, range: "'עסקאות'!A2:J" })).payload || {}).values || [];
+  const at = rows.map((r, i) => g.part(String(r[7] || "").trim()) ? i : -1).filter(i => i >= 0).sort((a, b) => b - a), gone = at.map(i => rows[i].slice(0, 10).map(v => v == null ? "" : String(v)));
+  for (const i of at) await mcp.callTool(SERVER, "update_spreadsheet", { spreadsheetId: SHEET_ID, requests: [{ deleteDimension: { range: { sheetId: 777001, dimension: "ROWS", startIndex: i + 1, endIndex: i + 2 } } }] });
+  data.apple = (data.apple || []).filter(r => !g.part(String(r[7] || "").trim()));
+  return gone.reverse();
+}
 { const od = deleteTx; deleteTx = async function (k, btn) {
     const t = txByKey(k), keep = t && t.del && t.del.key === "apple" && !t.gen ? { r: t.del.raw.slice(0, 10).map(v => v == null ? "" : String(v)), at: new Date().toISOString(), m: String(t.merchant || "").slice(0, 40), c: t.category } : null;
+    const whole = t && t.parts && !t.splitOf && t.rid;
     const ok = await od.apply(this, arguments);
+    if (ok && whole) { try { const gone = await deleteSplitParts(t.rid); if (keep && gone.length) keep.parts = gone; afterData(); } catch (e) {} }
     if (ok && keep) { binList.push(keep); saveBin().catch(() => {}); }
     return ok;
   }; }
@@ -10849,10 +10885,11 @@ function openBin() {
     const row = b.r.slice(0, 10); while (row.length < 9) row.push("");
     if (!row[7] || (data.apple || []).some(r => String(r[7] || "").trim() === String(row[7]).trim())) row[7] = "m-" + Date.now();
     bk.disabled = true; bk.textContent = "מחזיר…";
-    writePending([...readPending(), row]); data.apple = [...(data.apple || []), row];
-    if (navigator.onLine) sendingIds.add(row[7]);
+    const parts = (b.parts || []).map((r, i) => { const x = r.slice(0, 10); while (x.length < 9) x.push(""); x[7] = "sp-" + row[7] + "-" + (i + 1); return x; });
+    writePending([...readPending(), row, ...parts]); data.apple = [...(data.apple || []), row, ...parts];
+    if (navigator.onLine) [row, ...parts].forEach(r => sendingIds.add(r[7]));
     binList = binList.filter(x => x !== b); saveBin().catch(() => {});
-    afterData(); if (navigator.onLine) sendRow(row);
+    afterData(); if (navigator.onLine) [row, ...parts].forEach(r => sendRow(r));
     draw(); toast(`״${b.m || row[2]}״ חזרה לרשימה ✓`, 2200);
   });
   draw();
@@ -11829,7 +11866,7 @@ window.ispendLearn = async function (raw, name, cat) {
   if (document.body) go(); else document.addEventListener("DOMContentLoaded", go);
 })();
 /* a newer version on the server: reload by itself when nothing is open, otherwise offer it */
-const BUILD_ID = "20261128093418";
+const BUILD_ID = "20261128094606";
 let updToast = null;
 async function checkUpdate() {
   try {
